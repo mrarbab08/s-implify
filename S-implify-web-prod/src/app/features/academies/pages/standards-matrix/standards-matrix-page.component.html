@@ -1,0 +1,310 @@
+<div class="standards-matrix-screen flex flex-col gap-6">
+    <!-- KPI row (matches main dashboard layout) -->
+    <div class="mb-6 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+        <div class="kpi-metric-card flex flex-col">
+            <h5 class="kpi-metric-title mb-5">STAAR COMPONENT SCORE</h5>
+            <div class="kpi-metric-value-wrap">
+                <h3 class="kpi-metric-value">
+                    {{ kpiComponentScore }}<span class="text-2xl font-semibold"> %</span>
+                </h3>
+            </div>
+            <div class="mt-auto flex items-center gap-3">
+                <div class="kpi-metric-bar-track min-w-0 flex-1">
+                    <div
+                        class="kpi-metric-bar-fill kpi-bar-blue-purple"
+                        [style.width.%]="componentScoreWidth"
+                    ></div>
+                </div>
+                <span
+                    class="shrink-0 text-xl font-bold"
+                    [ngClass]="gradeLetterClass(kpiCsGrade)"
+                    >{{ kpiCsGrade || '—' }}</span
+                >
+            </div>
+        </div>
+
+        <div class="kpi-metric-card flex flex-col">
+            <h5 class="kpi-metric-title mb-5">GROWTH</h5>
+            <div class="kpi-metric-value-wrap">
+                <h3 class="kpi-metric-value">
+                    {{ kpiGrowth }}<span class="text-2xl font-semibold"> %</span>
+                </h3>
+            </div>
+            <div class="mt-auto flex items-center gap-3">
+                <div class="kpi-metric-bar-track min-w-0 flex-1">
+                    <div class="kpi-metric-bar-fill kpi-bar-blue-purple" [style.width.%]="growthWidth"></div>
+                </div>
+                <span
+                    class="shrink-0 text-xl font-bold"
+                    [ngClass]="gradeLetterClass(kpiGrowthGrade)"
+                    >{{ kpiGrowthGrade || '—' }}</span
+                >
+            </div>
+        </div>
+
+        <div class="kpi-metric-card flex flex-col justify-center space-y-5">
+            <div>
+                <div class="mb-2 flex justify-between text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                    <span>APP</span>
+                    <span class="font-semibold text-[#2563eb] dark:text-sky-400">{{ kpiApp }} %</span>
+                </div>
+                <div class="kpi-metric-bar-track">
+                    <div class="kpi-metric-bar-fill kpi-bar-app" [style.width.%]="appWidth"></div>
+                </div>
+            </div>
+            <div>
+                <div class="mb-2 flex justify-between text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                    <span>MEET</span>
+                    <span class="font-semibold text-[#991b1b] dark:text-red-300">{{ kpiMeet }} %</span>
+                </div>
+                <div class="kpi-metric-bar-track">
+                    <div class="kpi-metric-bar-fill kpi-bar-meet" [style.width.%]="meetWidth"></div>
+                </div>
+            </div>
+            <div>
+                <div class="mb-2 flex justify-between text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                    <span>MASTER</span>
+                    <span class="font-semibold text-[#ea580c] dark:text-orange-400">{{ kpiMaster }} %</span>
+                </div>
+                <div class="kpi-metric-bar-track">
+                    <div class="kpi-metric-bar-fill kpi-bar-master" [style.width.%]="masterWidth"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (overallMetricsError) {
+    <div class="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{{ overallMetricsError }}</div>
+    }
+
+    @if (!districtContext.isGrowthContextReady()) {
+    <div class="rounded-lg bg-warning/10 px-4 py-3 text-sm text-warning">
+        Select district, school year, and quarter in the header before loading standards data.
+    </div>
+    }
+
+    <!-- Filter bar -->
+    <div
+        class="panel flex flex-wrap items-end gap-4 rounded-xl border border-sky-200/80 bg-sky-100/90 p-4 dark:border-sky-800/60 dark:bg-sky-950/35"
+    >
+        <div class="min-w-[160px] flex-1">
+            <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Step 1: CAMPUS</label>
+            <select
+                [(ngModel)]="filterCampusCode"
+                (ngModelChange)="onCampusChange()"
+                [disabled]="campuses.length <= 1"
+                class="form-select form-select-sm w-full rounded-lg border-slate-200 text-sm dark:border-slate-600 dark:bg-[#0e1726]"
+            >
+                <option *ngFor="let c of campuses" [ngValue]="c.campusCode">{{ c.campusName }}</option>
+            </select>
+        </div>
+        <div class="min-w-[120px] flex-1">
+            <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Step 2: GRADE</label>
+            <select
+                [(ngModel)]="filterGradeCode"
+                (ngModelChange)="onFilterChange()"
+                class="form-select form-select-sm w-full rounded-lg border-slate-200 text-sm dark:border-slate-600 dark:bg-[#0e1726]"
+            >
+                <option *ngFor="let g of grades" [ngValue]="g.gradeCode">{{ g.gradeName || g.gradeCode }}</option>
+            </select>
+        </div>
+        <div class="min-w-[140px] flex-1">
+            <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Step 3: SUBJECT</label>
+            <select
+                [(ngModel)]="filterSubjectCode"
+                (ngModelChange)="onFilterChange()"
+                class="form-select form-select-sm w-full rounded-lg border-slate-200 text-sm dark:border-slate-600 dark:bg-[#0e1726]"
+            >
+                <option *ngFor="let s of subjects" [ngValue]="s.subjectCode">{{ s.subjectName || s.subjectCode }}</option>
+            </select>
+        </div>
+        <div class="min-w-[180px] flex-1">
+            <label class="mb-1 block text-[10px] font-bold uppercase tracking-wide text-slate-500">Step 4: TEACHER</label>
+            <select
+                [(ngModel)]="filterTeacherId"
+                (ngModelChange)="onFilterChange()"
+                class="form-select form-select-sm w-full rounded-lg border-slate-200 text-sm dark:border-slate-600 dark:bg-[#0e1726]"
+            >
+                <option [ngValue]="null">TEACHER (ALL)</option>
+                <option *ngFor="let t of teachers" [ngValue]="teacherIdValue(t)">{{ teacherDisplayName(t) }}</option>
+            </select>
+        </div>
+    </div>
+
+    @if (standardsError) {
+    <div class="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{{ standardsError }}</div>
+    }
+
+    <ng-template #sectionExportMenu let-enabled="enabled" let-target="target">
+        <div hlMenu class="dropdown">
+            <button
+                hlMenuButton
+                type="button"
+                class="btn btn-outline-primary btn-sm dropdown-toggle"
+                [disabled]="!enabled"
+            >
+                <icon-download class="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                Export
+                <icon-caret-down class="inline-block h-4 w-4 ltr:ml-1 rtl:mr-1" />
+            </button>
+            <ul
+                *hlMenuItems
+                animate.enter="anim-enter-toggle"
+                animate.leave="anim-leave-toggle"
+                class="whitespace-nowrap ltr:right-0 rtl:left-0"
+            >
+                <li>
+                    <button type="button" *hlMenuItem="let menuItem" (click)="onExportMenu(target, 'excel')">
+                        <icon-file class="inline-block h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                        Download Excel
+                    </button>
+                </li>
+                <li>
+                    <button type="button" *hlMenuItem="let menuItem" (click)="onExportMenu(target, 'print')">
+                        <icon-printer class="inline-block h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                        Print
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </ng-template>
+
+    <!-- Performance Standard (quarter from header) -->
+    <div
+        class="panel overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none"
+    >
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4 dark:border-slate-700/80">
+            <div class="flex items-center gap-2">
+                <icon-chart-square class="h-4 w-4 text-primary" />
+                <h5 class="text-sm font-semibold text-[#0e1726] dark:text-white-light">
+                    {{ performanceStandardTitle }}
+                </h5>
+            </div>
+        </div>
+        <div
+            #perfBarChartContainer
+            class="w-full max-w-full overflow-y-hidden px-2 pb-4 pt-2 [scrollbar-width:thin]"
+            [class.overflow-x-auto]="usePerfBarHorizontalScroll"
+            [class.overflow-x-hidden]="!usePerfBarHorizontalScroll"
+        >
+            @if (standardsLoading) {
+            <p class="px-3 py-8 text-center text-sm text-gray-500">
+                Loading {{ performanceStandardTitle }}…
+            </p>
+            }
+            <apx-chart
+                *ngIf="q1PerformanceChart && !standardsLoading"
+                [series]="q1PerformanceChart.series"
+                [chart]="q1PerformanceChart.chart"
+                [dataLabels]="q1PerformanceChart.dataLabels"
+                [stroke]="q1PerformanceChart.stroke"
+                [colors]="q1PerformanceChart.colors"
+                [legend]="q1PerformanceChart.legend"
+                [plotOptions]="q1PerformanceChart.plotOptions"
+                [xaxis]="q1PerformanceChart.xaxis"
+                [yaxis]="q1PerformanceChart.yaxis"
+                [grid]="q1PerformanceChart.grid"
+                [tooltip]="q1PerformanceChart.tooltip"
+                class="block w-full min-w-0 rounded-lg bg-white dark:bg-[#0e1726]"
+                [style.min-width.px]="usePerfBarHorizontalScroll ? perfBarScrollWidth : null"
+            >
+            </apx-chart>
+        </div>
+    </div>
+
+    <!-- Detailed Student Cohort -->
+    <div
+        class="panel overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none"
+    >
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 pb-4 dark:border-slate-700/80">
+            <h5 class="text-sm font-semibold text-[#0e1726] dark:text-white-light">Detailed Student Cohort</h5>
+            <ng-container
+                *ngTemplateOutlet="sectionExportMenu; context: { enabled: canExportCohort, target: 'cohort' }"
+            ></ng-container>
+        </div>
+        <div class="table-responsive max-h-[320px] overflow-auto">
+            @if (standardsLoading) {
+            <p class="px-3 py-8 text-center text-sm text-gray-500">Loading student cohort…</p>
+            } @else if (!cohortRows.length) {
+            <p class="px-3 py-8 text-center text-sm text-gray-500">No students for the selected filters.</p>
+            }
+            <table class="table-hover text-sm" *ngIf="!standardsLoading && cohortRows.length">
+                <thead>
+                    <tr>
+                        <th>STUDENT NAME</th>
+                        <th>CAMPUS</th>
+                        <th>GRADE</th>
+                        <th>COURSE</th>
+                        <th>INSTRUCTOR</th>
+                        <th
+                            class="cursor-pointer select-none text-center transition hover:text-primary"
+                            [attr.aria-sort]="
+                                cohortStaarSortDir === 'neutral'
+                                    ? 'none'
+                                    : cohortStaarSortDir === 'asc'
+                                      ? 'ascending'
+                                      : 'descending'
+                            "
+                            (click)="toggleCohortStaarSort()"
+                            title="Sort by STAAR score (click: low → high → high → low → original order)"
+                        >
+                            <span class="inline-flex items-center justify-center gap-1.5">
+                                STAAR SCORE
+                                <span class="inline-flex shrink-0 items-center">
+                                    <svg width="16" height="16" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                                        <polygon
+                                            points="3.11,6.25 10.89,6.25 7,1.75"
+                                            fill="currentColor"
+                                            class="text-black/20 dark:text-white-dark/30"
+                                            [class.!text-primary]="cohortStaarSortDir === 'asc'"
+                                        />
+                                        <polygon
+                                            points="7,12.25 10.89,7.75 3.11,7.75"
+                                            fill="currentColor"
+                                            class="text-black/20 dark:text-white-dark/30"
+                                            [class.!text-primary]="cohortStaarSortDir === 'desc'"
+                                        />
+                                    </svg>
+                                </span>
+                            </span>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let r of sortedCohortRows">
+                        <td class="font-medium">{{ r.studentName }}</td>
+                        <td>{{ r.campus }}</td>
+                        <td>{{ r.grade }}</td>
+                        <td>{{ r.course }}</td>
+                        <td>{{ r.instructor }}</td>
+                        <td class="text-center">
+                            <span
+                                class="badge rounded-full px-2.5 py-1 text-xs font-semibold"
+                                [ngClass]="staarBadgeClass(r.staarScore)"
+                                >{{ r.staarScore }}%</span
+                            >
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Standards matrix widget -->
+    <div
+        class="panel overflow-hidden rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none"
+    >
+        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-4 dark:border-slate-700/80">
+            <h5 class="text-sm font-semibold text-[#0e1726] dark:text-white-light">Standards Matrix</h5>
+            <ng-container
+                *ngTemplateOutlet="sectionExportMenu; context: { enabled: canExportStandardsMatrix, target: 'matrix' }"
+            ></ng-container>
+        </div>
+        <app-standards-matrix
+            class="block"
+            [standardCodes]="standardCodes"
+            [matrixRows]="matrixRows"
+            [classAveragePercents]="classAveragePercents"
+        ></app-standards-matrix>
+    </div>
+</div>

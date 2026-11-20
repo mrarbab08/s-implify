@@ -1,0 +1,200 @@
+﻿<div class="flex min-h-screen bg-[#f4ede3]">
+  <!-- LEFT: warm brand panel -->
+  <div class="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-[#f3ecdf] p-10 lg:flex">
+    <img
+      src="/assets/images/logo.jpeg"
+      alt="S-Implify - Simplify to Amplify"
+      class="h-10 w-auto self-start object-contain mix-blend-multiply"
+    />
+
+    <div class="relative">
+      <h1 class="text-[40px] font-bold leading-[1.15] text-[#1b3a57] xl:text-[46px]">
+        Simplify to<br />Amplify.
+      </h1>
+      <p class="mt-4 text-[15px] text-[#5f6b7a]">Log in and continue growing.</p>
+    </div>
+
+    <img
+      src="/assets/images/auth/login-illustration-desk.svg"
+      alt="Student working at a desk"
+      class="w-[320px] self-start object-contain xl:w-[360px]"
+    />
+  </div>
+
+  <!-- RIGHT: form panel -->
+  <div class="flex w-full items-center justify-center bg-[#faf3e9] px-4 py-10 sm:px-8 lg:w-1/2 dark:bg-[#141b28]">
+    <div
+      class="anim-fade-up w-full max-w-[400px] rounded-[28px] bg-white p-7 shadow-[0_24px_60px_-30px_rgba(15,23,42,0.2)] sm:p-8 dark:bg-[#0e1726]"
+    >
+      <!-- Alerts -->
+      <div
+        *ngIf="errorMsg"
+        class="mb-5 flex items-start gap-3 rounded-xl border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
+        </svg>
+        <span>{{ errorMsg }}</span>
+      </div>
+      <div
+        *ngIf="successMsg"
+        class="mb-5 flex items-start gap-3 rounded-xl border border-success/30 bg-success/10 px-4 py-3 text-sm text-success"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm-1 14.414L6.586 12 8 10.586l3 3 6-6L18.414 9 11 16.414z" />
+        </svg>
+        <span>{{ successMsg }}</span>
+      </div>
+      <div
+        *ngIf="socialHint"
+        class="anim-fade-up mb-5 flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm0 9h8a10 10 0 00-8-6v6z" />
+        </svg>
+        <span>{{ socialHint }}</span>
+      </div>
+
+      <h1 class="text-center text-[20px] font-semibold text-[#12213b] dark:text-white-light">
+        Log in to your account
+      </h1>
+
+      <form class="mt-6 space-y-4 dark:text-white" (ngSubmit)="onSubmit()" #loginForm="ngForm">
+        <!-- email -->
+        <div>
+          <label for="boxed-login-email" class="mb-1.5 block text-xs text-[#3b4655] dark:text-gray-300">
+            Email address
+          </label>
+          <div class="relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="pointer-events-none absolute start-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#9aa3b2]"
+            >
+              <rect x="2" y="4" width="20" height="16" rx="3"></rect>
+              <path d="m2 7 10 6 10-6"></path>
+            </svg>
+            <input
+              id="boxed-login-email"
+              type="email"
+              name="email"
+              autocomplete="username"
+              placeholder="Enter your email"
+              class="form-input rounded-xl border-transparent bg-[#f7f8fa] py-3 ps-11 text-sm placeholder:text-[#9aa3b2] focus:border-primary focus:bg-white dark:border-[#1b2e4b] dark:bg-[#152238]"
+              [(ngModel)]="email"
+              required
+              email
+              [disabled]="isLoading"
+            />
+          </div>
+        </div>
+
+        <!-- password -->
+        <div>
+          <label for="boxed-login-password" class="mb-1.5 block text-xs text-[#3b4655] dark:text-gray-300">
+            Password
+          </label>
+          <div class="relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="pointer-events-none absolute start-4 top-1/2 h-4.5 w-4.5 -translate-y-1/2 text-[#9aa3b2]"
+            >
+              <rect x="4" y="11" width="16" height="10" rx="2"></rect>
+              <path d="M8 11V7a4 4 0 0 1 8 0v4"></path>
+            </svg>
+            <input
+              id="boxed-login-password"
+              [type]="showPassword ? 'text' : 'password'"
+              name="password"
+              autocomplete="current-password"
+              placeholder="Enter your password"
+              class="form-input rounded-xl border-transparent bg-[#f7f8fa] py-3 ps-11 pe-11 text-sm placeholder:text-[#9aa3b2] focus:border-primary focus:bg-white dark:border-[#1b2e4b] dark:bg-[#152238]"
+              [(ngModel)]="password"
+              required
+              [disabled]="isLoading"
+            />
+            <button
+              type="button"
+              class="absolute end-3.5 top-1/2 -translate-y-1/2 text-[#b7bdcc] transition-colors hover:text-primary"
+              (click)="togglePasswordVisibility()"
+              [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'"
+            >
+              <svg *ngIf="!showPassword" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12S5 4 12 4s11 8 11 8-4 8-11 8S1 12 1 12z" /><circle cx="12" cy="12" r="3" />
+              </svg>
+              <svg *ngIf="showPassword" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17.94 17.94A10.06 10.06 0 0112 20C5 20 1 12 1 12a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
+                <line x1="1" y1="1" x2="23" y2="23" />
+              </svg>
+            </button>
+          </div>
+
+          <div class="mt-1.5 text-end">
+            <a
+              routerLink="/auth/password-reset"
+              class="text-xs text-[#5f6b7a] transition hover:text-primary dark:text-gray-400 dark:hover:text-primary"
+            >
+              Forgot your password?
+            </a>
+          </div>
+        </div>
+
+        <!-- submit -->
+        <button
+          type="submit"
+          class="mt-2 flex w-full items-center justify-center gap-2 rounded-full bg-[#2A9D8F] py-3 text-sm text-white shadow-[0_12px_25px_-10px_rgba(42,157,143,0.8)] transition-all duration-200 hover:bg-[#1E7A70] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+          [disabled]="isLoading || !email || !password"
+        >
+          <span *ngIf="!isLoading">Log in</span>
+          <span *ngIf="isLoading" class="flex items-center justify-center gap-2">
+            <svg class="h-4 w-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path>
+            </svg>
+            Signing in…
+          </span>
+        </button>
+
+        <!-- divider -->
+        <div class="relative py-1 text-center">
+          <span class="absolute inset-x-0 top-1/2 h-px w-full -translate-y-1/2 bg-[#eceef4] dark:bg-[#1b2e4b]"></span>
+          <span class="relative bg-white px-4 text-xs text-[#9aa3b2] dark:bg-[#0e1726] dark:text-gray-500">or</span>
+        </div>
+
+        <!-- google -->
+        <button
+          type="button"
+          (click)="onGoogleSignIn()"
+          class="flex w-full items-center justify-center gap-2.5 rounded-full border border-[#e5e7eb] bg-white py-3 text-sm text-[#12213b] transition-all duration-200 hover:bg-[#f8f9fa] active:scale-[0.99] dark:border-[#1b2e4b] dark:bg-[#152238] dark:text-white-light"
+        >
+          <svg class="h-[18px] w-[18px]" viewBox="0 0 48 48">
+            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" />
+            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+          </svg>
+          Continue with Google
+        </button>
+      </form>
+
+      <!-- footer -->
+      <p class="mt-6 text-center text-[13px] text-[#5f6b7a] dark:text-gray-400">
+        Don't have an account?
+        <a routerLink="/auth/register" class="text-[#2A9D8F] transition hover:underline dark:text-primary">
+          Sign Up
+        </a>
+      </p>
+    </div>
+  </div>
+</div>

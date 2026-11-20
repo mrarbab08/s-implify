@@ -1,0 +1,135 @@
+@import 'tippy.js/dist/tippy.css';
+@import 'highlight.js/styles/monokai-sublime.css';
+/* @import 'swiper/swiper-bundle.min.css'; */
+@import '../../../node_modules/swiper/swiper-bundle.min.css';
+@import 'ngx-lightbox/lightbox.css';
+@import '@ng-select/ng-select/themes/default.theme.css';
+@import 'quill/dist/quill.snow.css';
+@import 'file-upload-with-preview/dist/style.css';
+@import 'flatpickr/dist/flatpickr.min.css';
+@import 'nouislider/dist/nouislider.min.css';
+@import 'tailwind.css';
+
+/* Angular 21+ enter/leave animations (no legacy @angular/animations) */
+.anim-enter-toggle {
+    animation: anim-enter-toggle 100ms ease-out;
+}
+@keyframes anim-enter-toggle {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+.anim-leave-toggle {
+    animation: anim-leave-toggle 75ms ease-in forwards;
+}
+@keyframes anim-leave-toggle {
+    from {
+        opacity: 1;
+        transform: scale(1);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+}
+
+/* Accordion collapse (replaces slideDownUp trigger) */
+.accordion-content {
+    overflow: hidden;
+    max-height: 2000px;
+    opacity: 1;
+    transition: max-height 300ms ease, opacity 300ms ease;
+}
+
+/* Score strip donuts — hovering a legend row dims the non-matching slices */
+.score-donut .apexcharts-donut-slice-0,
+.score-donut .apexcharts-donut-slice-1,
+.score-donut .apexcharts-donut-slice-2 {
+    transition: opacity 160ms ease;
+}
+.score-donut[data-hl="0"] .apexcharts-donut-slice-1,
+.score-donut[data-hl="0"] .apexcharts-donut-slice-2,
+.score-donut[data-hl="1"] .apexcharts-donut-slice-0,
+.score-donut[data-hl="1"] .apexcharts-donut-slice-2,
+.score-donut[data-hl="2"] .apexcharts-donut-slice-0,
+.score-donut[data-hl="2"] .apexcharts-donut-slice-1 {
+    opacity: 0.45;
+}
+
+/* Dashboard cards — subtle lift on hover (every panel on the dashboard) */
+@media (hover: hover) and (pointer: fine) {
+    .dashboard-page .panel {
+        transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+    }
+    .dashboard-page .panel:hover {
+        transform: translateY(-4px);
+        border-color: rgba(42, 157, 143, 0.35);
+        box-shadow: 0 2px 4px rgba(15, 23, 42, 0.08), 0 28px 56px -24px rgba(15, 23, 42, 0.38);
+    }
+    .dark .dashboard-page .panel:hover {
+        border-color: rgba(94, 234, 212, 0.3);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), 0 28px 56px -24px rgba(0, 0, 0, 0.8);
+    }
+}
+
+/* Campuses Overview chart — pointer cursor + soft bar shadow + gradient legend swatches */
+.campuses-chart-scroll {
+    cursor: pointer;
+}
+.campuses-chart-scroll .apexcharts-bar-area {
+    filter: drop-shadow(0 4px 5px rgba(15, 23, 42, 0.22));
+    transition: filter 0.18s ease;
+    /* Visually separate the two bars inside each campus group — card-colored stroke */
+    stroke: #ffffff;
+    stroke-width: 3px;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+}
+.dark .campuses-chart-scroll .apexcharts-bar-area {
+    stroke: #0e1726;
+}
+.campuses-chart-scroll:hover .apexcharts-bar-area {
+    filter: drop-shadow(0 6px 8px rgba(15, 23, 42, 0.3));
+}
+/* Value chips drawn by the component's chip decorator — fade in on draw */
+.campus-chip {
+    animation: campus-chip-in 0.45s ease-out 0.2s both;
+}
+@keyframes campus-chip-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+/* Bottom legend — rounded square swatches filled with the same gradients */
+.apexcharts-legend .apexcharts-legend-series:nth-child(1) .apexcharts-legend-marker {
+    background: linear-gradient(to bottom, #5fc4b6, #1f6e63) !important;
+    border-radius: 4px !important;
+}
+.apexcharts-legend .apexcharts-legend-series:nth-child(2) .apexcharts-legend-marker {
+    background: linear-gradient(to bottom, #f4a261, #c14a24) !important;
+    border-radius: 4px !important;
+}
+.apexcharts-legend .apexcharts-legend-series .apexcharts-legend-text {
+    font-weight: 600 !important;
+    color: #475569 !important;
+}
+.accordion-content.accordion-collapsed {
+    max-height: 0;
+    opacity: 0;
+}
+
+/* Un-bold all text: override Tailwind font-weight utilities (font-medium,
+   font-semibold, font-bold, font-extrabold, ...) everywhere in the app. */
+*,
+*::before,
+*::after {
+    font-weight: 400 !important;
+}

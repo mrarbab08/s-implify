@@ -1,0 +1,111 @@
+<div class="h-auto !p-3 sm:!p-4">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-stretch">
+        <div class="min-h-0 min-w-0 flex-1">
+            <div
+                #tableScrollHost
+                class="standards-matrix-table-scroll rounded-lg border border-slate-100 dark:border-slate-700/80"
+                [style.height.px]="matrixPanelHeightPx"
+            >
+                <table
+                    class="table-hover text-xs [&_thead_tr_th]:!px-2 [&_thead_tr_th]:!py-2 [&_tbody_tr_td]:!px-2 [&_tbody_tr_td]:!py-0"
+                >
+                    <thead class="sticky top-0 z-[1] bg-slate-50 dark:bg-slate-800/90">
+                        <tr class="h-9">
+                            <th class="sticky left-0 z-[2] min-w-[9rem] whitespace-nowrap bg-slate-50 dark:bg-slate-800/90">
+                                STUDENT NAME
+                            </th>
+                            <th class="min-w-[5.5rem] whitespace-nowrap text-center">PERCENT SCORE</th>
+                            <th
+                                *ngFor="let code of standardCodes; let i = index"
+                                class="min-w-[4.25rem] cursor-pointer select-none whitespace-nowrap text-center transition hover:text-primary"
+                                [attr.aria-sort]="standardColumnAriaSort(i)"
+                                (click)="toggleStandardSort(i)"
+                                [title]="'Sort by ' + code"
+                            >
+                                <span class="inline-flex items-center justify-center gap-0.5">
+                                    {{ code }}
+                                    <svg
+                                        width="14"
+                                        height="14"
+                                        viewBox="0 0 14 14"
+                                        fill="none"
+                                        class="shrink-0"
+                                        aria-hidden="true"
+                                    >
+                                        <polygon
+                                            points="3.11,6.25 10.89,6.25 7,1.75"
+                                            fill="currentColor"
+                                            class="text-black/20 dark:text-white-dark/30"
+                                            [class.!text-primary]="
+                                                standardSortColumnIndex === i && standardSortDir === 'asc'
+                                            "
+                                        />
+                                        <polygon
+                                            points="7,12.25 10.89,7.75 3.11,7.75"
+                                            fill="currentColor"
+                                            class="text-black/20 dark:text-white-dark/30"
+                                            [class.!text-primary]="
+                                                standardSortColumnIndex === i && standardSortDir === 'desc'
+                                            "
+                                        />
+                                    </svg>
+                                </span>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr *ngFor="let row of sortedMatrixRows" class="h-8">
+                            <td
+                                class="sticky left-0 z-[1] whitespace-nowrap bg-white font-semibold text-gray-600 dark:bg-[#0e1726]"
+                            >
+                                {{ row.studentName }}
+                            </td>
+                            <td class="text-center font-medium">{{ row.percentScore }}%</td>
+                            <td *ngFor="let pct of row.standardPercents; let i = index" class="p-0 text-center">
+                                <span
+                                    class="inline-flex min-w-[2.75rem] justify-center rounded px-1.5 py-1 text-[11px] font-semibold"
+                                    [ngClass]="cellToneClass(pct)"
+                                    >{{ pct }}%</span
+                                >
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div
+            class="flex w-full shrink-0 flex-col lg:w-[17rem] xl:w-[18rem]"
+            [style.height.px]="matrixPanelHeightPx"
+        >
+            <div
+                class="mb-1 flex h-7 shrink-0 items-center text-[11px] font-semibold uppercase tracking-wide text-[#0e1726] dark:text-white-light"
+            >
+                Class Average
+            </div>
+            <div
+                #classAvgChartContainer
+                class="standards-matrix-chart-plot min-h-0 flex-1 overflow-x-hidden rounded-lg border border-slate-100 [scrollbar-width:thin] dark:border-slate-700/80"
+                [class.overflow-y-auto]="useClassAvgVerticalScroll"
+                [class.overflow-y-hidden]="!useClassAvgVerticalScroll"
+            >
+                <apx-chart
+                    *ngIf="chartOptions"
+                    [series]="chartOptions.series"
+                    [chart]="chartOptions.chart"
+                    [dataLabels]="chartOptions.dataLabels"
+                    [stroke]="chartOptions.stroke"
+                    [colors]="chartOptions.colors"
+                    [legend]="chartOptions.legend"
+                    [plotOptions]="chartOptions.plotOptions"
+                    [xaxis]="chartOptions.xaxis"
+                    [yaxis]="chartOptions.yaxis"
+                    [grid]="chartOptions.grid"
+                    [tooltip]="chartOptions.tooltip"
+                    class="block w-full min-w-0 rounded-lg bg-white dark:bg-black"
+                >
+                </apx-chart>
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,101 @@
+﻿<div class="flex min-h-screen flex-col bg-white text-[#0e1726]">
+    <main class="flex flex-1 items-center justify-center px-6 py-10 sm:px-10">
+        <div class="w-full max-w-4xl">
+            <div class="text-center">
+                <img
+                    src="/assets/images/logo.jpeg"
+                    alt="S-IMPLIFY"
+                    class="mx-auto h-20 w-auto object-contain md:h-24"
+                />
+                <h1 class="mt-6 text-2xl text-[#0e1726] sm:text-3xl">Select User Role</h1>
+                <p class="mt-1.5 text-sm text-gray-500">
+                    To continue, select your role from below given options
+                </p>
+            </div>
+
+            @if (errorMsg) {
+            <div
+                class="mx-auto mt-6 flex max-w-xl items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+            >
+                <icon-info-circle class="mt-0.5 h-5 w-5 shrink-0" />
+                <span>{{ errorMsg }}</span>
+            </div>
+            }
+
+            <div
+                class="mt-10 grid grid-cols-2"
+                [class.md:grid-cols-1]="roles.length === 1"
+                [class.md:grid-cols-2]="roles.length === 2"
+                [class.md:grid-cols-3]="roles.length === 3"
+                [class.md:grid-cols-4]="roles.length >= 4"
+            >
+                @for (role of roles; track role.userRoleAssignmentId; let i = $index; let c =
+                $count) {
+                <button
+                    type="button"
+                    [class]="roleCellClass(i, c)"
+                    [disabled]="selectingId != null"
+                    (click)="selectRole(role)"
+                >
+                    @if (isSelecting(role)) {
+                    <svg
+                        class="h-7 w-7 animate-spin text-[#17375e]"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                    >
+                        <circle
+                            class="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            stroke-width="4"
+                        ></circle>
+                        <path
+                            class="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8v8H4z"
+                        ></path>
+                    </svg>
+                    } @else {
+                    <svg viewBox="0 0 24 24" fill="currentColor" class="h-7 w-7 text-[#17375e]">
+                        <path
+                            d="M12 12.5a4.25 4.25 0 1 0 0-8.5 4.25 4.25 0 0 0 0 8.5Zm0 2.25c-4.28 0-7.75 2.4-7.75 5.75V22h15.5v-1.5c0-3.35-3.47-5.75-7.75-5.75Z"
+                        />
+                    </svg>
+                    }
+                    <span class="text-sm text-gray-600 transition group-hover:text-[#17375e]">
+                        {{ roleTitle(role) }}
+                    </span>
+                </button>
+                }
+            </div>
+
+            <div class="mt-10 text-center">
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-2 text-base text-[#2A9D8F] transition hover:opacity-80 disabled:opacity-50"
+                    [disabled]="selectingId != null"
+                    (click)="signOut()"
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        class="h-5 w-5"
+                    >
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <path d="m16 17 5-5-5-5"></path>
+                        <path d="M21 12H9"></path>
+                    </svg>
+                    Sign Out
+                </button>
+            </div>
+        </div>
+    </main>
+</div>

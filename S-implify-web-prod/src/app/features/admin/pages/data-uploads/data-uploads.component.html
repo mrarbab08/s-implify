@@ -1,0 +1,775 @@
+<div class="space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold dark:text-white-light">Data uploads</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Uses <strong>District</strong> and <strong>School year</strong> from the header. Uploads that are
+            quarter-scoped also require <strong>Quarter</strong> (growth sheets, student standards, individual
+            attendance).
+        </p>
+    </div>
+
+    @if (!districtContext.isAttendanceContextReady()) {
+    <div class="rounded-lg bg-warning/10 px-4 py-3 text-sm text-warning">
+        Select district and academic year in the top bar before uploading.
+    </div>
+    }
+
+    <ul class="flex flex-wrap gap-2 border-b border-white-light pb-1 dark:border-[#191e3a]">
+        @for (tab of tabs; track tab.id) {
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === tab.id ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab(tab.id)"
+            >
+                {{ tab.label }}
+            </button>
+        </li>
+        }
+    </ul>
+
+    @if (activeTab === 'rawscores') {
+    <div class="panel space-y-5">
+        <div>
+            <h2 class="text-lg font-semibold dark:text-white-light">Raw scores</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                <code>POST /api/rawscores-uploads/upload</code> — CSV or Excel; replaces prior raw scores for this
+                district and academic year.
+            </p>
+        </div>
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">File</label>
+                <input
+                    type="file"
+                    accept=".csv,.xlsx,.xls"
+                    class="form-input max-w-xs text-sm"
+                    (change)="onRawscoresFile($event)"
+                />
+            </div>
+            <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="rawscoresBusy || !rawscoresFile || !districtContext.isAttendanceContextReady()"
+                (click)="submitRawscores()"
+            >
+                @if (rawscoresBusy) { Uploading… } @else { Import raw scores }
+            </button>
+        </div>
+        @if (rawscoresMsg) {
+        <p class="text-sm text-gray-700 dark:text-gray-300" [class.text-danger]="rawscoresMsg.toLowerCase().includes('fail')">
+            {{ rawscoresMsg }}
+        </p>
+        }
+        <div class="border-t border-white-light pt-4 dark:border-[#191e3a]">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold dark:text-white-light">Uploaded files</h3>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="rawscoresHistoryLoading || !districtContext.isAttendanceContextReady()"
+                    (click)="refreshRawscoresHistory()"
+                >
+                    Refresh
+                </button>
+            </div>
+            @if (!districtContext.isAttendanceContextReady()) {
+            <p class="text-xs text-gray-500">Select district and year to view uploads.</p>
+            } @else if (rawscoresHistoryLoading) {
+            <p class="text-xs text-gray-500">Loading…</p>
+            } @else if (!rawscoresHistory.length) {
+            <p class="text-xs text-gray-500">No uploads for this district and year yet.</p>
+            } @else {
+            <div class="table-responsive">
+                <table class="table-hover min-w-[720px] text-sm">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Uploaded At</th>
+                            <th>Uploaded By</th>
+                            <th class="text-right">Rows</th>
+                            <th class="text-right">Updated</th>
+                            <th>Status</th>
+                            <th class="w-10 text-center">Errors</th>
+                            <th class="w-10 text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (r of rawscoresHistory; track r.rawscoresUploadId) {
+                        <tr>
+                            <td>{{ r.fileName || '—' }}</td>
+                            <td>{{ r.uploadedAt | date : 'medium' }}</td>
+                            <td>{{ r.uploadedBy || '—' }}</td>
+                            <td class="text-right">{{ r.recordCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.updatedRowCount ?? '—' }}</td>
+                            <td><span [ngClass]="statusBadgeClass(r.status)">{{ r.status || '—' }}</span></td>
+                            <ng-container [ngTemplateOutlet]="uploadErrorsCell" [ngTemplateOutletContext]="{ row: r }" />
+                            <ng-container
+                                [ngTemplateOutlet]="uploadDeleteCell"
+                                [ngTemplateOutletContext]="{ tab: 'rawscores', uploadId: r.rawscoresUploadId, fileName: r.fileName }"
+                            />
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    @if (activeTab === 'growth') {
+    <div class="panel space-y-5">
+        <div>
+            <h2 class="text-lg font-semibold dark:text-white-light">Growth sheets</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                <code>POST /api/growth-sheet/upload</code> — CSV or Excel; async processing (poll upload status).
+            </p>
+        </div>
+        @if (!districtContext.isGrowthContextReady()) {
+        <div class="rounded bg-gray-100 px-3 py-2 text-xs text-gray-600 dark:bg-dark/40 dark:text-gray-300">
+            Choose <strong>Quarter</strong> in the header for this upload.
+        </div>
+        }
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">File</label>
+                <input type="file" accept=".csv,.xlsx,.xls" class="form-input max-w-xs text-sm" (change)="onGrowthFile($event)" />
+            </div>
+            <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="growthBusy || !growthFile || !districtContext.isGrowthContextReady()"
+                (click)="submitGrowthSheet()"
+            >
+                @if (growthBusy) { Uploading… } @else { Upload growth sheet }
+            </button>
+        </div>
+        @if (growthMsg) {
+        <p class="text-sm text-gray-700 dark:text-gray-300" [class.text-danger]="growthMsg.toLowerCase().includes('fail')">
+            {{ growthMsg }}
+        </p>
+        }
+        <div class="border-t border-white-light pt-4 dark:border-[#191e3a]">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold dark:text-white-light">Uploaded files</h3>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="growthHistoryLoading || !districtContext.isGrowthContextReady()"
+                    (click)="refreshGrowthHistory()"
+                >
+                    Refresh
+                </button>
+            </div>
+            @if (!districtContext.isGrowthContextReady()) {
+            <p class="text-xs text-gray-500">Select district, year, and quarter to view uploads.</p>
+            } @else if (growthHistoryLoading) {
+            <p class="text-xs text-gray-500">Loading…</p>
+            } @else if (!growthHistory.length) {
+            <p class="text-xs text-gray-500">No uploads for this district, year, and quarter yet.</p>
+            } @else {
+            <div class="table-responsive">
+                <table class="table-hover min-w-[960px] text-sm">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Quarter</th>
+                            <th>Uploaded At</th>
+                            <th>Uploaded By</th>
+                            <th class="text-right">Rows</th>
+                            <th class="text-right">Skipped</th>
+                            <th class="text-right">Updated</th>
+                            <th>Status</th>
+                            <th class="w-10 text-center">Errors</th>
+                            <th class="w-10 text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (r of growthHistory; track r.growthSheetUploadId) {
+                        <tr>
+                            <td>{{ r.fileName || '—' }}</td>
+                            <td>{{ r.quarterCode || '—' }}</td>
+                            <td>{{ r.uploadedAt | date : 'medium' }}</td>
+                            <td>{{ r.uploadedBy || '—' }}</td>
+                            <td class="text-right">{{ r.recordCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.skippedCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.updatedCount ?? '—' }}</td>
+                            <td><span [ngClass]="statusBadgeClass(r.status)">{{ r.status || '—' }}</span></td>
+                            <ng-container [ngTemplateOutlet]="uploadErrorsCell" [ngTemplateOutletContext]="{ row: r }" />
+                            <ng-container
+                                [ngTemplateOutlet]="uploadDeleteCell"
+                                [ngTemplateOutletContext]="{ tab: 'growth', uploadId: r.growthSheetUploadId, fileName: r.fileName }"
+                            />
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    @if (activeTab === 'attendance') {
+    <div class="panel space-y-5">
+        <div>
+            <h2 class="text-lg font-semibold dark:text-white-light">Campus attendance daily</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                <code>POST /api/campus-attendance/upload</code> — Excel (.xlsx); one sheet per campus (sheet name =
+                campus code).
+            </p>
+        </div>
+        <div class="flex flex-wrap gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">District goal %</label>
+                <input type="number" min="0" max="100" class="form-input w-28 text-sm" [(ngModel)]="campusDistrictGoal" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Est. $ / student</label>
+                <input type="number" min="0" step="0.01" class="form-input w-32 text-sm" [(ngModel)]="campusEstimatePerStudent" />
+            </div>
+        </div>
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">File</label>
+                <input
+                    #attendanceFileInput
+                    type="file"
+                    accept=".xlsx,.xls"
+                    class="form-input max-w-xs text-sm"
+                    (change)="onAttendanceFile($event)"
+                />
+            </div>
+            <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="attendanceBusy || !attendanceFile || !districtContext.isAttendanceContextReady()"
+                (click)="submitCampusAttendance()"
+            >
+                @if (attendanceBusy) { Uploading… } @else { Upload attendance }
+            </button>
+        </div>
+        @if (attendanceMsg) {
+        <p class="text-sm text-gray-700 dark:text-gray-300" [class.text-danger]="attendanceMsg.toLowerCase().includes('fail')">
+            {{ attendanceMsg }}
+        </p>
+        }
+        <div class="border-t border-white-light pt-4 dark:border-[#191e3a]">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold dark:text-white-light">Uploaded files</h3>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="attendanceHistoryLoading || !districtContext.isAttendanceContextReady()"
+                    (click)="refreshAttendanceHistory()"
+                >
+                    Refresh
+                </button>
+            </div>
+            @if (!districtContext.isAttendanceContextReady()) {
+            <p class="text-xs text-gray-500">Select district and year to view uploads.</p>
+            } @else if (attendanceHistoryLoading) {
+            <p class="text-xs text-gray-500">Loading…</p>
+            } @else if (!attendanceHistory.length) {
+            <p class="text-xs text-gray-500">No uploads for this district and year yet.</p>
+            } @else {
+            <div class="table-responsive">
+                <table class="table-hover min-w-[960px] text-sm">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Uploaded At</th>
+                            <th>Uploaded By</th>
+                            <th class="text-right">Rows</th>
+                            <th class="text-right">District goal %</th>
+                            <th class="text-right">Est. $ / student</th>
+                            <th>Status</th>
+                            <th class="w-10 text-center">Errors</th>
+                            <th class="w-10 text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (r of attendanceHistory; track r.campusAttendanceUploadId) {
+                        <tr>
+                            <td>{{ r.fileName || '—' }}</td>
+                            <td>{{ r.uploadedAt | date : 'medium' }}</td>
+                            <td>{{ r.uploadedBy || '—' }}</td>
+                            <td class="text-right">{{ r.recordCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.districtGoal ?? '—' }}</td>
+                            <td class="text-right">{{ r.estimatedDollarsPerStudent ?? '—' }}</td>
+                            <td><span [ngClass]="statusBadgeClass(r.status)">{{ r.status || '—' }}</span></td>
+                            <ng-container [ngTemplateOutlet]="uploadErrorsCell" [ngTemplateOutletContext]="{ row: r }" />
+                            <ng-container
+                                [ngTemplateOutlet]="uploadDeleteCell"
+                                [ngTemplateOutletContext]="{ tab: 'attendance', uploadId: r.campusAttendanceUploadId, fileName: r.fileName }"
+                            />
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    @if (activeTab === 't-tess') {
+    <div class="panel space-y-5">
+        <div>
+            <h2 class="text-lg font-semibold dark:text-white-light">T-TESS teacher assessment</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                <code>POST /api/teacher-assessment/upload</code> — CSV or Excel with evaluation / walkthrough /
+                observation columns.
+            </p>
+        </div>
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">File</label>
+                <input type="file" accept=".csv,.xlsx,.xls" class="form-input max-w-xs text-sm" (change)="onTTessFile($event)" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Score multiplier</label>
+                <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    class="form-input w-28 text-sm"
+                    [(ngModel)]="tTessScoreMultiplier"
+                    title="Walkthrough/Observation scores are multiplied by this value (default 20)."
+                />
+            </div>
+            <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="tTessBusy || !tTessFile || !districtContext.isAttendanceContextReady()"
+                (click)="submitTTess()"
+            >
+                @if (tTessBusy) { Uploading… } @else { Upload T-TESS sheet }
+            </button>
+        </div>
+        @if (tTessMsg) {
+        <p class="text-sm text-gray-700 dark:text-gray-300" [class.text-danger]="tTessMsg.toLowerCase().includes('fail')">
+            {{ tTessMsg }}
+        </p>
+        }
+        <div class="border-t border-white-light pt-4 dark:border-[#191e3a]">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold dark:text-white-light">Uploaded files</h3>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="tTessHistoryLoading || !districtContext.isAttendanceContextReady()"
+                    (click)="refreshTTessHistory()"
+                >
+                    Refresh
+                </button>
+            </div>
+            @if (!districtContext.isAttendanceContextReady()) {
+            <p class="text-xs text-gray-500">Select district and year to view uploads.</p>
+            } @else if (tTessHistoryLoading) {
+            <p class="text-xs text-gray-500">Loading…</p>
+            } @else if (!tTessHistory.length) {
+            <p class="text-xs text-gray-500">No T-TESS uploads for this district and year yet.</p>
+            } @else {
+            <div class="table-responsive">
+                <table class="table-hover min-w-[960px] text-sm">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Uploaded At</th>
+                            <th>Uploaded By</th>
+                            <th class="text-right">Score multiplier</th>
+                            <th class="text-right">Rows</th>
+                            <th class="text-right">Skipped</th>
+                            <th class="text-right">Inserted</th>
+                            <th class="text-right">Updated</th>
+                            <th>Status</th>
+                            <th class="w-10 text-center">Errors</th>
+                            <th class="w-10 text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (r of tTessHistory; track r.teacherAssessmentUploadId) {
+                        <tr>
+                            <td>{{ r.fileName || '—' }}</td>
+                            <td>{{ r.uploadedAt | date : 'medium' }}</td>
+                            <td>{{ r.uploadedBy || '—' }}</td>
+                            <td class="text-right">{{ r.scoreMultiplier ?? '—' }}</td>
+                            <td class="text-right">{{ r.recordCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.skippedCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.insertedCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.updatedCount ?? '—' }}</td>
+                            <td><span [ngClass]="statusBadgeClass(r.status)">{{ r.status || '—' }}</span></td>
+                            <ng-container [ngTemplateOutlet]="uploadErrorsCell" [ngTemplateOutletContext]="{ row: r }" />
+                            <ng-container
+                                [ngTemplateOutlet]="uploadDeleteCell"
+                                [ngTemplateOutletContext]="{ tab: 't-tess', uploadId: r.teacherAssessmentUploadId, fileName: r.fileName }"
+                            />
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    @if (activeTab === 'student-standards') {
+    <div class="panel space-y-5">
+        <div>
+            <h2 class="text-lg font-semibold dark:text-white-light">Student standards</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                <code>POST /api/student-standards/upload</code> — CSV or Excel; requires Local ID, grade, subject, and
+                standard score columns.
+            </p>
+        </div>
+        @if (!districtContext.isGrowthContextReady()) {
+        <div class="rounded bg-gray-100 px-3 py-2 text-xs text-gray-600 dark:bg-dark/40 dark:text-gray-300">
+            Choose <strong>Quarter</strong> in the header for this upload.
+        </div>
+        }
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">File</label>
+                <input type="file" accept=".csv,.xlsx,.xls" class="form-input max-w-xs text-sm" (change)="onStandardsFile($event)" />
+            </div>
+            <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="standardsBusy || !standardsFile || !districtContext.isGrowthContextReady()"
+                (click)="submitStudentStandards()"
+            >
+                @if (standardsBusy) { Uploading… } @else { Upload standards sheet }
+            </button>
+        </div>
+        @if (standardsMsg) {
+        <p class="text-sm text-gray-700 dark:text-gray-300" [class.text-danger]="standardsMsg.toLowerCase().includes('fail')">
+            {{ standardsMsg }}
+        </p>
+        }
+        <div class="border-t border-white-light pt-4 dark:border-[#191e3a]">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold dark:text-white-light">Uploaded files</h3>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="standardsHistoryLoading || !districtContext.isGrowthContextReady()"
+                    (click)="refreshStandardsHistory()"
+                >
+                    Refresh
+                </button>
+            </div>
+            @if (!districtContext.isGrowthContextReady()) {
+            <p class="text-xs text-gray-500">Select district, year, and quarter to view uploads.</p>
+            } @else if (standardsHistoryLoading) {
+            <p class="text-xs text-gray-500">Loading…</p>
+            } @else if (!standardsHistory.length) {
+            <p class="text-xs text-gray-500">No student standards uploads for this scope yet.</p>
+            } @else {
+            <div class="table-responsive">
+                <table class="table-hover min-w-[880px] text-sm">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Quarter</th>
+                            <th>Uploaded At</th>
+                            <th>Uploaded By</th>
+                            <th class="text-right">Rows</th>
+                            <th class="text-right">Skipped</th>
+                            <th class="text-right">Inserted</th>
+                            <th class="text-right">Updated</th>
+                            <th>Status</th>
+                            <th class="w-10 text-center">Errors</th>
+                            <th class="w-10 text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (r of standardsHistory; track r.studentStandardsUploadId) {
+                        <tr>
+                            <td>{{ r.fileName || '—' }}</td>
+                            <td>{{ r.quarterCode || '—' }}</td>
+                            <td>{{ r.uploadedAt | date : 'medium' }}</td>
+                            <td>{{ r.uploadedBy || '—' }}</td>
+                            <td class="text-right">{{ r.recordCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.skippedCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.insertedCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.updatedCount ?? '—' }}</td>
+                            <td><span [ngClass]="statusBadgeClass(r.status)">{{ r.status || '—' }}</span></td>
+                            <ng-container [ngTemplateOutlet]="uploadErrorsCell" [ngTemplateOutletContext]="{ row: r }" />
+                            <ng-container
+                                [ngTemplateOutlet]="uploadDeleteCell"
+                                [ngTemplateOutletContext]="{ tab: 'student-standards', uploadId: r.studentStandardsUploadId, fileName: r.fileName }"
+                            />
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    @if (activeTab === 'individual-attendance') {
+    <div class="panel space-y-5">
+        <div>
+            <h2 class="text-lg font-semibold dark:text-white-light">Individual attendance</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                <code>POST /api/individual-attendance/upload</code> — CSV or Excel; per-student attendance by quarter.
+            </p>
+        </div>
+        @if (!districtContext.isGrowthContextReady()) {
+        <div class="rounded bg-gray-100 px-3 py-2 text-xs text-gray-600 dark:bg-dark/40 dark:text-gray-300">
+            Choose <strong>Quarter</strong> in the header for this upload.
+        </div>
+        }
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">File</label>
+                <input type="file" accept=".csv,.xlsx,.xls" class="form-input max-w-xs text-sm" (change)="onIndividualFile($event)" />
+            </div>
+            <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="individualBusy || !individualFile || !districtContext.isGrowthContextReady()"
+                (click)="submitIndividualAttendance()"
+            >
+                @if (individualBusy) { Uploading… } @else { Upload individual attendance }
+            </button>
+        </div>
+        @if (individualMsg) {
+        <p class="text-sm text-gray-700 dark:text-gray-300" [class.text-danger]="individualMsg.toLowerCase().includes('fail')">
+            {{ individualMsg }}
+        </p>
+        }
+        <div class="border-t border-white-light pt-4 dark:border-[#191e3a]">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold dark:text-white-light">Uploaded files</h3>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="individualHistoryLoading || !districtContext.isGrowthContextReady()"
+                    (click)="refreshIndividualHistory()"
+                >
+                    Refresh
+                </button>
+            </div>
+            @if (!districtContext.isGrowthContextReady()) {
+            <p class="text-xs text-gray-500">Select district, year, and quarter to view uploads.</p>
+            } @else if (individualHistoryLoading) {
+            <p class="text-xs text-gray-500">Loading…</p>
+            } @else if (!individualHistory.length) {
+            <p class="text-xs text-gray-500">No individual attendance uploads for this scope yet.</p>
+            } @else {
+            <div class="table-responsive">
+                <table class="table-hover min-w-[880px] text-sm">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Quarter</th>
+                            <th>Uploaded At</th>
+                            <th>Uploaded By</th>
+                            <th class="text-right">Rows</th>
+                            <th class="text-right">Skipped</th>
+                            <th class="text-right">Inserted</th>
+                            <th class="text-right">Updated</th>
+                            <th>Status</th>
+                            <th class="w-10 text-center">Errors</th>
+                            <th class="w-10 text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (r of individualHistory; track r.individualAttendanceUploadId) {
+                        <tr>
+                            <td>{{ r.fileName || '—' }}</td>
+                            <td>{{ r.quarterCode || '—' }}</td>
+                            <td>{{ r.uploadedAt | date : 'medium' }}</td>
+                            <td>{{ r.uploadedBy || '—' }}</td>
+                            <td class="text-right">{{ r.recordCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.skippedCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.insertedCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.updatedCount ?? '—' }}</td>
+                            <td><span [ngClass]="statusBadgeClass(r.status)">{{ r.status || '—' }}</span></td>
+                            <ng-container [ngTemplateOutlet]="uploadErrorsCell" [ngTemplateOutletContext]="{ row: r }" />
+                            <ng-container
+                                [ngTemplateOutlet]="uploadDeleteCell"
+                                [ngTemplateOutletContext]="{ tab: 'individual-attendance', uploadId: r.individualAttendanceUploadId, fileName: r.fileName }"
+                            />
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    @if (activeTab === 'ccmr') {
+    <div class="panel space-y-5">
+        <div>
+            <h2 class="text-lg font-semibold dark:text-white-light">CCMR workbook</h2>
+            <p class="text-xs text-gray-500 dark:text-gray-400">
+                <code>POST /api/ccmr/upload</code> — Excel (.xlsx); one worksheet per calendar month (sheet name = month).
+            </p>
+        </div>
+        <div class="flex flex-wrap items-end gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">File</label>
+                <input type="file" accept=".xlsx,.xls" class="form-input max-w-xs text-sm" (change)="onCcmrFile($event)" />
+            </div>
+            <button
+                type="button"
+                class="btn btn-primary"
+                [disabled]="ccmrBusy || !ccmrFile || !districtContext.isAttendanceContextReady()"
+                (click)="submitCcmr()"
+            >
+                @if (ccmrBusy) { Uploading… } @else { Upload CCMR workbook }
+            </button>
+        </div>
+        @if (ccmrMsg) {
+        <p class="text-sm text-gray-700 dark:text-gray-300" [class.text-danger]="ccmrMsg.toLowerCase().includes('fail')">
+            {{ ccmrMsg }}
+        </p>
+        }
+        <div class="border-t border-white-light pt-4 dark:border-[#191e3a]">
+            <div class="mb-3 flex items-center justify-between gap-2">
+                <h3 class="text-sm font-semibold dark:text-white-light">Uploaded files</h3>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="ccmrHistoryLoading || !districtContext.isAttendanceContextReady()"
+                    (click)="refreshCcmrHistory()"
+                >
+                    Refresh
+                </button>
+            </div>
+            @if (!districtContext.isAttendanceContextReady()) {
+            <p class="text-xs text-gray-500">Select district and year to view uploads.</p>
+            } @else if (ccmrHistoryLoading) {
+            <p class="text-xs text-gray-500">Loading…</p>
+            } @else if (!ccmrHistory.length) {
+            <p class="text-xs text-gray-500">No CCMR uploads for this district and year yet.</p>
+            } @else {
+            <div class="table-responsive">
+                <table class="table-hover min-w-[880px] text-sm">
+                    <thead>
+                        <tr>
+                            <th>File</th>
+                            <th>Uploaded At</th>
+                            <th>Uploaded By</th>
+                            <th class="text-right">Rows</th>
+                            <th class="text-right">Skipped</th>
+                            <th class="text-right">Inserted</th>
+                            <th class="text-right">Updated</th>
+                            <th>Status</th>
+                            <th class="w-10 text-center">Errors</th>
+                            <th class="w-10 text-center"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (r of ccmrHistory; track r.ccmrSheetUploadId) {
+                        <tr>
+                            <td>{{ r.fileName || '—' }}</td>
+                            <td>{{ r.uploadedAt | date : 'medium' }}</td>
+                            <td>{{ r.uploadedBy || '—' }}</td>
+                            <td class="text-right">{{ r.recordCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.skippedCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.insertedCount ?? '—' }}</td>
+                            <td class="text-right">{{ r.updatedCount ?? '—' }}</td>
+                            <td><span [ngClass]="statusBadgeClass(r.status)">{{ r.status || '—' }}</span></td>
+                            <ng-container [ngTemplateOutlet]="uploadErrorsCell" [ngTemplateOutletContext]="{ row: r }" />
+                            <ng-container
+                                [ngTemplateOutlet]="uploadDeleteCell"
+                                [ngTemplateOutletContext]="{ tab: 'ccmr', uploadId: r.ccmrSheetUploadId, fileName: r.fileName }"
+                            />
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+    </div>
+    }
+</div>
+
+<ng-template #uploadErrorsCell let-row="row">
+    <td class="text-center">
+        @if (hasUploadErrors(row)) {
+        <button
+            type="button"
+            class="inline-flex text-danger hover:opacity-80"
+            title="View upload errors"
+            (click)="openUploadErrorModal(row.fileName || 'Upload', row)"
+        >
+            <icon-info-circle class="h-5 w-5" />
+        </button>
+        } @else {
+        <span class="text-gray-400">—</span>
+        }
+    </td>
+</ng-template>
+
+<ng-template #uploadDeleteCell let-tab="tab" let-uploadId="uploadId" let-fileName="fileName">
+    <td class="text-center">
+        @if (uploadId != null) {
+        <button
+            type="button"
+            class="inline-flex text-danger hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Delete upload"
+            [disabled]="isDeletingUpload(tab, uploadId)"
+            (click)="confirmDeleteUpload(tab, uploadId, fileName)"
+        >
+            <icon-trash-lines class="h-5 w-5" />
+        </button>
+        } @else {
+        <span class="text-gray-400">—</span>
+        }
+    </td>
+</ng-template>
+
+<ngx-custom-modal #uploadErrorModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-danger/10 text-danger dark:bg-danger/20"
+            >
+                <icon-info-circle class="h-4 w-4" />
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">{{ uploadErrorModalTitle }}</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {{ uploadErrorSubtitle }}
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (uploadErrorRows.length) {
+        <div class="datatable records-datatable upload-error-datatable">
+            <ng-datatable
+                [rows]="uploadErrorRows"
+                [columns]="uploadErrorCols"
+                [columnFilter]="false"
+                [sortable]="false"
+                [search]="uploadErrorSearch"
+                [pageSize]="10"
+                skin="whitespace-nowrap table-hover text-xs"
+            >
+            </ng-datatable>
+        </div>
+        } @else if (uploadErrorRawText) {
+        <p class="rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400">
+            {{ uploadErrorRawText }}
+        </p>
+        } @else {
+        <p class="rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400">
+            No error details available.
+        </p>
+        }
+    </ng-template>
+</ngx-custom-modal>

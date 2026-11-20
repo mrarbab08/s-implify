@@ -1,0 +1,5 @@
+{
+  "provider": "gemini",
+  "apiKey": "YOUR_API_KEY_HERE",
+  "model": "gemini-3.5-flash-lite"
+}

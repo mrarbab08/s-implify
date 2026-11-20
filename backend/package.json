@@ -1,0 +1,17 @@
+{
+  "name": "s-implify-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local S-Implify API server (Express + SQLite) matching the S-Implify web frontend contract",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "multer": "^2.0.1",
+    "xlsx": "^0.18.5"
+  }
+}

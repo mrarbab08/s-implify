@@ -1,0 +1,36 @@
+# Dependencies
+node_modules/
+**/node_modules/
+
+# Build output / caches
+dist/
+build/
+.angular/
+**/dist/
+**/build/
+**/.angular/
+out/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Secrets — the real API key must never be committed
+backend/ai-config.json
+.env
+.env.*
+!.env.example
+
+# SQLite runtime sidecars (the checkpointed simplify.db is committed)
+backend/data/*.db-wal
+backend/data/*.db-shm
+
+# Large unused media at repo root (not referenced by the app)
+video.mp4
+
+# OS files
+Thumbs.db
+.DS_Store

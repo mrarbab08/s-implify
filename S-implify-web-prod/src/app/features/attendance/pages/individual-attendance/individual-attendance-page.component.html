@@ -1,0 +1,400 @@
+<div class="animation-fade-in space-y-8 pb-8">
+    @if (!districtContext.isGrowthContextReady()) {
+    <div
+        class="flex items-start gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/90 px-5 py-4 text-sm text-amber-900 shadow-sm dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-100">
+        <span
+            class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-200">
+            <icon-info-circle class="h-4 w-4" />
+        </span>
+        <div>
+            <p class="font-semibold">Context required</p>
+            <p class="mt-1 text-amber-800/90 dark:text-amber-100/80">
+                Select <strong>District</strong>, <strong>School year</strong>, and <strong>Quarter</strong> in the
+                header to load student score bands and campus rankings.
+            </p>
+        </div>
+    </div>
+    }
+
+    @if (loadError) {
+    <div
+        class="flex items-start gap-3 rounded-2xl border border-red-200/80 bg-red-50/90 px-5 py-4 text-sm text-red-900 shadow-sm dark:border-red-500/25 dark:bg-red-500/10 dark:text-red-100">
+        <span
+            class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-500/15 text-red-600 dark:text-red-300">
+            <icon-clock class="h-4 w-4" />
+        </span>
+        <div>
+            <p class="font-semibold">Could not load data</p>
+            <p class="mt-1 opacity-90">{{ loadError }}</p>
+        </div>
+    </div>
+    }
+
+    @if (loading && districtContext.isGrowthContextReady() && rankedCampuses.length === 0) {
+    <div class="grid animate-pulse gap-6 xl:grid-cols-2">
+        <div class="h-96 rounded-2xl bg-gray-100 dark:bg-[#1a2332]"></div>
+        <div class="h-96 rounded-2xl bg-gray-100 dark:bg-[#1a2332]"></div>
+    </div>
+    }
+
+    @if (rankedCampuses.length > 0) {
+    <div class="grid min-w-0 gap-6 xl:grid-cols-2">
+        <!-- Rankings table -->
+        <div
+            class="panel relative flex min-w-0 h-full flex-col overflow-hidden rounded-2xl border border-gray-100 p-0 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)] dark:border-white/[0.06] dark:shadow-none sm:p-0">
+            @if (loading) {
+            <div
+                class="absolute right-4 top-3 z-10 inline-flex items-center gap-2 rounded-full border border-gray-200/80 bg-white/95 px-3 py-1 text-xs font-medium text-gray-600 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-[#1a2332]/95 dark:text-gray-300">
+                <span class="h-1.5 w-1.5 animate-pulse rounded-full bg-primary"></span>
+                Updating…
+            </div>
+            }
+            <div class="table-responsive min-h-0 flex-1 pt-1">
+                <table class="table-hover w-full text-sm">
+                    <thead>
+                        <tr
+                            class="text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                            <th class="!px-5 !py-3 sm:!px-6">Campus</th>
+                            <th class="!px-2 !py-3 text-center">Rank</th>
+                            <th class="!px-2 !py-3 text-center text-emerald-600 dark:text-emerald-400">Green</th>
+                            <th class="!px-2 !py-3 text-center text-amber-600 dark:text-amber-400">Yellow</th>
+                            <th class="!px-2 !py-3 text-center text-red-600 dark:text-red-400">Red</th>
+                            <th class="!px-2 !py-3 text-center">Students</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-white/[0.06]">
+                        <tr *ngFor="let campus of topCampuses; let odd = odd"
+                            class="transition-colors hover:bg-primary/[0.03] dark:hover:bg-white/[0.02]"
+                            [ngClass]="{ 'bg-gray-50/50 dark:bg-white/[0.03]': odd }">
+                            <td class="!px-5 !py-4 sm:!px-6">
+                                <div class="flex items-center gap-3">
+                                    <div [class]="campusAvatarShellClass(campus.tier)">
+                                        {{ campusIcon(campus) }}
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div
+                                            class="truncate text-base font-semibold !text-slate-900 dark:!text-slate-100">
+                                            {{ campusLabel(campus) }}
+                                        </div>
+                                        <div class="text-xs !text-slate-600 dark:!text-slate-400">
+                                            Rank {{ campus.rank }} of {{ rankedCampuses.length }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="!px-2 !py-4 text-center">
+                                <span
+                                    class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-xs font-bold text-gray-700 dark:bg-[#1a2332] dark:text-gray-200">
+                                    {{ campus.rank }}
+                                </span>
+                            </td>
+                            <td class="!px-2 !py-4 text-center">
+                                <button type="button"
+                                    class="text-base font-bold tabular-nums text-emerald-600 underline-offset-2 transition hover:underline dark:text-emerald-400"
+                                    title="View students above 95% PIA"
+                                    (click)="openCampusBandRecords(campus.campusCode, campusLabel(campus), 'green')">
+                                    {{ formatBandPct(campus.studentsScoreGreen) }}
+                                </button>
+                            </td>
+                            <td class="!px-2 !py-4 text-center">
+                                <button type="button"
+                                    class="tabular-nums font-semibold text-amber-600 underline-offset-2 transition hover:underline dark:text-amber-400"
+                                    title="View students 90–95% PIA"
+                                    (click)="openCampusBandRecords(campus.campusCode, campusLabel(campus), 'yellow')">
+                                    {{ formatBandPct(campus.studentsScoreYellow) }}
+                                </button>
+                            </td>
+                            <td class="!px-2 !py-4 text-center">
+                                <button type="button"
+                                    class="tabular-nums font-semibold text-red-600 underline-offset-2 transition hover:underline dark:text-red-400"
+                                    title="View students below 90% PIA"
+                                    (click)="openCampusBandRecords(campus.campusCode, campusLabel(campus), 'red')">
+                                    {{ formatBandPct(campus.studentsScoreRed) }}
+                                </button>
+                            </td>
+                            <td
+                                class="!px-2 !py-4 text-center tabular-nums text-gray-600 dark:text-gray-300">
+                                {{ studentsDisplay(campus) }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Summary + distribution -->
+        <div class="flex min-w-0 h-full flex-col gap-6">
+            <div class="grid min-w-0 grid-cols-2 gap-3 sm:gap-4">
+                <div
+                    class="group min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-3.5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.08)] transition hover:border-primary/20 hover:shadow-md dark:border-white/[0.06] dark:bg-[#0e1726] sm:p-4">
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-blue-600 text-white shadow-md shadow-primary/20">
+                            <icon-users class="h-5 w-5" />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-400 dark:text-gray-500">
+                                Total students
+                            </p>
+                            <p class="mt-0.5 text-lg font-bold leading-none tabular-nums text-gray-900 dark:text-white sm:text-xl">
+                                {{ totalStudentsDisplay }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="group min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-3.5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.08)] transition hover:border-emerald-500/20 hover:shadow-md dark:border-white/[0.06] dark:bg-[#0e1726] sm:p-4">
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md shadow-emerald-500/20">
+                            <icon-square-check class="h-5 w-5" />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-400 dark:text-gray-500">
+                                Green (&gt;95%)
+                            </p>
+                            <p class="mt-0.5 text-lg font-bold leading-none tabular-nums text-emerald-600 dark:text-emerald-400 sm:text-xl">
+                                {{ districtGreenDisplay }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="group min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-3.5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.08)] transition hover:border-amber-500/20 hover:shadow-md dark:border-white/[0.06] dark:bg-[#0e1726] sm:p-4">
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 text-white shadow-md shadow-amber-500/25">
+                            <icon-info-circle class="h-5 w-5" />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-400 dark:text-gray-500">
+                                Yellow (90–95%)
+                            </p>
+                            <p class="mt-0.5 text-lg font-bold leading-none tabular-nums text-amber-600 dark:text-amber-400 sm:text-xl">
+                                {{ districtYellowDisplay }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div
+                    class="group min-w-0 overflow-hidden rounded-2xl border border-gray-100 bg-white p-3.5 shadow-[0_4px_20px_-8px_rgba(0,0,0,0.08)] transition hover:border-red-500/20 hover:shadow-md dark:border-white/[0.06] dark:bg-[#0e1726] sm:p-4">
+                    <div class="flex items-center gap-2.5">
+                        <div
+                            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-md shadow-red-500/20">
+                            <icon-info-circle class="h-5 w-5" />
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-[10px] font-bold uppercase leading-tight tracking-wide text-gray-400 dark:text-gray-500">
+                                Red (&lt;90%)
+                            </p>
+                            <p class="mt-0.5 text-lg font-bold leading-none tabular-nums text-red-600 dark:text-red-400 sm:text-xl">
+                                {{ districtRedDisplay }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div
+                class="panel flex-1 rounded-2xl border border-gray-100 p-5 shadow-[0_4px_24px_-12px_rgba(0,0,0,0.06)] dark:border-white/[0.06] dark:shadow-none sm:p-6">
+                <h3 class="text-sm font-bold text-gray-800 dark:text-white-light">District student score bands</h3>
+                <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                    Share of students by average Total PIA: green above 95%, yellow 90–95%, red below 90%.
+                </p>
+                <div class="mt-6 space-y-5">
+                    <div>
+                        <div class="mb-2 flex items-center justify-between gap-2 text-xs">
+                            <span class="font-bold text-emerald-600 dark:text-emerald-400">Green (&gt;95%)</span>
+                            <span class="tabular-nums text-gray-400 dark:text-gray-500">
+                                {{ formatBandPct(districtBandPct.green) }}
+                            </span>
+                        </div>
+                        <div class="h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-[#1a2332]">
+                            <div
+                                class="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-[width] duration-700 ease-out"
+                                [style.width.%]="districtBandPct.green"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="mb-2 flex items-center justify-between gap-2 text-xs">
+                            <span class="font-bold text-amber-600 dark:text-amber-400">Yellow (90–95%)</span>
+                            <span class="tabular-nums text-gray-400 dark:text-gray-500">
+                                {{ formatBandPct(districtBandPct.yellow) }}
+                            </span>
+                        </div>
+                        <div class="h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-[#1a2332]">
+                            <div
+                                class="h-full rounded-full bg-gradient-to-r from-amber-500 to-amber-400 transition-[width] duration-700 ease-out"
+                                [style.width.%]="districtBandPct.yellow"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="mb-2 flex items-center justify-between gap-2 text-xs">
+                            <span class="font-bold text-red-600 dark:text-red-400">Red (&lt;90%)</span>
+                            <span class="tabular-nums text-gray-400 dark:text-gray-500">
+                                {{ formatBandPct(districtBandPct.red) }}
+                            </span>
+                        </div>
+                        <div class="h-2.5 overflow-hidden rounded-full bg-gray-100 dark:bg-[#1a2332]">
+                            <div
+                                class="h-full rounded-full bg-gradient-to-r from-red-500 to-rose-500 transition-[width] duration-700 ease-out"
+                                [style.width.%]="districtBandPct.red"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Donut section -->
+    @if (donutCharts.length > 0) {
+    <div>
+        <div class="mb-5 flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-bold text-gray-900 dark:text-white-light">Score bands at a glance</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    All campuses by green band. Donut shows red, yellow, and green student share per campus.
+                </p>
+            </div>
+        </div>
+        <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            <div *ngFor="let chartData of donutCharts"
+                class="group relative overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-[0_4px_24px_-12px_rgba(0,0,0,0.08)] transition hover:-translate-y-0.5 hover:shadow-lg dark:border-white/[0.06] dark:bg-[#0e1726] dark:shadow-none">
+                <div class="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/80 to-blue-500/80 opacity-90"></div>
+                <div class="p-5 pt-6">
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="min-w-0">
+                            <h3 class="truncate text-sm font-bold text-gray-800 dark:text-gray-100">
+                                {{ chartData.title }}
+                            </h3>
+                        </div>
+                        <button
+                            type="button"
+                            class="shrink-0 cursor-pointer rounded-lg bg-gray-100 px-2 py-1 text-[10px] font-bold text-gray-500 transition hover:bg-primary/10 hover:text-primary dark:bg-[#1a2332] dark:text-gray-400 dark:hover:bg-primary/20 dark:hover:text-primary"
+                            title="View all students for this campus"
+                            (click)="openCampusAllRecords(chartData.campusCode, chartData.campusName)"
+                        >
+                            {{ chartData.prefix }}
+                        </button>
+                    </div>
+                    <div
+                        class="relative mt-2 flex justify-center rounded-xl bg-gray-50/80 py-2 dark:bg-black/25">
+                        <apx-chart [series]="chartData.chartOptions.series" [chart]="chartData.chartOptions.chart"
+                            [dataLabels]="chartData.chartOptions.dataLabels" [stroke]="chartData.chartOptions.stroke"
+                            [colors]="chartData.chartOptions.colors" [legend]="chartData.chartOptions.legend"
+                            [plotOptions]="chartData.chartOptions.plotOptions" [labels]="chartData.chartOptions.labels">
+                        </apx-chart>
+                    </div>
+                    <div
+                        class="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-gray-100 bg-white/60 px-3 py-2.5 text-[11px] font-semibold dark:border-white/[0.06] dark:bg-white/[0.03]">
+                        <button type="button"
+                            class="flex items-center gap-1.5 text-red-600 underline-offset-2 transition hover:underline dark:text-red-400"
+                            title="View students below 90% PIA"
+                            (click)="openCampusBandRecords(chartData.campusCode, chartData.campusName, 'red')">
+                            <span class="h-2 w-2 rounded-full" [style.background-color]="tierColors.red.main"></span>
+                            Red {{ chartData.redPct.toFixed(1) }}%
+                        </button>
+                        <button type="button"
+                            class="flex items-center gap-1.5 text-amber-600 underline-offset-2 transition hover:underline dark:text-amber-400"
+                            title="View students 90–95% PIA"
+                            (click)="openCampusBandRecords(chartData.campusCode, chartData.campusName, 'yellow')">
+                            <span class="h-2 w-2 rounded-full" [style.background-color]="tierColors.yellow.main"></span>
+                            Yellow {{ chartData.yellowPct.toFixed(1) }}%
+                        </button>
+                        <button type="button"
+                            class="flex items-center gap-1.5 text-emerald-600 underline-offset-2 transition hover:underline dark:text-emerald-400"
+                            title="View students above 95% PIA"
+                            (click)="openCampusBandRecords(chartData.campusCode, chartData.campusName, 'green')">
+                            <span class="h-2 w-2 rounded-full" [style.background-color]="tierColors.green.main"></span>
+                            Green {{ chartData.greenPct.toFixed(1) }}%
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    }
+    }
+
+    @if (districtContext.isGrowthContextReady() && !loading && !loadError && rankedCampuses.length === 0) {
+    <div
+        class="flex flex-col items-center justify-center rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 px-8 py-16 text-center dark:border-white/10 dark:bg-[#0e1726]/50">
+        <div
+            class="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm dark:bg-[#1a2332]">
+            <icon-users class="h-7 w-7 text-gray-300 dark:text-gray-600" />
+        </div>
+        <p class="text-base font-semibold text-gray-700 dark:text-gray-300">No campus rows yet</p>
+        <p class="mt-2 max-w-md text-sm text-gray-500 dark:text-gray-400">
+            No individual attendance records returned for this district and year. Upload an individual attendance
+            sheet from Data uploads, or choose another district or school year.
+        </p>
+    </div>
+    }
+</div>
+
+<ngx-custom-modal #studentRecordsModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20"
+            >
+                <icon-users class="h-4 w-4" />
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">Student Records</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {{ selectedRecordsCampusLabel }} · {{ selectedRecordsBandLabel }}
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="!canExportRecords"
+                (click)="exportRecords('csv')"
+            >
+                <icon-file class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                EXCEL
+            </button>
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="!canExportRecords"
+                (click)="exportRecords('print')"
+            >
+                <icon-printer class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                PRINT
+            </button>
+        </div>
+
+        <p *ngIf="recordsLoading" class="mb-4 text-sm text-white-dark">Loading records…</p>
+
+        <p
+            *ngIf="!recordsLoading && recordsRows.length === 0"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            No student records available for this campus and band.
+        </p>
+
+        <div
+            *ngIf="recordsRows.length > 0"
+            class="datatable records-datatable individual-records-datatable"
+        >
+            <ng-datatable
+                [rows]="recordsRows"
+                [columns]="recordCols"
+                [columnFilter]="false"
+                [sortable]="true"
+                [search]="recordsSearch"
+                [rowClass]="totalPiaRowClass"
+                [loading]="recordsLoading"
+                [pageSize]="10"
+                skin="whitespace-nowrap table-hover text-xs"
+            >
+            </ng-datatable>
+        </div>
+    </ng-template>
+</ngx-custom-modal>

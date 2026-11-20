@@ -1,0 +1,243 @@
+<div class="-mb-2">
+    <div class="pt-2 flex flex-col gap-4">
+        <p
+            *ngIf="districtContext.bootstrapLoaded && ccmrLoading"
+            class="text-sm text-white-dark mb-4"
+        >
+            Loading CCMR metrics…
+        </p>
+        <p *ngIf="ccmrError" class="text-sm text-danger mb-4">{{ ccmrError }}</p>
+
+        <!-- ROW 1 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 w-full">
+            <div class="panel bg-[#0bd2dd] text-white p-6 shadow-sm border-0">
+                <h5 class="text-sm font-semibold uppercase mb-6 text-white ltr:text-left rtl:text-right">CCMR SCORE</h5>
+                <div class="mb-4">
+                    <h3 class="text-4xl font-bold">{{ ccmrScoreDisplay }}</h3>
+                </div>
+                <div class="flex items-center text-white mt-10 text-sm">
+                    <icon-eye class="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                    <span>{{ ccmrFocusMonth }}</span>
+                </div>
+            </div>
+            <div class="panel bg-[#9c78fe] text-white p-6 shadow-sm border-0">
+                <h5 class="text-sm font-semibold uppercase mb-6 text-white ltr:text-left rtl:text-right">GRADUATION RATE</h5>
+                <div class="mb-4">
+                    <h3 class="text-4xl font-bold">{{ ccmrGradDisplay }}</h3>
+                </div>
+                <div class="flex items-center text-white mt-10 text-sm">
+                    <icon-eye class="ltr:mr-2 rtl:ml-2 h-4 w-4" />
+                    <span>{{ ccmrFocusMonth }}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-between dark:text-white-light font-bold text-[#0e1726] mt-4">
+            <h5 class="text-lg font-bold uppercase dark:text-white-light">ACADEMIES</h5>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="panel p-4" *ngFor="let ac of ccmrAcademies; trackBy: trackCcmrAcademy">
+                <div class="flex items-center gap-3 mb-2">
+                    <div class="w-10 h-10 rounded-full bg-[#eca93d] flex-none flex justify-center items-center shadow-md">
+                        <icon-menu-dashboard class="w-6 h-6 text-[#1c2c47]" />
+                    </div>
+                    <div class="text-base font-bold text-[#1c2c47] dark:text-white-light">
+                        <button
+                            type="button"
+                            class="text-left font-bold text-[#1c2c47] transition-colors hover:text-primary hover:underline focus:text-primary focus:underline active:text-primary active:underline dark:text-white-light"
+                            (click)="openAcademyRecords(ac)"
+                        >
+                            {{ ac.name }}
+                        </button>
+                    </div>
+                </div>
+                <div class="my-3 h-12 w-full min-w-0">
+                    <apx-chart
+                        *ngIf="ac.sparklineOptions"
+                        [series]="ac.sparklineOptions.series"
+                        [chart]="ac.sparklineOptions.chart"
+                        [stroke]="ac.sparklineOptions.stroke"
+                        [markers]="ac.sparklineOptions.markers"
+                        [colors]="ac.sparklineOptions.colors"
+                        [grid]="ac.sparklineOptions.grid"
+                        [xaxis]="ac.sparklineOptions.xaxis"
+                        [tooltip]="ac.sparklineOptions.tooltip"
+                        class="block h-full w-full min-w-0"
+                    ></apx-chart>
+                    <div *ngIf="!ac.sparklineOptions" class="h-full flex items-center justify-center text-xs text-gray-400">—</div>
+                </div>
+                <div class="flex justify-between items-center text-[13px] font-bold mt-1">
+                    <div>
+                        <span class="text-black dark:text-gray-400 block mb-1">CCMR</span>
+                        <span class="text-black dark:text-gray-200 text-sm">{{ ac.ccmr }}%</span>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-success block mb-1">GRAD Rate</span>
+                        <span class="text-success text-sm">{{ ac.grad }}%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex flex-col gap-6">
+            <div class="panel w-full">
+                <div class="mb-3 flex items-center justify-between dark:text-white-light">
+                    <h5 class="text-lg font-semibold text-[#0e1726] dark:text-white-light">Bar Chart</h5>
+                    <span class="text-xs font-normal text-gray-500 dark:text-gray-400"
+                        >Click a month bar to view academy records</span
+                    >
+                </div>
+                <div
+                    #ccmrBarChartContainer
+                    class="ccmr-month-bar-chart w-full max-w-full overflow-y-hidden [scrollbar-width:thin]"
+                    [class.overflow-x-auto]="useCcmrBarHorizontalScroll"
+                    [class.overflow-x-hidden]="!useCcmrBarHorizontalScroll"
+                >
+                    <apx-chart
+                        *ngIf="ccmrBarChart"
+                        [series]="ccmrBarChart.series"
+                        [chart]="ccmrBarChart.chart"
+                        [dataLabels]="ccmrBarChart.dataLabels"
+                        [stroke]="ccmrBarChart.stroke"
+                        [colors]="ccmrBarChart.colors"
+                        [legend]="ccmrBarChart.legend"
+                        [plotOptions]="ccmrBarChart.plotOptions"
+                        [xaxis]="ccmrBarChart.xaxis"
+                        [yaxis]="ccmrBarChart.yaxis"
+                        [grid]="ccmrBarChart.grid"
+                        [tooltip]="ccmrBarChart.tooltip"
+                        [fill]="ccmrBarChart.fill"
+                        class="block w-full min-w-0 cursor-pointer rounded-lg bg-white dark:bg-black"
+                        [style.min-width.px]="useCcmrBarHorizontalScroll ? ccmrBarScrollWidth : null"
+                    ></apx-chart>
+                </div>
+            </div>
+
+            <div class="panel w-full">
+                <div class="mb-3 flex items-center justify-between dark:text-white-light">
+                    <h5 class="text-lg font-semibold text-[#0e1726] dark:text-white-light">{{ ccmrFocusMonth }}</h5>
+                </div>
+                <div class="table-responsive">
+                    <table class="table-hover">
+                        <thead>
+                            <tr>
+                                <th>ACADEMY</th>
+                                <th class="text-center">TOTAL STUDENT</th>
+                                <th class="text-center">CCMR</th>
+                                <th class="text-center">GRAD RATE</th>
+                                <th class="text-center">ON TRACK</th>
+                                <th class="text-center">LIKELY</th>
+                                <th class="text-center">NOT LIKELY</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr *ngIf="!ccmrLoading && !ccmrAcademies.length">
+                                <td colspan="7" class="text-center text-white-dark py-6">
+                                    No academy data for the selected district and year.
+                                </td>
+                            </tr>
+                            <tr *ngFor="let ac of ccmrAcademies">
+                                <td class="font-semibold">
+                                    <button
+                                        type="button"
+                                        class="font-semibold text-gray-500 transition-colors hover:text-primary hover:underline focus:text-primary focus:underline active:text-primary active:underline dark:text-gray-400"
+                                        (click)="openAcademyRecords(ac)"
+                                    >
+                                        {{ ac.name }}
+                                    </button>
+                                </td>
+                                <td class="text-center">{{ ac.students }}</td>
+                                <td class="text-center">{{ ac.ccmr }}%</td>
+                                <td class="text-center">{{ ac.grad }}%</td>
+                                <td class="text-center">
+                                    <span class="badge bg-success/20 text-success rounded-full py-1 px-3">{{ ac.onTrack }}%</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-warning/20 text-warning rounded-full py-1 px-3">{{ ac.likely }}%</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-danger/20 text-danger rounded-full py-1 px-3">{{ ac.notLikely }}%</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ngx-custom-modal #academyRecordsModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20"
+            >
+                <icon-menu-dashboard class="h-4 w-4" />
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">Academy Records</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {{ selectedAcademyName }}
+                    <span *ngIf="recordsCalendarMonth && recordsCalendarMonth !== '—'">
+                        · {{ recordsCalendarMonth }}</span
+                    >
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="!canExportAcademyRecords"
+                (click)="exportAcademyRecords('csv')"
+            >
+                <icon-file class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                EXCEL
+            </button>
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="!canExportAcademyRecords"
+                (click)="exportAcademyRecords('print')"
+            >
+                <icon-printer class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                PRINT
+            </button>
+        </div>
+
+        <p *ngIf="academyRecordsLoading" class="mb-4 text-sm text-white-dark">Loading records…</p>
+
+        <div *ngIf="academyRecordsError" class="mb-4 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+            {{ academyRecordsError }}
+        </div>
+
+        <p
+            *ngIf="!academyRecordsLoading && !academyRecordsError && academyRecordsRows.length === 0"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            No data available for this academy.
+        </p>
+
+        <div
+            *ngIf="academyRecordsRows.length > 0"
+            class="datatable records-datatable ccmr-academy-records-datatable"
+        >
+            <ng-datatable
+                [rows]="academyRecordsRows"
+                [columns]="academyRecordCols"
+                [columnFilter]="false"
+                [sortable]="true"
+                [search]="academyRecordsSearch"
+                [rowClass]="ccmrMetRowClass"
+                [loading]="academyRecordsLoading"
+                [pageSize]="10"
+                skin="whitespace-nowrap table-hover text-xs"
+            >
+            </ng-datatable>
+        </div>
+    </ng-template>
+</ngx-custom-modal>

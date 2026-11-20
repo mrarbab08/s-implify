@@ -1,0 +1,774 @@
+<div class="flex flex-col gap-5">
+    @if (!districtContext.isAttendanceContextReady()) {
+    <div class="rounded-lg bg-warning/10 px-4 py-3 text-sm text-warning">
+        Select <strong>District</strong> and <strong>School year</strong> in the header to load T-TESS records.
+    </div>
+    }
+
+    @if (exportError) {
+    <div class="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+        {{ exportError }}
+    </div>
+    }
+
+    @if (loadError) {
+    <div class="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+        {{ loadError }}
+    </div>
+    }
+
+    @if (districtContext.isAttendanceContextReady()) {
+    <div class="panel overflow-hidden border border-white-light p-0 dark:border-[#1b2e4b]">
+        <div
+            class="flex flex-wrap items-center justify-between gap-3 border-b border-white-light bg-[#f8fafc] px-4 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50"
+        >
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h5 class="text-sm font-semibold text-[#0e1726] dark:text-white-light">Filter records</h5>
+                    @if (filterOptionsLoading) {
+                    <span class="text-xs text-gray-400">Loading options…</span>
+                    }
+                </div>
+                <p class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    Narrow teacher records by grade, subject, or average score range.
+                </p>
+            </div>
+            <div class="flex shrink-0 flex-wrap gap-2">
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    [disabled]="!districtContext.isAttendanceContextReady()"
+                    (click)="openAssessmentModal()"
+                >
+                    + New Assessment
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="loading || !canClearFilters"
+                    (click)="clearFilters()"
+                >
+                    Clear all
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    [disabled]="loading || filterOptionsLoading"
+                    (click)="applyFilters()"
+                >
+                    Apply filters
+                </button>
+            </div>
+        </div>
+
+        @if (filterError) {
+        <div class="border-b border-danger/20 bg-danger/10 px-4 py-2 text-sm text-danger">{{ filterError }}</div>
+        }
+
+        <div class="grid gap-4 p-4 md:grid-cols-2 xl:grid-cols-12">
+            <div class="md:col-span-1 xl:col-span-3">
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Grade</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [(ngModel)]="filtersDraft.gradeCode"
+                    [disabled]="filterOptionsLoading || loading"
+                >
+                    <option [ngValue]="null">All grades</option>
+                    @for (g of districtContext.grades; track g.gradeId) {
+                    <option [ngValue]="g.gradeCode">{{ g.gradeName || g.gradeCode }}</option>
+                    }
+                </select>
+            </div>
+
+            <div class="md:col-span-1 xl:col-span-3">
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Subject</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [(ngModel)]="filtersDraft.subjectCode"
+                    [disabled]="filterOptionsLoading || loading"
+                >
+                    <option [ngValue]="null">All subjects</option>
+                    @for (s of filterSubjects; track s.subjectId) {
+                    <option [ngValue]="s.subjectCode">{{ s.subjectName || s.subjectCode }}</option>
+                    }
+                </select>
+            </div>
+
+            <div class="md:col-span-2 xl:col-span-6">
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">
+                    Average score range
+                </label>
+                <div class="flex items-center gap-2">
+                    <input
+                        type="number"
+                        step="0.1"
+                        class="form-input min-w-0 flex-1 text-sm"
+                        [(ngModel)]="averageScoreMinInput"
+                        placeholder="Min"
+                        aria-label="Minimum average score"
+                        [disabled]="loading"
+                    />
+                    <span class="shrink-0 text-xs font-medium text-gray-400">to</span>
+                    <input
+                        type="number"
+                        step="0.1"
+                        class="form-input min-w-0 flex-1 text-sm"
+                        [(ngModel)]="averageScoreMaxInput"
+                        placeholder="Max"
+                        aria-label="Maximum average score"
+                        [disabled]="loading"
+                    />
+                </div>
+            </div>
+        </div>
+
+        @if (activeFilterChips.length) {
+        <div
+            class="flex flex-wrap items-center gap-2 border-t border-white-light bg-white-light/20 px-4 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/20"
+        >
+            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Applied</span>
+            @for (chip of activeFilterChips; track chip.id) {
+            <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+                [attr.aria-label]="'Remove filter: ' + chip.label"
+                (click)="removeFilterChip(chip.id)"
+            >
+                <span>{{ chip.label }}</span>
+                <span aria-hidden="true" class="text-sm leading-none">&times;</span>
+            </button>
+            }
+        </div>
+        }
+    </div>
+    }
+
+    @if (districtContext.isAttendanceContextReady()) {
+    <!-- Graphical summary — computed from every record matching the applied filters -->
+    <div class="grid gap-4">
+        <div class="flex items-center justify-between gap-3">
+            <h5 class="text-lg font-semibold dark:text-white-light">T-TESS Overview</h5>
+            @if (statsLoading) {
+            <span class="text-xs text-gray-400">Computing summary…</span>
+            }
+        </div>
+
+        <!-- KPI cards -->
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="panel flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-xs font-semibold uppercase tracking-wider text-[#8153FC]/70 dark:text-white/40">
+                        Teachers
+                    </div>
+                    <div class="mt-1 text-3xl font-extrabold leading-none text-[#0e1726] dark:text-white">
+                        {{ tessStats ? tessStats.teacherCount : '—' }}
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">records in scope</div>
+                </div>
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#8153FC]/10 text-[#8153FC] dark:bg-[#8153FC]/20">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.34 9.34 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"/></svg>
+                </div>
+            </div>
+
+            <div class="panel flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-xs font-semibold uppercase tracking-wider text-[#00ab55]/70 dark:text-white/40">
+                        Average Score
+                    </div>
+                    <div class="mt-1 text-3xl font-extrabold leading-none text-[#0e1726] dark:text-white">
+                        @if (tessStats?.avgScore != null) {
+                        {{ tessStats!.avgScore! | number: '1.1-1' }}
+                        } @else {
+                        —
+                        }
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        @if (tessStats && tessStats.scoredCount > 0) {
+                        of {{ tessStats.scoredCount }} scored teacher{{ tessStats.scoredCount === 1 ? '' : 's' }}
+                        } @else {
+                        no scored records
+                        }
+                    </div>
+                </div>
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#00ab55]/10 text-[#00ab55] dark:bg-[#00ab55]/20">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0a3 3 0 0 0 3-3v-1m-3 3a3 3 0 0 1-3 3m-6-3a3 3 0 0 0-3 3m3-3a3 3 0 0 1 3 3m0 0V9m0 0a3 3 0 0 1-3-3m3 3a3 3 0 0 0 3-3m-9 0a3 3 0 0 1 3 3h9a3 3 0 0 0-3-3m0 0a3 3 0 0 1-3 3"/></svg>
+                </div>
+            </div>
+
+            <div class="panel flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-xs font-semibold uppercase tracking-wider text-[#3b82f6]/70 dark:text-white/40">
+                        Average Growth
+                    </div>
+                    <div class="mt-1 text-3xl font-extrabold leading-none text-[#0e1726] dark:text-white">
+                        @if (tessStats?.avgGrowth != null) {
+                        {{ tessStats!.avgGrowth! | number: '1.1-1' }}
+                        } @else {
+                        —
+                        }
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">observation to observation</div>
+                </div>
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#3b82f6]/10 text-[#3b82f6] dark:bg-[#3b82f6]/20">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18 9 11.25l4.306 4.306a11.95 11.95 0 0 1 5.814-5.518l2.74-1.22m0 0-5.94-2.281m5.94 2.28-2.28 5.941"/></svg>
+                </div>
+            </div>
+
+            <div class="panel flex items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-xs font-semibold uppercase tracking-wider text-[#e2a03f]/70 dark:text-white/40">
+                        Proficient
+                    </div>
+                    <div class="mt-1 text-3xl font-extrabold leading-none text-[#0e1726] dark:text-white">
+                        @if (tessStats?.proficientPct != null) {
+                        {{ tessStats!.proficientPct! | number: '1.0-0' }}%
+                        } @else {
+                        —
+                        }
+                    </div>
+                    <div class="mt-1 text-xs text-gray-500 dark:text-gray-400">average above 74</div>
+                </div>
+                <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#e2a03f]/10 text-[#e2a03f] dark:bg-[#e2a03f]/20">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9m9 0a3 3 0 0 1 3 3h-15a3 3 0 0 1 3-3m9 0a3 3 0 0 0 3-3v-1m-3 3a3 3 0 0 1-3 3m-6-3a3 3 0 0 0-3 3m3-3a3 3 0 0 1 3 3m0 0V9m0 0a3 3 0 0 1-3-3m3 3a3 3 0 0 0 3-3M9 12h6"/></svg>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            <div class="panel flex flex-col">
+                <h6 class="mb-2 text-sm font-semibold text-[#0e1726] dark:text-white-light">Score Band Distribution</h6>
+                @if (bandChartOptions) {
+                <apx-chart
+                    [series]="bandChartOptions.series"
+                    [chart]="bandChartOptions.chart"
+                    [labels]="bandChartOptions.labels"
+                    [colors]="bandChartOptions.colors"
+                    [legend]="bandChartOptions.legend"
+                    [plotOptions]="bandChartOptions.plotOptions"
+                    [dataLabels]="bandChartOptions.dataLabels"
+                    [tooltip]="bandChartOptions.tooltip"
+                    class="block min-w-0"
+                ></apx-chart>
+                } @else if (statsLoading) {
+                <div class="flex h-[300px] items-center justify-center text-xs text-gray-400">Loading…</div>
+                } @else {
+                <div class="flex h-[300px] items-center justify-center text-xs text-gray-400">
+                    @if (tessStats) {
+                    No scored teacher records for the selected filters.
+                    } @else {
+                    No data for this district and school year.
+                    }
+                </div>
+                }
+            </div>
+
+            <div class="panel flex flex-col">
+                <h6 class="mb-2 text-sm font-semibold text-[#0e1726] dark:text-white-light">Average Score by Grade</h6>
+                @if (gradeChartOptions) {
+                <apx-chart
+                    [series]="gradeChartOptions.series"
+                    [chart]="gradeChartOptions.chart"
+                    [colors]="gradeChartOptions.colors"
+                    [xaxis]="gradeChartOptions.xaxis"
+                    [yaxis]="gradeChartOptions.yaxis"
+                    [legend]="gradeChartOptions.legend"
+                    [plotOptions]="gradeChartOptions.plotOptions"
+                    [dataLabels]="gradeChartOptions.dataLabels"
+                    [tooltip]="gradeChartOptions.tooltip"
+                    class="block min-w-0"
+                ></apx-chart>
+                } @else if (statsLoading) {
+                <div class="flex h-[300px] items-center justify-center text-xs text-gray-400">Loading…</div>
+                } @else {
+                <div class="flex h-[300px] items-center justify-center text-xs text-gray-400">No scored records by grade.</div>
+                }
+            </div>
+
+            <div class="panel flex flex-col">
+                <h6 class="mb-2 text-sm font-semibold text-[#0e1726] dark:text-white-light">Average Score by Campus</h6>
+                @if (campusChartOptions) {
+                <apx-chart
+                    [series]="campusChartOptions.series"
+                    [chart]="campusChartOptions.chart"
+                    [colors]="campusChartOptions.colors"
+                    [xaxis]="campusChartOptions.xaxis"
+                    [yaxis]="campusChartOptions.yaxis"
+                    [legend]="campusChartOptions.legend"
+                    [plotOptions]="campusChartOptions.plotOptions"
+                    [dataLabels]="campusChartOptions.dataLabels"
+                    [tooltip]="campusChartOptions.tooltip"
+                    class="block min-w-0"
+                ></apx-chart>
+                } @else if (statsLoading) {
+                <div class="flex h-[300px] items-center justify-center text-xs text-gray-400">Loading…</div>
+                } @else {
+                <div class="flex h-[300px] items-center justify-center text-xs text-gray-400">No scored records by campus.</div>
+                }
+            </div>
+        </div>
+    </div>
+    }
+
+    <div class="panel h-full border-white-light dark:border-[#1b2e4b]">
+        <div class="mb-5 flex flex-col gap-5 md:flex-row md:items-center justify-between">
+            <div>
+                <h5 class="text-lg font-semibold dark:text-white-light">All Teachers</h5>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-5 ltr:ml-auto rtl:mr-auto">
+                @if (loading) {
+                <span class="text-xs text-gray-400">Loading…</span>
+                }
+
+                <div hlMenu class="dropdown">
+                    <button hlMenuButton type="button"
+                        class="flex items-center rounded-md border border-[#e0e6ed] px-4 py-2 text-sm font-semibold dark:border-[#253b5c] dark:bg-[#1b2e4b] dark:text-white-dark transition-all hover:border-primary">
+                        <span class="ltr:mr-1 rtl:ml-1">Columns</span>
+                        <icon-caret-down class="h-5 w-5" />
+                    </button>
+                    <ul *hlMenuItems animate.enter="anim-enter-toggle" animate.leave="anim-leave-toggle"
+                        class="w-max ltr:left-0 rtl:right-0">
+                        <ng-container *ngFor="let col of cols; let i = index">
+                            <li>
+                                <div class="flex items-center px-4 py-1">
+                                    <label [for]="'chk-' + i" class="mb-0 cursor-pointer">
+                                        <input type="checkbox" [id]="'chk-' + i" class="form-checkbox" [ngModel]="!col.hide"
+                                            (ngModelChange)="col.hide = !$event; updateColumn(col)" />
+                                        <span class="ltr:ml-2 rtl:mr-2">{{ col.title }}</span>
+                                    </label>
+                                </div>
+                            </li>
+                        </ng-container>
+                    </ul>
+                </div>
+
+                <div>
+                    <input
+                        [(ngModel)]="tableSearch"
+                        type="text"
+                        class="form-input"
+                        placeholder="Search this record…"
+                        [disabled]="loading || rows.length === 0"
+                    />
+                </div>
+
+                <div class="flex flex-wrap items-center">
+                    @if (exportBusy) {
+                    <span class="text-xs text-gray-400 ltr:mr-2 rtl:ml-2">Preparing export…</span>
+                    }
+                    <button
+                        type="button"
+                        class="btn btn-primary btn-sm m-1 transition-all"
+                        [disabled]="!canExport"
+                        (click)="exportTable('csv')"
+                    >
+                        <icon-file class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                        EXCEL
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-primary btn-sm m-1 transition-all"
+                        [disabled]="!canExport"
+                        (click)="exportTable('print')"
+                    >
+                        <icon-printer class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                        PRINT
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        @if (districtContext.isAttendanceContextReady() && !loading && !loadError && rows.length === 0) {
+        <div class="mb-5 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400">
+            @if (hasActiveFilters) {
+            No teacher assessment records match the selected filters.
+            } @else {
+            No teacher assessment records for this district and school year.
+            }
+        </div>
+        }
+
+        <div class="datatable ttess-datatable">
+            <ng-datatable
+                [rows]="rows"
+                [columns]="cols"
+                [sortable]="true"
+                [search]="tableSearch"
+                [rowClass]="averageRowClass"
+                [loading]="loading"
+                [pageSize]="serverPageSize"
+                [showPageSize]="false"
+                [showFirstPage]="false"
+                [showLastPage]="false"
+                [showNumbers]="false"
+                skin="whitespace-nowrap table-hover"
+            >
+            </ng-datatable>
+        </div>
+
+        @if (totalCount > 0) {
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white-light pt-4 dark:border-[#1b2e4b]">
+            <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <span>
+                    Showing {{ rangeStart }} to {{ rangeEnd }} of {{ totalCount }} entries
+                </span>
+                <select
+                    class="form-select w-auto min-w-[4.5rem] py-1.5 text-sm font-semibold"
+                    [ngModel]="serverPageSize"
+                    (ngModelChange)="onPageSizeChange($event)"
+                    [disabled]="loading"
+                >
+                    @for (size of pageSizeOptions; track size) {
+                    <option [ngValue]="size">{{ size }}</option>
+                    }
+                </select>
+            </div>
+            <div class="ttess-server-pagination inline-flex items-center gap-1 ltr:ml-auto rtl:mr-auto">
+                <button
+                    type="button"
+                    class="bh-page-item"
+                    [class.disabled]="!canGoFirst"
+                    [disabled]="!canGoFirst"
+                    aria-label="First page"
+                    (click)="firstServerPage()"
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 rtl:rotate-180">
+                        <path d="M13 19L7 12L13 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        <path opacity="0.5" d="M16.9998 19L10.9998 12L16.9998 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <button
+                    type="button"
+                    class="bh-page-item"
+                    [class.disabled]="!canGoPrev"
+                    [disabled]="!canGoPrev"
+                    aria-label="Previous page"
+                    (click)="prevServerPage()"
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 rtl:rotate-180">
+                        <path d="M15 5L9 12L15 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+                @for (page of visiblePageNumbers; track page) {
+                <button
+                    type="button"
+                    class="bh-page-item"
+                    [class.bh-active]="page === currentServerPage"
+                    [disabled]="loading"
+                    [attr.aria-current]="page === currentServerPage ? 'page' : null"
+                    [attr.aria-label]="'Page ' + page"
+                    (click)="goToServerPage(page)"
+                >
+                    {{ page }}
+                </button>
+                }
+                <button
+                    type="button"
+                    class="bh-page-item"
+                    [class.disabled]="!canGoNext"
+                    [disabled]="!canGoNext"
+                    aria-label="Next page"
+                    (click)="nextServerPage()"
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 rtl:rotate-180">
+                        <path d="M9 5L15 12L9 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+                <button
+                    type="button"
+                    class="bh-page-item"
+                    [class.disabled]="!canGoLast"
+                    [disabled]="!canGoLast"
+                    aria-label="Last page"
+                    (click)="lastServerPage()"
+                >
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 rtl:rotate-180">
+                        <path d="M11 19L17 12L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                        <path opacity="0.5" d="M6.99976 19L12.9998 12L6.99976 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+</div>
+
+<!-- New Assessment modal (2 steps: select scope → T-TESS rubric) -->
+<ngx-custom-modal #newAssessmentModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20"
+            >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">New Teacher Assessment</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    Step {{ assessStep }} of 2 —
+                    {{ assessStep === 1 ? 'Select district, campus and teacher' : 'T-TESS rubric' }}
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (assessStep === 1) {
+        <!-- STEP 1 — Select District → Campus → Teacher -->
+        <div class="grid gap-4 md:grid-cols-3">
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">District</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [(ngModel)]="assessDistrictId"
+                    (change)="onAssessDistrictChange()"
+                >
+                    <option [ngValue]="null">Select district</option>
+                    @for (d of assessDistricts; track d.districtId) {
+                    <option [ngValue]="d.districtId">{{ d.districtName || d.districtCode }}</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Campus</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [(ngModel)]="assessCampusId"
+                    (change)="onAssessCampusChange()"
+                    [disabled]="assessDistrictId == null || assessLoadingCampuses"
+                >
+                    <option [ngValue]="null">
+                        {{ assessDistrictId == null ? 'Select a district first' : (assessLoadingCampuses ? 'Loading campuses…' : 'Select campus') }}
+                    </option>
+                    @for (c of assessCampuses; track c.campusId) {
+                    <option [ngValue]="c.campusId">{{ c.campusName || c.campusCode }}</option>
+                    }
+                </select>
+            </div>
+
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Teacher</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [(ngModel)]="assessTeacherId"
+                    (change)="onAssessTeacherChange()"
+                    [disabled]="assessCampusId == null || assessLoadingTeachers"
+                >
+                    <option [ngValue]="null">
+                        {{ assessCampusId == null ? 'Select a campus first' : (assessLoadingTeachers ? 'Loading teachers…' : 'Select teacher') }}
+                    </option>
+                    @for (t of assessFilteredTeachers; track t.teacherId) {
+                    <option [ngValue]="toNum(t.teacherId)">{{ t.teacherName || t.lastName || t.firstName }}</option>
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="mt-2">
+            <input
+                type="text"
+                class="form-input w-full text-sm"
+                placeholder="Search teacher by name…"
+                [(ngModel)]="assessTeacherSearch"
+                [disabled]="assessCampusId == null"
+            />
+        </div>
+
+        @if (assessStep1Error) {
+        <div class="mt-3 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ assessStep1Error }}</div>
+        }
+
+        @if (assessSelectedTeacher) {
+        <!-- Teacher summary card -->
+        <div
+            class="mt-4 rounded-lg border border-white-light bg-[#f8fafc] p-4 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50"
+        >
+            <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="min-w-0">
+                    <div class="text-sm font-bold text-[#0e1726] dark:text-white-light">{{ assessTeacherName }}</div>
+                    <div class="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        Grade: {{ assessSelectedTeacher.grade || '—' }} ·
+                        Subject: {{ assessSelectedTeacher.subject || '—' }} ·
+                        Campus: {{ assessCampusName || '—' }}
+                    </div>
+                </div>
+                <div class="text-right">
+                    @if (assessTeacherLatestLoading) {
+                    <span class="text-xs text-gray-400">Checking previous assessment…</span>
+                    } @else if (assessTeacherLatest) {
+                    <div class="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                        Last assessment:
+                        <span class="text-primary dark:text-primary">{{ assessTeacherLatest.averageScore }}</span>
+                        <span class="ml-1 font-normal text-gray-400">
+                            ({{ assessTeacherLatest.evaluationDate || '—' }})
+                        </span>
+                    </div>
+                    <div class="text-[11px] text-gray-400">{{ assessTeacherLatest.band }}</div>
+                    } @else {
+                    <div class="text-xs text-gray-400">No previous assessment</div>
+                    }
+                </div>
+            </div>
+        </div>
+        }
+
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="btn btn-outline-danger btn-sm" (click)="closeAssessmentModal()">
+                Cancel
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="!assessCanContinue" (click)="goToStep2()">
+                Continue
+            </button>
+        </div>
+        } @else {
+        <!-- STEP 2 — Assessment form -->
+        <div class="grid gap-4 md:grid-cols-3">
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Observation Date</label>
+                <input
+                    type="date"
+                    class="form-input w-full text-sm"
+                    [(ngModel)]="assessObservationDate"
+                    [disabled]="submittingAssessment"
+                />
+            </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Observation Type</label>
+                <select class="form-select w-full text-sm" [(ngModel)]="assessObservationType" [disabled]="submittingAssessment">
+                    @for (t of observationTypes; track t) {
+                    <option [ngValue]="t">{{ t }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Evaluator Name</label>
+                <input
+                    type="text"
+                    class="form-input w-full text-sm"
+                    [(ngModel)]="assessEvaluatorName"
+                    placeholder="Evaluator name"
+                    [disabled]="submittingAssessment"
+                />
+            </div>
+        </div>
+
+        <div class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+            Teacher: <span class="font-semibold">{{ assessTeacherName }}</span>
+        </div>
+
+        <div class="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-[#f8fafc] px-3 py-2 text-xs dark:bg-[#0e1726]/50">
+            <span class="font-semibold text-gray-600 dark:text-gray-300">
+                Rated {{ answeredCount }} / {{ assessActiveQuestions.length }} dimensions
+            </span>
+            @if (assessRubricError) {
+            <span class="text-warning">{{ assessRubricError }}</span>
+            }
+            @if (assessmentScorePreview != null) {
+            <span>
+                <span class="font-semibold text-gray-600 dark:text-gray-300">
+                    Overall score: {{ assessmentScorePreview }}
+                </span>
+                <span
+                    class="ml-2 rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                    [ngClass]="{
+                        'bg-success/10 text-success': assessmentBandPreview === 'Proficient',
+                        'bg-warning/10 text-warning': assessmentBandPreview === 'Progressing',
+                        'bg-danger/10 text-danger': assessmentBandPreview === 'Needs Improvement'
+                    }"
+                >
+                    {{ assessmentBandPreview }}
+                </span>
+            </span>
+            }
+        </div>
+
+        @if (assessRubricLoading) {
+        <div class="mt-4 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <span class="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+            Loading the {{ assessTeacherName || 'district' }} rubric…
+        </div>
+        }
+        @for (domain of assessRubricDomains; track domain.ttessDomainId) {
+        <div class="mt-4">
+            <div class="mb-2 text-sm font-bold text-[#0e1726] dark:text-white-light">{{ domain.domainName }}</div>
+            @for (dim of domain.questions; track dim.ttessQuestionId) {
+            @if (dim.isActive !== false) {
+            <div
+                class="mb-2 rounded-lg border p-2.5"
+                [ngClass]="
+                    assessSubmitAttempted && assessmentRatings[dim.ttessQuestionId] == null
+                        ? 'border-danger bg-danger/5'
+                        : 'border-white-light dark:border-[#1b2e4b]'
+                "
+            >
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <div class="text-xs font-semibold" [class.text-danger]="assessSubmitAttempted && assessmentRatings[dim.ttessQuestionId] == null">
+                        <span class="text-gray-400">{{ dim.questionCode }}</span> · {{ dim.questionText }}
+                    </div>
+                    <div class="flex flex-wrap gap-1.5">
+                        @for (lvl of assessRatingOptions; track lvl.ttessOptionId) {
+                        <button
+                            type="button"
+                            class="rounded-full border border-white-light px-2.5 py-1 text-[11px] font-semibold text-gray-600 transition-all duration-200 hover:border-primary"
+                            [ngClass]="{
+                                'border-primary bg-primary text-white': assessmentRatings[dim.ttessQuestionId] === lvl.pointValue
+                            }"
+                            [disabled]="submittingAssessment"
+                            (click)="setRating(dim.ttessQuestionId, lvl.pointValue)"
+                        >
+                            {{ lvl.optionLabel }} <span class="opacity-60">({{ lvl.pointValue }})</span>
+                        </button>
+                        }
+                    </div>
+                </div>
+            </div>
+            }
+            }
+            <div class="mt-2">
+                <textarea
+                    class="form-textarea w-full text-sm"
+                    rows="2"
+                    placeholder="Evidence / Comments (optional)"
+                    [(ngModel)]="assessDomainComments[domain.domainNumber]"
+                    [disabled]="submittingAssessment"
+                ></textarea>
+            </div>
+        </div>
+        }
+
+        <div class="mt-4">
+            <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Overall Comments</label>
+            <textarea
+                class="form-textarea w-full text-sm"
+                rows="3"
+                placeholder="Overall comments (optional)"
+                [(ngModel)]="assessOverallComment"
+                [disabled]="submittingAssessment"
+            ></textarea>
+        </div>
+
+        @if (assessSubmitError) {
+        <div class="mt-3 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ assessSubmitError }}</div>
+        }
+
+        <div class="mt-5 flex justify-between gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" [disabled]="submittingAssessment" (click)="backToStep1()">
+                Back
+            </button>
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="submittingAssessment"
+                (click)="submitAssessment()"
+            >
+                @if (submittingAssessment) {
+                Saving…
+                } @else {
+                Submit Assessment
+                }
+            </button>
+        </div>
+        }
+    </ng-template>
+</ngx-custom-modal>

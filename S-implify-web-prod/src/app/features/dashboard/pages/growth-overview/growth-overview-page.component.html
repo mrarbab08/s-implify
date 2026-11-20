@@ -1,0 +1,1769 @@
+<div class="-mb-2 dashboard-page">
+    <div class="pt-2 flex flex-col gap-4">
+            <p *ngIf="overallMetricsError" class="mb-1 text-xs text-danger">{{ overallMetricsError }}</p>
+            <p *ngIf="campusMetricsError" class="mb-2 text-xs text-danger">{{ campusMetricsError }}</p>
+            <p *ngIf="categoryMetricsError" class="mb-2 text-xs text-danger">{{ categoryMetricsError }}</p>
+            <!-- <p
+                *ngIf="districtContext.bootstrapLoaded && overallMetricsLoading"
+                class="mb-2 text-xs text-slate-500 dark:text-slate-400"
+            >
+                Loading dashboard metrics…
+            </p> -->
+            <div *ngIf="isCampusCategoryView" class="-mt-1 mb-1">
+                <a routerLink="/dashboard" class="text-sm font-semibold text-dark hover:underline dark:text-sky-400">
+                    ← Back to dashboard
+                </a>
+            </div>
+            <div *ngIf="districtRouteId != null" class="-mt-1 mb-1">
+                <a routerLink="/dashboard" class="text-sm font-semibold text-dark hover:underline dark:text-sky-400">
+                    ← Back to all districts
+                </a>
+            </div>
+            @if (districtScopeBlocked) {
+            <div
+                class="mb-3 rounded-lg border border-dashed border-[#E76F51]/40 bg-[#E76F51]/5 px-4 py-3 text-sm text-[#d2542f] dark:text-orange-300"
+            >
+                Your role is scoped to <strong>{{ pinnedDistrictName }}</strong> — you cannot view other
+                districts. Switch to the SuperAdmin role in User &amp; Setups to browse all districts.
+            </div>
+            } @else if (districtRouteId != null && districtContext.districtQuarters.length === 0) {
+            <div
+                class="rounded-lg border border-dashed border-[#E76F51]/40 bg-[#E76F51]/5 px-4 py-3 text-sm text-[#d2542f] dark:text-orange-300"
+            >
+                This district has no academic quarters configured yet, so there is no grading
+                window to show stats for. An admin can add quarters for it under Setups.
+            </div>
+            }
+            <div *ngIf="isTeacherDrillDownView && campusId" class="-mt-1 mb-1">
+                <a
+                    [routerLink]="['/dashboard/campus', campusId]"
+                    class="text-sm font-semibold text-dark hover:underline dark:text-sky-400"
+                >
+                    ← Back to {{ campusName }}
+                </a>
+            </div>
+
+            @if (districtContext.hasActiveGrowthFilters()) {
+            <div
+                class="flex flex-wrap items-center gap-2 rounded-lg border border-white-light bg-white-light/30 px-4 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/40"
+            >
+                <span class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400"
+                    >Applied filters</span
+                >
+                @for (chip of districtContext.growthFilterChips(); track chip.id) {
+                <button
+                    type="button"
+                    class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+                    [attr.aria-label]="'Remove filter: ' + chip.label"
+                    (click)="districtContext.clearGrowthFilterChip(chip.id)"
+                >
+                    <span>{{ chip.label }}</span>
+                    <span aria-hidden="true" class="text-sm leading-none">&times;</span>
+                </button>
+                }
+                <button
+                    type="button"
+                    class="ml-auto text-xs font-semibold text-gray-500 underline-offset-2 hover:text-primary hover:underline dark:text-gray-400"
+                    (click)="districtContext.resetGrowthFilters()"
+                >
+                    Clear all
+                </button>
+            </div>
+            }
+
+            <!-- SuperAdmin stat cards — Fueling-Brains-style colored blocks (all counts real) -->
+            @if (showOrgStats) {
+            <div class="anim-fade-up anim-delay-1 mb-1 grid grid-cols-1 gap-4 md:grid-cols-3 xl:grid-cols-5">
+                <!-- Districts -->
+                <button
+                    type="button"
+                    (click)="openDistrictsModal()"
+                    class="group relative cursor-pointer overflow-hidden rounded-2xl bg-[#2C3E7A] px-4 py-4 text-left text-white shadow-[0_14px_30px_-14px_rgba(44,62,122,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(44,62,122,0.8)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2C3E7A]/60"
+                >
+                    <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21h-7.5M4.5 9.75V21M19.5 21V9.75M3.27 6.96 12 3l8.73 3.96a.75.75 0 0 1 .52.68v.16a2.4 2.4 0 0 1-4.2 1.64l-.36-.37a1.5 1.5 0 0 0-2.2.02l-.4.42a2.25 2.25 0 0 1-3.28 0l-.4-.42a1.5 1.5 0 0 0-2.2-.02l-.36.37a2.4 2.4 0 0 1-4.2-1.64v-.16a.75.75 0 0 1 .52-.68Z"/></svg>
+                    <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
+                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ orgDistrictCount }}</h2>
+                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Total Districts</p>
+                    <p class="relative mt-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-white/70">{{ orgDistrictNew }} added this month</p>
+                </button>
+
+                <!-- Campuses -->
+                <button
+                    type="button"
+                    (click)="openCampusesModal()"
+                    class="group relative cursor-pointer overflow-hidden rounded-2xl bg-[#2AA8B8] px-4 py-4 text-left text-white shadow-[0_14px_30px_-14px_rgba(42,168,184,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(42,168,184,0.8)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2AA8B8]/60"
+                >
+                    <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.4 60.4 0 0 0 0 3.706c.127.738.575 1.365 1.207 1.75.46.278 1.003.403 1.548.403h9.505c.545 0 1.088-.125 1.548-.403.632-.385 1.08-1.012 1.207-1.75a60.4 60.4 0 0 0 0-3.706 60.4 60.4 0 0 0-.702-3.535A3.001 3.001 0 0 0 16.663 4.5H7.337a3.001 3.001 0 0 0-2.885 2.112 60.4 60.4 0 0 0-.702 3.535Zm4.74 3.353h5.99M12 21V8.25m-6 6.75h.008v.008H6v-.008Z"/></svg>
+                    <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
+                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ orgCampusCount }}</h2>
+                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Total Campuses</p>
+                    <p class="relative mt-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-white/70">{{ orgCampusNew }} added this month</p>
+                </button>
+
+                <!-- Teachers card removed from this KPI row — teacher data/pages unchanged -->
+
+                <!-- Developing campuses — campuses in the current selection with a latest average CS ≤ 63 (portal band precedent) -->
+                <div
+                    class="group relative overflow-hidden rounded-2xl bg-[#F4A261] px-4 py-4 text-white shadow-[0_14px_30px_-14px_rgba(244,162,97,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(244,162,97,0.8)]"
+                >
+                    <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5m3-9h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5M9 21v-5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75V21"/></svg>
+                    <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
+                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ developingCampusesLoading ? '—' : developingCampusesCount }}</h2>
+                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Developing Campuses</p>
+                    <p class="relative mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
+                        <span>CS&nbsp;<b class="text-[12px] text-white">{{ developingComponentScoreAvg != null ? (developingComponentScoreAvg | number: '1.1-1') : '—' }}</b>&nbsp;<span class="text-white/70">{{ developingComponentScoreGrade ?? '—' }}</span></span>
+                        <span>GROW&nbsp;<b class="text-[12px] text-white">{{ developingGrowthAvg != null ? (developingGrowthAvg | number: '1.1-1') : '—' }}</b>&nbsp;<span class="text-white/70">{{ developingGrowthGrade ?? '—' }}</span></span>
+                    </p>
+                    <p class="relative mt-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-white/70">{{ developingCaptionLabel }}</p>
+                </div>
+
+                <!-- Progressing campuses — same selection/rows, CS in the portal's 64–74 "Progressing" band -->
+                <div
+                    class="group relative overflow-hidden rounded-2xl bg-[#8153FC] px-4 py-4 text-white shadow-[0_14px_30px_-14px_rgba(129,83,252,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(129,83,252,0.8)]"
+                >
+                    <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5m3-9h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5M9 21v-5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75V21"/></svg>
+                    <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
+                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ progressingCampusesLoading ? '—' : progressingCampusesCount }}</h2>
+                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Progressing Campuses</p>
+                    <p class="relative mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
+                        <span>CS&nbsp;<b class="text-[12px] text-white">{{ progressingComponentScoreAvg != null ? (progressingComponentScoreAvg | number: '1.1-1') : '—' }}</b>&nbsp;<span class="text-white/70">{{ progressingComponentScoreGrade ?? '—' }}</span></span>
+                        <span>GROW&nbsp;<b class="text-[12px] text-white">{{ progressingGrowthAvg != null ? (progressingGrowthAvg | number: '1.1-1') : '—' }}</b>&nbsp;<span class="text-white/70">{{ progressingGrowthGrade ?? '—' }}</span></span>
+                    </p>
+                    <p class="relative mt-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-white/70">{{ progressingCaptionLabel }}</p>
+                </div>
+
+                <!-- Students — live mobility totals for the selected district + year + grading window -->
+                <div
+                    class="group relative overflow-hidden rounded-2xl bg-[#10B981] px-4 py-4 text-white shadow-[0_14px_30px_-14px_rgba(16,185,129,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(16,185,129,0.8)]"
+                >
+                    <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21c-2.54 0-4.86-1.052-6.554-2.747M15.75 10.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>
+                    <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
+                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ studentsTotalCount != null ? (studentsTotalCount | number) : '—' }}</h2>
+                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Total Students</p>
+                    <p class="relative mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
+                        <span class="inline-flex items-center gap-1.5"><span class="text-emerald-200" aria-hidden="true">↑</span> Incoming <b class="text-[13px] text-white">{{ studentsIncomingCount != null ? (studentsIncomingCount | number) : '—' }}</b></span>
+                        <span class="inline-flex items-center gap-1.5"><span class="text-rose-200" aria-hidden="true">↓</span> Outgoing <b class="text-[13px] text-white">{{ studentsOutgoingCount != null ? (studentsOutgoingCount | number) : '—' }}</b></span>
+                    </p>
+                    <p *ngIf="studentsSummaryLoading" class="relative mt-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-white/70">Loading…</p>
+                </div>
+            </div>
+            }
+
+            <!-- Filter bar — Fueling-Brains-style icon dropdowns (real reference data, wired to context) -->
+            @if (showOrgStats) {
+            <div class="anim-fade-up anim-delay-2 mb-1 flex flex-wrap items-stretch gap-3 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none">
+                <!-- State -->
+                <label class="flex min-w-[168px] flex-1 cursor-pointer items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2 transition-colors hover:border-slate-200 dark:border-slate-700/60 dark:bg-white/5 dark:hover:border-slate-600">
+                    <span class="grid h-9 w-9 shrink-0 place-content-center rounded-lg bg-[#2C3E7A] text-white">
+                        <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Zm0-18c2.5 2.1 3.75 5.1 3.75 9s-1.25 6.9-3.75 9m0-18c-2.5 2.1-3.75 5.1-3.75 9s1.25 6.9 3.75 9M3.4 9h17.2M3.4 15h17.2"/></svg>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">State</span>
+                        <select
+                            class="w-full cursor-pointer truncate border-0 bg-transparent p-0 text-sm font-semibold text-slate-700 shadow-none focus:outline-none focus:ring-0 dark:text-slate-200"
+                            (change)="districtContext.setStateId(this.toNumberOrNull($any($event.target).value))"
+                        >
+                            <option value="" [selected]="districtContext.selection.stateId == null">All</option>
+                            @for (s of districtContext.states; track s.stateId) {
+                            <option [value]="s.stateId" [selected]="districtContext.selection.stateId === s.stateId">{{ s.stateName }}</option>
+                            }
+                        </select>
+                    </span>
+                </label>
+
+                <!-- District -->
+                <label class="flex min-w-[168px] flex-1 cursor-pointer items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2 transition-colors hover:border-slate-200 dark:border-slate-700/60 dark:bg-white/5 dark:hover:border-slate-600">
+                    <span class="grid h-9 w-9 shrink-0 place-content-center rounded-lg bg-[#2AA8B8] text-white">
+                        <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21h-7.5M4.5 9.75V21M19.5 21V9.75M3.27 6.96 12 3l8.73 3.96a.75.75 0 0 1 .52.68v.16a2.4 2.4 0 0 1-4.2 1.64l-.36-.37a1.5 1.5 0 0 0-2.2.02l-.4.42a2.25 2.25 0 0 1-3.28 0l-.4-.42a1.5 1.5 0 0 0-2.2-.02l-.36.37a2.4 2.4 0 0 1-4.2-1.64v-.16a.75.75 0 0 1 .52-.68Z"/></svg>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">District</span>
+                        <select
+                            class="w-full cursor-pointer truncate border-0 bg-transparent p-0 text-sm font-semibold text-slate-700 shadow-none focus:outline-none focus:ring-0 dark:text-slate-200"
+                            (change)="districtContext.setDistrictId(this.toNumberOrNull($any($event.target).value))"
+                        >
+                            <option value="" [selected]="districtContext.selection.districtId == null">All</option>
+                            @for (d of districtContext.districts; track d.districtId) {
+                            <option [value]="d.districtId" [selected]="districtContext.selection.districtId === d.districtId">{{ d.districtName }}</option>
+                            }
+                        </select>
+                    </span>
+                </label>
+
+                <!-- Academic year -->
+                <label class="flex min-w-[168px] flex-1 cursor-pointer items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2 transition-colors hover:border-slate-200 dark:border-slate-700/60 dark:bg-white/5 dark:hover:border-slate-600">
+                    <span class="grid h-9 w-9 shrink-0 place-content-center rounded-lg bg-[#8153FC] text-white">
+                        <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5"/></svg>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Academic Year</span>
+                        <select
+                            class="w-full cursor-pointer truncate border-0 bg-transparent p-0 text-sm font-semibold text-slate-700 shadow-none focus:outline-none focus:ring-0 dark:text-slate-200"
+                            (change)="districtContext.setAcademicYearId(this.toNumberOrNull($any($event.target).value))"
+                        >
+                            <option value="" [selected]="districtContext.selection.academicYearId == null">All</option>
+                            @for (y of districtContext.academicYears; track y.academicYearId) {
+                            <option [value]="y.academicYearId" [selected]="districtContext.selection.academicYearId === y.academicYearId">{{ y.yearLabel }}</option>
+                            }
+                        </select>
+                    </span>
+                </label>
+
+                <!-- Grading window -->
+                <label class="flex min-w-[168px] flex-1 cursor-pointer items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2 transition-colors hover:border-slate-200 dark:border-slate-700/60 dark:bg-white/5 dark:hover:border-slate-600">
+                    <span class="grid h-9 w-9 shrink-0 place-content-center rounded-lg bg-[#F17063] text-white">
+                        <svg class="h-4.5 w-4.5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                    </span>
+                    <span class="min-w-0 flex-1">
+                        <span class="block text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Grading Window</span>
+                        <select
+                            class="w-full cursor-pointer truncate border-0 bg-transparent p-0 text-sm font-semibold text-slate-700 shadow-none focus:outline-none focus:ring-0 dark:text-slate-200"
+                            (change)="districtContext.setQuarterCode($any($event.target).value === '' ? null : $any($event.target).value)"
+                        >
+                            <option value="" [selected]="!districtContext.selection.quarterCode">All</option>
+                            @for (q of conceptPeriods; track q.districtQuarterId) {
+                            <option [value]="q.quarterCode" [selected]="districtContext.selection.quarterCode === q.quarterCode">{{ q.quarterName || q.quarterCode }}</option>
+                            }
+                        </select>
+                    </span>
+                </label>
+            </div>
+            }
+
+            <!-- Score strip — STAAR component score / growth / APP·MEET·MASTER (same data as Activities + Statistic above) -->
+            @if (isDistrictHomeDashboard) {
+            <div class="anim-fade-up anim-delay-2 grid grid-cols-1 gap-4 md:grid-cols-2 min-[990px]:grid-cols-3">
+                <!-- CARD 1 — STAAR COMPONENT SCORE -->
+                <div
+                    class="panel flex h-full flex-col rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none"
+                >
+                    <h5 class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                        STAAR Component Score
+                    </h5>
+                    <div class="flex flex-1 flex-col items-center justify-center gap-2 pt-1 min-[1450px]:flex-row min-[1450px]:gap-4">
+                        <!-- Donut -->
+                        <div class="relative w-[145px] shrink-0 sm:w-[160px] score-donut" [attr.data-hl]="hoveredSliceIndex.cs">
+                            @if (conceptCsDonut) {
+                            <apx-chart
+                                [series]="conceptCsDonut.series"
+                                [labels]="conceptCsDonut.labels"
+                                [chart]="conceptCsDonut.chart"
+                                [colors]="conceptCsDonut.colors"
+                                [stroke]="conceptCsDonut.stroke"
+                                [dataLabels]="conceptCsDonut.dataLabels"
+                                [legend]="conceptCsDonut.legend"
+                                [states]="conceptCsDonut.states"
+                                [plotOptions]="conceptCsDonut.plotOptions"
+                                [tooltip]="conceptCsDonut.tooltip"
+                                class="block w-full"
+                            ></apx-chart>
+                            } @else {
+                            <svg viewBox="0 0 120 120" class="block w-full" role="img" aria-label="No score for this period">
+                                <circle cx="60" cy="60" r="44" fill="none" stroke-width="16" class="stroke-[#e2e8f0] dark:stroke-[#1c2b47]" />
+                            </svg>
+                            }
+                            <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center leading-none">
+                                <div class="text-2xl font-extrabold tracking-tight text-[#ea580c] dark:text-orange-400 sm:text-3xl">
+                                    {{ conceptCsScoreText }}
+                                </div>
+                                <div
+                                    class="mt-1 text-[10px] font-extrabold uppercase tracking-widest"
+                                    [ngClass]="gradeLetterClass(overallCsGrade)"
+                                >
+                                    {{ overallCsGrade || '—' }}
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Legend -->
+                        <ul class="flex w-full max-w-[230px] flex-col gap-0.5">
+                            @for (level of conceptCsLevelRings; track level.label) {
+                            <li
+                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-colors"
+                                [class.bg-slate-100]="isScoreLegendRowHovered('cs', level.label)"
+                                [class.dark:bg-slate-800/60]="isScoreLegendRowHovered('cs', level.label)"
+                                (mouseenter)="onScoreLegendEnter('cs', level.label)"
+                                (mouseleave)="onScoreLegendLeave('cs')"
+                            >
+                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="scoreLevelColor(level.label)"></span>
+                                <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    {{ level.label }}
+                                </span>
+                                <span class="ml-auto flex items-baseline gap-1.5">
+                                    <span class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ scoreLevelText(level.score) }}</span>
+                                    <span
+                                        class="min-w-[0.6rem] text-right text-xs font-extrabold"
+                                        [ngClass]="gradeLetterClass(level.grade)"
+                                    >{{ level.grade || '—' }}</span>
+                                </span>
+                            </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- CARD 2 — GROWTH -->
+                <div
+                    class="panel flex h-full flex-col rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none"
+                >
+                    <h5 class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                        Growth
+                    </h5>
+                    <div class="flex flex-1 flex-col items-center justify-center gap-2 pt-1 min-[1450px]:flex-row min-[1450px]:gap-4">
+                        <!-- Donut -->
+                        <div class="relative w-[145px] shrink-0 sm:w-[160px] score-donut" [attr.data-hl]="hoveredSliceIndex.growth">
+                            @if (conceptGrowthDonut) {
+                            <apx-chart
+                                [series]="conceptGrowthDonut.series"
+                                [labels]="conceptGrowthDonut.labels"
+                                [chart]="conceptGrowthDonut.chart"
+                                [colors]="conceptGrowthDonut.colors"
+                                [stroke]="conceptGrowthDonut.stroke"
+                                [dataLabels]="conceptGrowthDonut.dataLabels"
+                                [legend]="conceptGrowthDonut.legend"
+                                [states]="conceptGrowthDonut.states"
+                                [plotOptions]="conceptGrowthDonut.plotOptions"
+                                [tooltip]="conceptGrowthDonut.tooltip"
+                                class="block w-full"
+                            ></apx-chart>
+                            } @else {
+                            <svg viewBox="0 0 120 120" class="block w-full" role="img" aria-label="No growth data for this period">
+                                <circle cx="60" cy="60" r="44" fill="none" stroke-width="16" class="stroke-[#e2e8f0] dark:stroke-[#1c2b47]" />
+                            </svg>
+                            }
+                            <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center leading-none">
+                                <div class="text-2xl font-extrabold tracking-tight text-[#ea580c] dark:text-orange-400 sm:text-3xl">
+                                    {{ conceptGrowthScoreText }}
+                                </div>
+                                <div
+                                    class="mt-1 text-[10px] font-extrabold uppercase tracking-widest"
+                                    [ngClass]="gradeLetterClass(overallGrowthGrade)"
+                                >
+                                    {{ overallGrowthGrade || '—' }}
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Legend -->
+                        <ul class="flex w-full max-w-[230px] flex-col gap-0.5">
+                            @for (level of conceptGrowthLevelRings; track level.label) {
+                            <li
+                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-colors"
+                                [class.bg-slate-100]="isScoreLegendRowHovered('growth', level.label)"
+                                [class.dark:bg-slate-800/60]="isScoreLegendRowHovered('growth', level.label)"
+                                (mouseenter)="onScoreLegendEnter('growth', level.label)"
+                                (mouseleave)="onScoreLegendLeave('growth')"
+                            >
+                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="scoreLevelColor(level.label)"></span>
+                                <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    {{ level.label }}
+                                </span>
+                                <span class="ml-auto flex items-baseline gap-1.5">
+                                    <span class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ scoreLevelText(level.score) }}</span>
+                                    <span
+                                        class="min-w-[0.6rem] text-right text-xs font-extrabold"
+                                        [ngClass]="gradeLetterClass(level.grade)"
+                                    >{{ level.grade || '—' }}</span>
+                                </span>
+                            </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- CARD 3 — APP / MEET / MASTER (one donut, three segments) -->
+                <div
+                    class="panel flex h-full flex-col justify-center rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none md:col-span-2 min-[990px]:col-span-1"
+                >
+                    <h5 class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                        APP / MEET / MASTER
+                    </h5>
+                    <div class="mt-1 flex flex-1 flex-col items-center justify-center gap-2 min-[1450px]:flex-row min-[1450px]:gap-4">
+                        <!-- Donut -->
+                        <div class="relative w-[135px] shrink-0 sm:w-[150px] score-donut" [attr.data-hl]="hoveredSliceIndex.bands">
+                            @if (conceptBandsDonut) {
+                            <apx-chart
+                                [series]="conceptBandsDonut.series"
+                                [labels]="conceptBandsDonut.labels"
+                                [chart]="conceptBandsDonut.chart"
+                                [colors]="conceptBandsDonut.colors"
+                                [stroke]="conceptBandsDonut.stroke"
+                                [dataLabels]="conceptBandsDonut.dataLabels"
+                                [legend]="conceptBandsDonut.legend"
+                                [states]="conceptBandsDonut.states"
+                                [plotOptions]="conceptBandsDonut.plotOptions"
+                                [tooltip]="conceptBandsDonut.tooltip"
+                                class="block w-full"
+                            ></apx-chart>
+                            } @else {
+                            <svg viewBox="0 0 120 120" class="block w-full" role="img" aria-label="No band data for this period">
+                                <circle cx="60" cy="60" r="44" fill="none" stroke-width="16" class="stroke-[#e2e8f0] dark:stroke-[#1c2b47]" />
+                            </svg>
+                            }
+                            <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center leading-none">
+                                <div class="text-2xl font-extrabold tracking-tight text-[#2563eb] dark:text-sky-400 sm:text-3xl">
+                                    {{ conceptAppScoreText }}
+                                </div>
+                                <div class="mt-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                    APP
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Legend -->
+                        <ul class="flex w-full max-w-[220px] flex-col gap-0.5">
+                            @for (band of conceptBandLegendRows; track band.label) {
+                            <li
+                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-colors"
+                                [class.bg-slate-100]="isScoreLegendRowHovered('bands', band.label)"
+                                [class.dark:bg-slate-800/60]="isScoreLegendRowHovered('bands', band.label)"
+                                (mouseenter)="onScoreLegendEnter('bands', band.label)"
+                                (mouseleave)="onScoreLegendLeave('bands')"
+                            >
+                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="scoreLevelColor(band.label)"></span>
+                                <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                    {{ band.label }}
+                                </span>
+                                <span class="ml-auto text-sm font-bold text-slate-800 dark:text-slate-100">{{ band.pctText }}</span>
+                            </li>
+                            }
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            }
+
+            <!-- CAMPUSES OVERVIEW -->
+            <div class="anim-fade-up anim-delay-3 grid xl:grid-cols-1">
+                <div
+                    class="panel h-full overflow-x-hidden overflow-y-visible rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none">
+                    <div class="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3 dark:border-slate-700/80">
+                        <h5 class="text-[11px] font-bold uppercase tracking-[0.14em] text-[#178377] dark:text-teal-300">
+                            <ng-container *ngIf="isCampusCategoryView">{{ campusName | uppercase }} — CAMPUSES</ng-container>
+                            <ng-container *ngIf="!campusId && !isCampusCategoryView">CAMPUSES OVERVIEW</ng-container>
+                            <ng-container *ngIf="isTeacherDrillDownView">{{ teacherName | uppercase }} — STUDENT OVERVIEW</ng-container>
+                            <ng-container *ngIf="isSingleCampusView">{{ campusName | uppercase }} —
+                                CLASSROOM OVERVIEW
+                            </ng-container>
+                        </h5>
+                        <button
+                            *ngIf="isTeacherDrillDownView"
+                            type="button"
+                            class="btn btn-outline-primary btn-sm shrink-0"
+                            [disabled]="!canOpenTeacherStudentOverview"
+                            (click)="openTeacherStudentOverviewModal()"
+                        >
+                            <icon-users-group class="h-4 w-4 ltr:mr-1.5 rtl:ml-1.5" />
+                            Students
+                        </button>
+                    </div>
+                    <div class="bg-white px-0 pb-2 pt-1 dark:bg-[#0e1726]">
+                        <p
+                            *ngIf="districtContext.bootstrapLoaded && campusChartLoading"
+                            class="px-5 py-4 text-sm text-slate-500 dark:text-slate-400"
+                        >
+                            Loading {{ isTeacherDrillDownView ? 'student' : isSingleCampusView ? 'classroom' : 'campus' }} overview…
+                        </p>
+                        <p
+                            *ngIf="
+                                districtContext.bootstrapLoaded &&
+                                districtContext.isGrowthContextReady() &&
+                                !campusChartLoading &&
+                                !campusesOverviewChart &&
+                                !campusMetricsError
+                            "
+                            class="px-5 py-4 text-sm text-slate-500 dark:text-slate-400"
+                        >
+                            No {{ isTeacherDrillDownView ? 'student' : isSingleCampusView ? 'teacher' : 'campus' }} metrics for this selection.
+                        </p>
+                        <div
+                            #campusesChartContainer
+                            *ngIf="campusesOverviewChart"
+                            class="campuses-chart-scroll w-full max-w-full overflow-y-hidden pb-2 pt-1"
+                            [class.overflow-x-auto]="useCampusesChartHorizontalScroll"
+                            [class.overflow-x-hidden]="!useCampusesChartHorizontalScroll"
+                            [class.cursor-pointer]="isCampusOverviewChartClickable || isTeacherOverviewChartClickable"
+                            [attr.title]="
+                                isCampusOverviewChartClickable
+                                    ? 'Click a campus bar to open school classroom overview'
+                                    : isTeacherOverviewChartClickable
+                                      ? 'Click a teacher bar to view student stats'
+                                      : undefined
+                            "
+                        >
+                            <apx-chart
+                                [series]="campusesOverviewChart.series"
+                                [chart]="campusesOverviewChart.chart"
+                                [dataLabels]="campusesOverviewChart.dataLabels"
+                                [stroke]="campusesOverviewChart.stroke"
+                                [colors]="campusesOverviewChart.colors"
+                                [legend]="campusesOverviewChart.legend"
+                                [plotOptions]="campusesOverviewChart.plotOptions"
+                                [xaxis]="campusesOverviewChart.xaxis"
+                                [yaxis]="campusesOverviewChart.yaxis"
+                                [grid]="campusesOverviewChart.grid"
+                                [tooltip]="campusesOverviewChart.tooltip"
+                                [fill]="campusesOverviewChart.fill"
+                                class="block w-full min-w-0 rounded-lg bg-white dark:bg-[#0e1726]"
+                                [style.min-width.px]="useCampusesChartHorizontalScroll ? campusesOverviewChartScrollWidth : null"
+                            ></apx-chart>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 3 — summary strip (main dashboard only) -->
+            <div *ngIf="isDistrictHomeDashboard" class="grid gap-4 xl:grid-cols-3">
+                <!-- Schools Summary (drill-down opens campus-category/:id) -->
+                <div
+                    class="panel h-full rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-14px_rgba(15,23,42,0.1)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none"
+                >
+                    <div class="mb-4 border-b border-slate-100 pb-3 dark:border-slate-700/80">
+                        <h5 class="text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">Schools
+                            summary</h5>
+                    </div>
+                    <div class="space-y-6">
+                        <p
+                            *ngIf="categorySummaryLoading"
+                            class="text-xs text-slate-500 dark:text-slate-400"
+                        >
+                            Loading schools summary…
+                        </p>
+                        <p
+                            *ngIf="
+                                districtContext.bootstrapLoaded &&
+                                districtContext.isGrowthContextReady() &&
+                                !categorySummaryLoading &&
+                                !schoolsCategorySummaryRows.length &&
+                                !categoryMetricsError
+                            "
+                            class="text-xs text-slate-500 dark:text-slate-400"
+                        >
+                            No schools summary data for this selection.
+                        </p>
+                        <a
+                            *ngFor="let row of schoolsCategorySummaryRows; trackBy: trackSchoolCategoryRow"
+                            [routerLink]="['/dashboard/campus-category', row.campusCategoryId]"
+                            [state]="{ categoryLabel: row.label }"
+                            class="flex cursor-pointer items-center no-underline outline-none ring-0 focus:outline-none focus-visible:ring-0 [-webkit-tap-highlight-color:transparent] hover:bg-transparent hover:no-underline active:bg-transparent"
+                        >
+                            <div class="mr-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100">
+                                <icon-book class="h-4 w-4 text-gray-500" />
+                            </div>
+                            <span class="min-w-0 flex-1 truncate uppercase tracking-wide text-xs font-semibold text-slate-700 dark:text-slate-200">{{
+                                row.label
+                            }}</span>
+                            <div class="flex shrink-0 items-center gap-1.5">
+                                <app-progress-ring
+                                    size="sm"
+                                    color="#a32cc4"
+                                    caption="COMP"
+                                    [value]="row.componentPct"
+                                    [centerText]="row.componentPct !== null ? row.componentPct.toFixed(1) + '%' : '—'"
+                                    [grade]="row.componentPct !== null ? categoryCsGrade(row.campusCategoryId) : null"
+                                    [gradeClass]="gradeLetterClass(categoryCsGrade(row.campusCategoryId))"
+                                />
+                                <app-progress-ring
+                                    size="sm"
+                                    color="#14b8a6"
+                                    caption="GROW"
+                                    [value]="row.growthPct"
+                                    [centerText]="row.growthPct !== null ? row.growthPct.toFixed(1) + '%' : '—'"
+                                    [grade]="row.growthPct !== null ? categoryGrowthGrade(row.campusCategoryId) : null"
+                                    [gradeClass]="gradeLetterClass(categoryGrowthGrade(row.campusCategoryId))"
+                                />
+                            </div>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Other Summary -->
+                <div
+                    class="panel h-full rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-14px_rgba(15,23,42,0.1)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none">
+                    <div class="mb-4 border-b border-slate-100 pb-3 dark:border-slate-700/80">
+                        <h5 class="text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">Other
+                            summary</h5>
+                    </div>
+                    <div class="space-y-6">
+                        <div class="flex items-center">
+                            <div
+                                class="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-50 text-sky-600 dark:bg-sky-950/40 dark:text-sky-400"
+                            >
+                                <icon-desktop class="h-4 w-4" />
+                            </div>
+                            <div class="min-w-0 flex-1">
+                                <div class="uppercase tracking-wide text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                    CCMR rate
+                                </div>
+                                @if (ccmrSummaryError) {
+                                <p class="mt-0.5 text-[11px] text-danger">{{ ccmrSummaryError }}</p>
+                                }
+                            </div>
+                            @if (ccmrSummaryLoading) {
+                            <span class="shrink-0 text-xs whitespace-nowrap text-slate-400 dark:text-slate-500">Loading…</span>
+                            } @else {
+                            <app-progress-ring
+                                size="md"
+                                color="#0ea5e9"
+                                [value]="ccmrRatePct"
+                                [centerText]="ccmrRatePct !== null ? ccmrRatePct.toFixed(1) + '%' : '—'"
+                            />
+                            }
+                        </div>
+                        <div class="flex items-center">
+                            <div
+                                class="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400"
+                            >
+                                <icon-book class="h-4 w-4" />
+                            </div>
+                            <span class="min-w-0 flex-1 uppercase tracking-wide text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                Graduation rate
+                            </span>
+                            @if (ccmrSummaryLoading) {
+                            <span class="shrink-0 text-xs whitespace-nowrap text-slate-400 dark:text-slate-500">Loading…</span>
+                            } @else {
+                            <app-progress-ring
+                                size="md"
+                                color="#10b981"
+                                [value]="gradRatePct"
+                                [centerText]="gradRatePct !== null ? gradRatePct.toFixed(1) + '%' : '—'"
+                            />
+                            }
+                        </div>
+                        <div class="flex items-center">
+                            <div
+                                class="mr-3 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-50 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400"
+                            >
+                                <icon-users class="h-4 w-4" />
+                            </div>
+                            <span class="min-w-0 flex-1 uppercase tracking-wide text-xs font-semibold text-slate-700 dark:text-slate-200">
+                                Teachers
+                            </span>
+                            @if (ccmrSummaryLoading) {
+                            <span class="shrink-0 text-xs whitespace-nowrap text-slate-400 dark:text-slate-500">Loading…</span>
+                            } @else {
+                            <app-progress-ring
+                                size="md"
+                                color="#f59e0b"
+                                [value]="teachersRatePct"
+                                [centerText]="teachersRatePct !== null ? teachersRatePct.toFixed(1) + '%' : '—'"
+                            />
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attendance -->
+                <div
+                    class="panel flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.1)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none">
+                    <div class="mb-2 border-b border-slate-100 pb-3 dark:border-slate-700/80">
+                        <h5 class="text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-100">
+                            Attendance</h5>
+                    </div>
+                    <div class="flex flex-1 flex-col items-center justify-center gap-3 py-2">
+                        @if (attendanceSummaryLoading) {
+                        <p class="text-sm text-slate-500 dark:text-slate-400">Loading attendance…</p>
+                        } @else {
+                        <app-progress-ring
+                            size="lg"
+                            color="#14b8a6"
+                            [value]="attendanceGaugeValue"
+                            [centerText]="mockAttendancePct !== '—' ? mockAttendancePct + '%' : '—'"
+                        />
+                        <div class="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                            Overall attendance rate
+                        </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- CONCEPT GRID — SuperAdmin district home (all data real) -->
+            @if (isDistrictHomeDashboard) {
+            <div class="anim-fade-up anim-delay-2 grid grid-cols-1 gap-4 md:grid-cols-2 min-[990px]:grid-cols-12">
+                <!-- Academic year (right column) -->
+                <div
+                    class="panel rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none min-[990px]:col-span-4"
+                >
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-base text-slate-800 dark:text-white">{{ conceptDistrictName }}</h5>
+                        <span class="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] text-primary dark:bg-primary/20">{{ conceptAcademicYearLabel }}</span>
+                    </div>
+                    <div class="rounded-xl border border-slate-100 p-3 dark:border-slate-700/60">
+                        <div class="mb-2 grid grid-cols-7 gap-1 text-center text-[10px] uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                            <span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span>
+                        </div>
+                        @for (week of conceptCalendarWeeks; track $index) {
+                        <div class="mb-0.5 grid grid-cols-7 gap-1 text-center text-xs">
+                            @for (cell of week; track $index) {
+                            <span
+                                class="grid h-6 place-content-center rounded-full"
+                                [class.bg-primary]="cell.isToday"
+                                [class.text-white]="cell.isToday"
+                                [class.text-slate-600]="!cell.isToday && cell.day != null"
+                                [class.dark:text-slate-300]="!cell.isToday && cell.day != null"
+                            >{{ cell.day ?? '' }}</span>
+                            }
+                        </div>
+                        }
+                    </div>
+                    <div class="mt-4 flex items-center gap-2">
+                        <div class="flex -space-x-2">
+                            @for (name of conceptCampusChips; track name) {
+                            <span class="grid h-7 w-7 place-content-center rounded-full border-2 border-white bg-primary/15 text-[9px] text-primary dark:border-[#0e1726] dark:bg-primary/25 dark:text-[#b79afc]">{{ campusInitials(name) }}</span>
+                            }
+                        </div>
+                        @if (conceptCampusChipExtra > 0) {
+                        <span class="text-xs text-slate-400 dark:text-slate-500">+{{ conceptCampusChipExtra }} more</span>
+                        }
+                        @if (!conceptCampusChips.length) {
+                        <span class="text-xs text-slate-400 dark:text-slate-500">No campuses yet</span>
+                        }
+                    </div>
+                    <div class="mt-4 border-t border-slate-100 pt-3 dark:border-slate-700/60">
+                        <h6 class="mb-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Assessment periods</h6>
+                        @if (conceptPeriods.length) {
+                        <ul class="space-y-2">
+                            @for (q of conceptPeriods; track q.districtQuarterId) {
+                            <li class="flex items-center justify-between rounded-lg px-2 py-1.5 text-xs" [class.bg-primary/10]="q.quarterCode === conceptActiveQuarterCode" [class.dark:bg-primary/15]="q.quarterCode === conceptActiveQuarterCode">
+                                <span class="flex items-center gap-2 text-slate-700 dark:text-slate-200">
+                                    <span class="grid h-6 w-6 place-content-center rounded-md text-[10px]" [class.bg-primary]="q.quarterCode === conceptActiveQuarterCode" [class.text-white]="q.quarterCode === conceptActiveQuarterCode" [class.bg-slate-100]="q.quarterCode !== conceptActiveQuarterCode" [class.dark:bg-slate-700]="q.quarterCode !== conceptActiveQuarterCode">{{ q.quarterCode?.slice(0, 2) }}</span>
+                                    {{ q.quarterName || q.quarterCode }}
+                                </span>
+                                <span class="text-slate-400 dark:text-slate-500">{{ q.startDate | date:'MMM d' }} – {{ q.endDate | date:'MMM d' }}</span>
+                            </li>
+                            }
+                        </ul>
+                        } @else {
+                        <p class="text-xs text-slate-400 dark:text-slate-500">No assessment periods set up for this district.</p>
+                        }
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <button type="button" [routerLink]="['/district-profile', districtContext.selection.districtId]" class="btn btn-primary btn-sm">District Profile</button>
+                    </div>
+                </div>
+
+                <!-- Campus Ranked -->
+                <div
+                    class="panel rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none min-[990px]:col-span-8"
+                >
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-base text-slate-800 dark:text-white">Campus Ranked</h5>
+                        <select
+                            class="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs text-slate-500 focus:outline-none dark:border-slate-600 dark:bg-[#0e1726] dark:text-slate-300"
+                            [value]="conceptRankedSource"
+                            (change)="setConceptRankedSource($any($event.target).value)"
+                        >
+                            <option value="growth">Growth</option>
+                            <option value="ccmr">CCMR</option>
+                        </select>
+                    </div>
+                    <p *ngIf="conceptRankedSource === 'growth' && campusChartLoading" class="py-6 text-center text-xs text-slate-400 dark:text-slate-500">Loading campus ranking…</p>
+                    <table class="w-full text-sm" *ngIf="!(conceptRankedSource === 'growth' && campusChartLoading)">
+                        <thead>
+                            <tr class="text-left text-[11px] uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                                <th class="pb-2 font-normal">Campus</th>
+                                <th class="pb-2 text-right font-normal">Rank</th>
+                                <th class="pb-2 text-right font-normal">{{ conceptRankedSource === 'ccmr' ? 'CCMR %' : 'Growth' }}</th>
+                                <th class="pb-2 text-right font-normal">Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (row of conceptRankedRows; track row.key; let i = $index) {
+                            <tr class="border-t border-slate-100 transition-colors hover:bg-slate-50 dark:border-slate-700/60 dark:hover:bg-white/5">
+                                <td class="flex items-center gap-2 py-2.5 text-slate-700 dark:text-slate-200">
+                                    <span class="grid h-7 w-7 shrink-0 place-content-center rounded-full bg-primary/15 text-[9px] text-primary dark:bg-primary/25 dark:text-[#b79afc]">{{ campusInitials(row.title) }}</span>
+                                    <span class="truncate">{{ row.title }}</span>
+                                </td>
+                                <td class="text-right text-slate-500 dark:text-slate-400">#{{ i + 1 }}</td>
+                                <td class="text-right" [class.text-success]="conceptRankedSource === 'growth' && row.metric !== '—'">
+                                    @if (conceptRankedSource === 'growth' && row.metric !== '—') {
+                                    <span>&uarr; {{ row.metric }}</span>
+                                    } @else {
+                                    <span>{{ row.metric }}</span>
+                                    }
+                                </td>
+                                <td class="text-right text-slate-700 dark:text-slate-200">{{ row.score ?? '—' }}</td>
+                            </tr>
+                            } @empty {
+                            <tr><td colspan="4" class="py-6 text-center text-xs text-slate-400 dark:text-slate-500">No {{ conceptRankedSource === 'ccmr' ? 'academy CCMR' : 'campus growth' }} data for this selection.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+            }
+
+            <!-- ROW 1 — KPI cards (non district-home scopes keep the previous layout) -->
+            @if (!isDistrictHomeDashboard) {
+            <div class="anim-fade-up anim-delay-2 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <!-- STAAR COMPONENT SCORE -->
+                <div class="kpi-metric-card flex flex-col">
+                    <h5 class="kpi-metric-title mb-4">STAAR COMPONENT SCORE</h5>
+                    <div class="kpi-metric-value-wrap !mb-0">
+                        <h3 class="kpi-metric-value">
+                            {{ mockComponentScore }}<span class="text-2xl font-semibold"> %</span>
+                        </h3>
+                    </div>
+                    <div class="mt-5 flex items-center gap-4">
+                        <div class="kpi-ring relative h-[4.5rem] w-[4.5rem] shrink-0">
+                            <svg viewBox="0 0 72 72" class="h-full w-full -rotate-90">
+                                <defs>
+                                    <linearGradient id="kpiRingStaar" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#2A9D8F" />
+                                        <stop offset="100%" stop-color="#5FC4B6" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="36" cy="36" r="30" fill="none" stroke="#e6edec" stroke-width="7" class="dark:stroke-[#1c2b47]" />
+                                <circle
+                                    cx="36"
+                                    cy="36"
+                                    r="30"
+                                    fill="none"
+                                    stroke="url(#kpiRingStaar)"
+                                    stroke-width="7"
+                                    stroke-linecap="round"
+                                    [style.stroke-dasharray]="188.5"
+                                    [style.stroke-dashoffset]="kpiRingOffset(componentScoreWidth)"
+                                    class="transition-[stroke-dashoffset] duration-700 ease-out"
+                                />
+                            </svg>
+                        </div>
+                        @if (isDistrictHomeDashboard && gradesByCategory.length) {
+                        <div class="flex min-w-0 flex-1 flex-col items-end gap-0.5" title="Component score grade by category">
+                            @for (g of gradesByCategory; track g.campusCategoryId) {
+                            <div class="flex w-full items-baseline justify-between gap-1.5 leading-none">
+                                <span class="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{
+                                    g.categoryCode || '—'
+                                }}</span>
+                                <span
+                                    class="min-w-[0.75rem] text-right text-base font-bold"
+                                    [ngClass]="gradeLetterClass(g.csGrade)"
+                                    >{{ g.csGrade || '—' }}</span
+                                >
+                            </div>
+                            }
+                        </div>
+                        } @else {
+                        <span
+                            class="ml-auto shrink-0 text-xl font-bold"
+                            [ngClass]="gradeLetterClass(overallCsGrade)"
+                            >{{ overallCsGrade || '—' }}</span
+                        >
+                        }
+                    </div>
+                </div>
+
+                <!-- GROWTH -->
+                <div class="kpi-metric-card flex flex-col">
+                    <h5 class="kpi-metric-title mb-4">GROWTH</h5>
+                    <div class="kpi-metric-value-wrap !mb-0">
+                        <h3 class="kpi-metric-value">
+                            {{ mockGrowth }}<span class="text-2xl font-semibold"> %</span>
+                        </h3>
+                    </div>
+                    <div class="mt-5 flex items-center gap-4">
+                        <div class="kpi-ring relative h-[4.5rem] w-[4.5rem] shrink-0">
+                            <svg viewBox="0 0 72 72" class="h-full w-full -rotate-90">
+                                <defs>
+                                    <linearGradient id="kpiRingGrowth" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#E76F51" />
+                                        <stop offset="100%" stop-color="#F4A261" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="36" cy="36" r="30" fill="none" stroke="#f4e8e2" stroke-width="7" class="dark:stroke-[#1c2b47]" />
+                                <circle
+                                    cx="36"
+                                    cy="36"
+                                    r="30"
+                                    fill="none"
+                                    stroke="url(#kpiRingGrowth)"
+                                    stroke-width="7"
+                                    stroke-linecap="round"
+                                    [style.stroke-dasharray]="188.5"
+                                    [style.stroke-dashoffset]="kpiRingOffset(growthWidth)"
+                                    class="transition-[stroke-dashoffset] duration-700 ease-out"
+                                />
+                            </svg>
+                        </div>
+                        @if (isDistrictHomeDashboard && gradesByCategory.length) {
+                        <div class="flex min-w-0 flex-1 flex-col items-end gap-0.5" title="Growth grade by category">
+                            @for (g of gradesByCategory; track g.campusCategoryId) {
+                            <div class="flex w-full items-baseline justify-between gap-1.5 leading-none">
+                                <span class="text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{{
+                                    g.categoryCode || '—'
+                                }}</span>
+                                <span
+                                    class="min-w-[0.75rem] text-right text-base font-bold"
+                                    [ngClass]="gradeLetterClass(g.growthGrade)"
+                                    >{{ g.growthGrade || '—' }}</span
+                                >
+                            </div>
+                            }
+                        </div>
+                        } @else {
+                        <span
+                            class="ml-auto shrink-0 text-xl font-bold"
+                            [ngClass]="gradeLetterClass(overallGrowthGrade)"
+                            >{{ overallGrowthGrade || '—' }}</span
+                        >
+                        }
+                    </div>
+                </div>
+
+                <!-- APP / MEET / MASTER -->
+                <div class="kpi-metric-card flex flex-col justify-center space-y-5">
+                    <div>
+                        <div class="mb-2 flex justify-between text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                            <span>APP</span>
+                            <span class="font-semibold text-[#2563eb] dark:text-sky-400">{{ mockApp }} %</span>
+                        </div>
+                        <div class="kpi-metric-bar-track !h-3">
+                            <div class="kpi-metric-bar-fill kpi-bar-app" [style.width.%]="appWidth"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="mb-2 flex justify-between text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                            <span>MEET</span>
+                            <span class="font-semibold text-[#991b1b] dark:text-red-300">{{ mockMeet }} %</span>
+                        </div>
+                        <div class="kpi-metric-bar-track !h-3">
+                            <div class="kpi-metric-bar-fill kpi-bar-meet" [style.width.%]="meetWidth"></div>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="mb-2 flex justify-between text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                            <span>MASTER</span>
+                            <span class="font-semibold text-[#ea580c] dark:text-orange-400">{{ mockMaster }} %</span>
+                        </div>
+                        <div class="kpi-metric-bar-track !h-3">
+                            <div class="kpi-metric-bar-fill kpi-bar-master" [style.width.%]="masterWidth"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            }
+
+            <!-- ROW 5 — Top teachers / growth leaders (campus-category: merged campus-teacher-metrics) -->
+            <div *ngIf="isCampusCategoryView" class="grid gap-4 xl:grid-cols-2">
+                <p *ngIf="categoryTeacherMetricsError" class="col-span-full text-xs text-danger">
+                    {{ categoryTeacherMetricsError }}
+                </p>
+                <p
+                    *ngIf="categoryTeachersLoading"
+                    class="col-span-full text-sm text-slate-500 dark:text-slate-400"
+                >
+                    Loading teacher metrics…
+                </p>
+                <!-- Top 5 teachers (component score) -->
+                <div class="panel h-full w-full">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Teachers</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="w-full text-left text-sm text-gray-500">
+                            <thead class="bg-gray-50 text-gray-700">
+                                <tr>
+                                    <th class="p-3">Name</th>
+                                    <th class="p-3">Subject</th>
+                                    <th class="p-3">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let t of categoryTopTeachers" class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="flex items-center gap-2 p-3">{{ t.name }}</td>
+                                    <td class="p-3">{{ t.subjectLabel }}</td>
+                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(t.componentScore) }}</td>
+                                </tr>
+                                <tr
+                                    *ngIf="
+                                        !categoryTeachersLoading &&
+                                        !categoryTopTeachers.length &&
+                                        districtContext.bootstrapLoaded
+                                    "
+                                >
+                                    <td colspan="3" class="p-4 text-center text-gray-400">No teacher data for this category.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top 5 classrooms (growth by classroom proxy) -->
+                <div class="panel h-full w-full">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Classrooms</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="w-full text-left text-sm text-gray-500">
+                            <thead class="bg-gray-50 text-gray-700">
+                                <tr>
+                                    <th class="p-3">Instructor</th>
+                                    <th class="p-3">Grade</th>
+                                    <th class="p-3">Growth</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let r of categoryTopGrowthLeaders" class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="flex items-center gap-2 p-3">{{ r.instructorName }}</td>
+                                    <td class="p-3">{{ r.gradeLabel || '—' }}</td>
+                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(r.growth) }}</td>
+                                </tr>
+                                <tr
+                                    *ngIf="
+                                        !categoryTeachersLoading &&
+                                        !categoryTopGrowthLeaders.length &&
+                                        districtContext.bootstrapLoaded
+                                    "
+                                >
+                                    <td colspan="3" class="p-4 text-center text-gray-400">No classroom growth data for this category.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 5 — teacher classroom: Top students (chart from campus-teacher-student-metrics) -->
+            <div *ngIf="isTeacherDrillDownView" class="grid gap-4 xl:grid-cols-2">
+                <p *ngIf="campusMetricsError" class="col-span-full text-xs text-danger">
+                    {{ campusMetricsError }}
+                </p>
+                <p
+                    *ngIf="campusChartLoading"
+                    class="col-span-full text-sm text-slate-500 dark:text-slate-400"
+                >
+                    Loading student leaderboards…
+                </p>
+
+                <!-- Top 5 Students by score -->
+                <div class="panel h-full w-full">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 students by component score</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="w-full text-left text-sm text-gray-500">
+                            <thead class="bg-gray-50 text-gray-700">
+                                <tr>
+                                    <th class="p-3">Name</th>
+                                    <th class="p-3">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let s of teacherTopStudentsByScore" class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="p-3">{{ s.studentName }}</td>
+                                    <td class="p-3 font-semibold text-success">{{ formatStudentScore(s.componentScore) }}</td>
+                                </tr>
+                                <tr
+                                    *ngIf="
+                                        !campusChartLoading &&
+                                        !teacherTopStudentsByScore.length &&
+                                        districtContext.bootstrapLoaded
+                                    "
+                                >
+                                    <td colspan="2" class="p-4 text-center text-gray-400">No student data for this classroom.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top 5 Students by growth -->
+                <div class="panel h-full w-full">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 students by growth</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="w-full text-left text-sm text-gray-500">
+                            <thead class="bg-gray-50 text-gray-700">
+                                <tr>
+                                    <th class="p-3">Name</th>
+                                    <th class="p-3">Growth</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let s of teacherTopStudentsByGrowth" class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="p-3">{{ s.studentName }}</td>
+                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(s.growth) }}</td>
+                                </tr>
+                                <tr
+                                    *ngIf="
+                                        !campusChartLoading &&
+                                        !teacherTopStudentsByGrowth.length &&
+                                        districtContext.bootstrapLoaded
+                                    "
+                                >
+                                    <td colspan="2" class="p-4 text-center text-gray-400">No growth data for this classroom.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 5 — single campus: Top classrooms / students -->
+            <div *ngIf="isSingleCampusView" class="grid gap-4 xl:grid-cols-2">
+                <p *ngIf="campusMetricsError" class="col-span-full text-xs text-danger">
+                    {{ campusMetricsError }}
+                </p>
+                <p *ngIf="campusStudentsError" class="col-span-full text-xs text-danger">
+                    {{ campusStudentsError }}
+                </p>
+                <p
+                    *ngIf="campusChartLoading || campusStudentsLoading"
+                    class="col-span-full text-sm text-slate-500 dark:text-slate-400"
+                >
+                    Loading campus leaderboards…
+                </p>
+
+                <!-- Top 5 Classrooms -->
+                <div class="panel h-full w-full">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Classrooms</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="w-full text-left text-sm text-gray-500">
+                            <thead class="bg-gray-50 text-gray-700">
+                                <tr>
+                                    <th class="p-3">Instructor</th>
+                                    <th class="p-3">Grade</th>
+                                    <th class="p-3">Growth</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let r of campusTopClassrooms" class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="flex items-center gap-2 p-3">
+                                        <div
+                                            class="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-gray-200"
+                                        >
+                                            <icon-home class="h-4 w-4 text-primary" />
+                                        </div>
+                                        {{ r.instructorName }}
+                                    </td>
+                                    <td class="p-3">{{ r.gradeLabel }}</td>
+                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(r.growth) }}</td>
+                                </tr>
+                                <tr
+                                    *ngIf="
+                                        !campusChartLoading &&
+                                        !campusTopClassrooms.length &&
+                                        districtContext.bootstrapLoaded
+                                    "
+                                >
+                                    <td colspan="3" class="p-4 text-center text-gray-400">No classroom growth data for this campus.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top 5 Students -->
+                <div class="panel h-full w-full">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Students</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="w-full text-left text-sm text-gray-500">
+                            <thead class="bg-gray-50 text-gray-700">
+                                <tr>
+                                    <th class="p-3">Name</th>
+                                    <th class="p-3">Component score</th>
+                                    <th class="p-3">Growth</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let s of campusTopStudents" class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="flex items-center gap-2 p-3">
+                                        <div
+                                            class="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-gray-200"
+                                        >
+                                            <icon-user class="h-4 w-4 text-primary" />
+                                        </div>
+                                        {{ s.studentName }}
+                                    </td>
+                                    <td class="p-3">{{ formatNullablePct(s.componentScore) }}</td>
+                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(s.growth) }}</td>
+                                </tr>
+                                <tr
+                                    *ngIf="
+                                        !campusStudentsLoading &&
+                                        !campusTopStudents.length &&
+                                        districtContext.bootstrapLoaded
+                                    "
+                                >
+                                    <td colspan="3" class="p-4 text-center text-gray-400">No student scores for this campus.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ROW 5 — district home leaderboards -->
+            <div *ngIf="isDistrictHomeDashboard" class="grid gap-4 xl:grid-cols-2">
+                <p *ngIf="districtLeaderboardsError" class="col-span-full text-xs text-danger">
+                    {{ districtLeaderboardsError }}
+                </p>
+                <p
+                    *ngIf="districtLeaderboardsLoading"
+                    class="col-span-full text-sm text-slate-500 dark:text-slate-400"
+                >
+                    Loading leaderboards…
+                </p>
+                <!-- Top 5 Teachers -->
+                <div class="panel h-full w-full">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Teachers</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="w-full text-left text-sm text-gray-500">
+                            <thead class="bg-gray-50 text-gray-700">
+                                <tr>
+                                    <th class="p-3">Name</th>
+                                    <th class="p-3">Subject</th>
+                                    <th class="p-3">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let t of districtHomeTopTeachers" class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="p-3">{{ t.name }}</td>
+                                    <td class="p-3">{{ t.subjectLabel }}</td>
+                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(t.summativeScore) }}</td>
+                                </tr>
+                                <tr
+                                    *ngIf="
+                                        !districtLeaderboardsLoading &&
+                                        !districtHomeTopTeachers.length &&
+                                        districtContext.bootstrapLoaded
+                                    "
+                                >
+                                    <td colspan="3" class="p-4 text-center text-gray-400">No teacher data for this district.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Top 5 Classrooms -->
+                <div class="panel h-full w-full">
+                    <div class="mb-3 flex items-center justify-between">
+                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Classrooms</h5>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="w-full text-left text-sm text-gray-500">
+                            <thead class="bg-gray-50 text-gray-700">
+                                <tr>
+                                    <th class="p-3">Instructor</th>
+                                    <th class="p-3">Grade</th>
+                                    <th class="p-3">Growth</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr *ngFor="let r of districtHomeTopClassrooms" class="border-b last:border-0 hover:bg-gray-50">
+                                    <td class="p-3">{{ r.instructorName }}</td>
+                                    <td class="p-3">{{ r.gradeLabel }}</td>
+                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(r.growth) }}</td>
+                                </tr>
+                                <tr
+                                    *ngIf="
+                                        !districtLeaderboardsLoading &&
+                                        !districtHomeTopClassrooms.length &&
+                                        districtContext.bootstrapLoaded
+                                    "
+                                >
+                                    <td colspan="3" class="p-4 text-center text-gray-400">No classroom growth data for this district.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+    </div>
+</div>
+
+<ngx-custom-modal #teacherStudentOverviewModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20"
+            >
+                <icon-users-group class="h-4 w-4" />
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">Students</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {{ teacherName }} · {{ campusName }}
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="!canExportTeacherStudentOverview"
+                (click)="exportTeacherStudentOverview('excel')"
+            >
+                <icon-file class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                EXCEL
+            </button>
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="!canExportTeacherStudentOverview"
+                (click)="exportTeacherStudentOverview('print')"
+            >
+                <icon-printer class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                PRINT
+            </button>
+        </div>
+
+        <p
+            *ngIf="!teacherStudentOverviewRows.length"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            No student data for this classroom.
+        </p>
+
+        <div
+            *ngIf="teacherStudentOverviewRows.length > 0"
+            class="datatable records-datatable teacher-student-overview-datatable"
+        >
+            <ng-datatable
+                [rows]="teacherStudentOverviewRows"
+                [columns]="teacherStudentOverviewColumns"
+                [columnFilter]="false"
+                [sortable]="true"
+                [search]="teacherStudentOverviewSearch"
+                [rowClass]="teacherStudentRowClass"
+                [pageSize]="10"
+                skin="whitespace-nowrap table-hover text-xs"
+                firstArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M13 19L7 12L13 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> <path opacity="0.5" d="M16.9998 19L10.9998 12L16.9998 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg>'
+                lastArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M11 19L17 12L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> <path opacity="0.5" d="M6.99976 19L12.9998 12L6.99976 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg> '
+                previousArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M15 5L9 12L15 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg>'
+                nextArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M9 5L15 12L9 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg>'
+            >
+                @for (field of teacherStudentDiffColumnFields; track field) {
+                <ng-template [slot]="field" let-value="data">
+                    @let diff = teacherStudentQuarterDiffValue(value, field);
+                    @if (diff != null) {
+                    <span
+                        class="flex items-center justify-center gap-1 font-bold"
+                        [ngClass]="diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : ''"
+                    >
+                        {{ diff }}
+                        @if (diff > 0) {
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3 w-3"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="3"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M12 19V6M5 12l7-7 7 7" />
+                        </svg>
+                        }
+                        @if (diff < 0) {
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-3 w-3"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="3"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path d="M12 5v13M19 12l-7 7-7-7" />
+                        </svg>
+                        }
+                    </span>
+                    } @else {
+                    <span class="text-gray-400">—</span>
+                    }
+                </ng-template>
+                }
+            </ng-datatable>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- Districts popup (Districts stat card) -->
+<ngx-custom-modal #districtsModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#8153FC]/10 text-[#8153FC] dark:bg-[#8153FC]/20"
+            >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21h-7.5M4.5 9.75V21M19.5 21V9.75M3.27 6.96 12 3l8.73 3.96a.75.75 0 0 1 .52.68v.16a2.4 2.4 0 0 1-4.2 1.64l-.36-.37a1.5 1.5 0 0 0-2.2.02l-.4.42a2.25 2.25 0 0 1-3.28 0l-.4-.42a1.5 1.5 0 0 0-2.2-.02l-.36.37a2.4 2.4 0 0 1-4.2-1.64v-.16a.75.75 0 0 1 .52-.68Z"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">Districts</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    All districts in the system
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <p
+            *ngIf="orgModalLoading"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            Loading districts…
+        </p>
+        <p
+            *ngIf="!orgModalLoading && !orgDistrictRows.length"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            No districts found.
+        </p>
+        <div
+            *ngIf="!orgModalLoading && orgDistrictRows.length"
+            class="overflow-x-auto"
+        >
+            <table class="table-hover min-w-full text-sm">
+                <thead>
+                    <tr class="border-b border-white-light text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-[#1b2e4b] dark:text-gray-400">
+                        <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">District Name</th>
+                        <th class="px-4 py-3">Code</th>
+                        <th class="px-4 py-3">Campuses</th>
+                        <th class="px-4 py-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of orgDistrictRows; track row.name; let i = $index) {
+                    <tr
+                        class="anim-fade-up border-b border-white-light/60 transition-colors hover:bg-gray-50 dark:border-[#1b2e4b]/60 dark:hover:bg-[#1b2e4b]/40"
+                        [style.animation-delay]="orgRowDelay(i)"
+                    >
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ i + 1 }}</td>
+                        <td class="px-4 py-2.5 font-semibold">
+                            <a
+                                [routerLink]="
+                                    row.districtId != null
+                                        ? ['/dashboard/district', row.districtId]
+                                        : ['/dashboard']
+                                "
+                                class="text-primary hover:underline dark:text-primary"
+                                title="Open district dashboard"
+                            >{{ row.name }}</a>
+                        </td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.code }}</td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.campusCount }}</td>
+                        <td class="px-4 py-2.5">
+                            <span
+                                class="rounded-md px-2 py-1 text-xs font-medium"
+                                [ngClass]="row.isActive
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'"
+                            >
+                                {{ row.isActive ? 'Active' : 'Inactive' }}
+                            </span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- Campuses popup (Campuses stat card) -->
+<ngx-custom-modal #campusesModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3D91F5]/10 text-[#3D91F5] dark:bg-[#3D91F5]/20"
+            >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.4 60.4 0 0 0 0 3.706c.127.738.575 1.365 1.207 1.75.46.278 1.003.403 1.548.403h9.505c.545 0 1.088-.125 1.548-.403.632-.385 1.08-1.012 1.207-1.75a60.4 60.4 0 0 0 0-3.706 60.4 60.4 0 0 0-.702-3.535A3.001 3.001 0 0 0 16.663 4.5H7.337a3.001 3.001 0 0 0-2.885 2.112 60.4 60.4 0 0 0-.702 3.535Zm4.74 3.353h5.99M12 21V8.25m-6 6.75h.008v.008H6v-.008Z"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">Campuses</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    Select a campus to view its stats · click a name to open its dashboard
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <div *ngIf="!orgModalLoading && orgCampusRows.length" class="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors"
+                [ngClass]="districtContext.growthFilters.campusId == null
+                    ? 'border-primary bg-primary text-white'
+                    : 'border-primary/30 text-primary hover:bg-primary/10'"
+                (click)="applyCampusFilterFromPopup(null, null)"
+            >
+                All Campuses (District)
+            </button>
+            <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-full border border-white-light px-3 py-1.5 text-xs font-semibold text-gray-600 transition-colors hover:border-primary/40 hover:text-primary dark:border-[#1b2e4b] dark:text-gray-300"
+                (click)="openFiltersPanelFromPopup()"
+                title="Open the full search filters panel (grade, subject, demographics)"
+            >
+                ⚙️ More filters
+            </button>
+        </div>
+        <p
+            *ngIf="orgModalLoading"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            Loading campuses…
+        </p>
+        <p
+            *ngIf="!orgModalLoading && !orgCampusRows.length"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            No campuses found.
+        </p>
+        <div
+            *ngIf="!orgModalLoading && orgCampusRows.length"
+            class="max-h-[60vh] overflow-y-auto"
+        >
+            <table class="table-hover min-w-full text-sm">
+                <thead class="sticky top-0 bg-white dark:bg-[#0e1726]">
+                    <tr class="border-b border-white-light text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-[#1b2e4b] dark:text-gray-400">
+                        <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">District</th>
+                        <th class="px-4 py-3">Campus Name</th>
+                        <th class="px-4 py-3">Code</th>
+                        <th class="px-4 py-3">Score</th>
+                        <th class="px-4 py-3 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of orgCampusRows; track row.name + row.code; let i = $index) {
+                    <tr
+                        class="anim-fade-up border-b border-white-light/60 transition-colors hover:bg-gray-50 dark:border-[#1b2e4b]/60 dark:hover:bg-[#1b2e4b]/40"
+                        [style.animation-delay]="orgRowDelay(i)"
+                        [ngClass]="{ 'bg-[#2A9D8F]/5 dark:bg-[#2A9D8F]/10': isCampusFilterRow(row.campusId) }"
+                    >
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ i + 1 }}</td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.district }}</td>
+                        <td class="px-4 py-2.5 font-semibold">
+                            <a
+                                [routerLink]="['/dashboard/campus', row.slug]"
+                                class="text-primary hover:underline dark:text-primary"
+                                title="Open campus dashboard"
+                            >{{ row.name }}</a>
+                        </td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.code }}</td>
+                        <td class="px-4 py-2.5">
+                            @if (row.score != null) {
+                            <span class="font-bold text-primary dark:text-primary">{{
+                                row.score | number: '1.0-1'
+                            }}%</span>
+                            } @else {
+                            <span class="text-gray-400">—</span>
+                            }
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                            @if (isCampusFilterRow(row.campusId)) {
+                            <span
+                                class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary dark:bg-primary/20"
+                                title="Dashboard stats are currently scoped to this campus"
+                            >✓ Selected</span>
+                            } @else {
+                            <button
+                                type="button"
+                                class="text-xs font-semibold text-primary hover:underline dark:text-primary"
+                                (click)="applyCampusFilterFromPopup(row.campusId, row.slug)"
+                                title="Show dashboard stats for this campus"
+                            >View stats</button>
+                            }
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- Teachers popup (Teachers stat card) -->
+<ngx-custom-modal #teachersModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#2A9D8F]/10 text-[#2A9D8F] dark:bg-[#2A9D8F]/20"
+            >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.438 60.438 0 0 0 .589 11.481M12 14.25V8.25m0 0 .75-.75.75.75M12 8.25v-.75M17.255 14.515a60.47 60.47 0 0 0 .79-9.29M6.261 14.515a60.439 60.439 0 0 0-.79-9.29M12 14.25c-2.153 0-4.256.13-6.326.385m12.602 0a60.53 60.53 0 0 0-6.276-.385m0 0c-.686 1.386-1.847 2.176-3.276 2.176-1.407 0-2.598-.81-3.24-2.176m9.516 0c-.686 1.386-1.87 2.176-3.24 2.176-1.43 0-2.59-.79-3.276-2.176"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">Teachers</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    Teachers with active assignments
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <p
+            *ngIf="orgModalLoading"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            Loading teachers…
+        </p>
+        <p
+            *ngIf="!orgModalLoading && !orgTeacherRows.length"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            No teachers found.
+        </p>
+        <div
+            *ngIf="!orgModalLoading && orgTeacherRows.length"
+            class="max-h-[60vh] overflow-y-auto"
+        >
+            <table class="table-hover min-w-full text-sm">
+                <thead class="sticky top-0 bg-white dark:bg-[#0e1726]">
+                    <tr class="border-b border-white-light text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-[#1b2e4b] dark:text-gray-400">
+                        <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">Teacher</th>
+                        <th class="px-4 py-3">Email</th>
+                        <th class="px-4 py-3">Campus</th>
+                        <th class="px-4 py-3">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of orgTeacherRows; track row.email; let i = $index) {
+                    <tr
+                        class="anim-fade-up border-b border-white-light/60 transition-colors hover:bg-gray-50 dark:border-[#1b2e4b]/60 dark:hover:bg-[#1b2e4b]/40"
+                        [style.animation-delay]="orgRowDelay(i)"
+                    >
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ i + 1 }}</td>
+                        <td class="px-4 py-2.5 font-semibold">
+                            <a
+                                [routerLink]="row.campusSlug && row.teacherId != null
+                                    ? ['/dashboard/campus', row.campusSlug, 'teacher', row.teacherId]
+                                    : ['/t-tess']"
+                                class="text-primary hover:underline dark:text-primary"
+                                title="Open teacher classroom"
+                            >{{ row.name }}</a>
+                        </td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.email }}</td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.campus }}</td>
+                        <td class="px-4 py-2.5">
+                            <span
+                                class="rounded-md px-2 py-1 text-xs font-medium"
+                                [ngClass]="row.isActive
+                                    ? 'bg-green-100 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                                    : 'bg-red-100 text-red-700 dark:bg-red-900/20 dark:text-red-400'"
+                            >
+                                {{ row.isActive ? 'Active' : 'Inactive' }}
+                            </span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- Campus Comparison results — floating window like the Search Filters form -->
+<ngx-custom-modal
+    #comparisonModal
+    customClass="modal-top filters-modal"
+    class="no-footer"
+    (closed)="onComparisonModalClosed()"
+>
+    <ng-template #modalHeader>
+        <div class="relative w-full text-center">
+            <h4 class="mb-1 text-lg font-bold text-[#0e1726] dark:text-white-light">Campus Comparison</h4>
+            <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                Stats for the two selected campuses, side by side.
+            </p>
+            <button
+                type="button"
+                (click)="exportComparisonPdf()"
+                title="Download stats as PDF"
+                class="absolute top-1/2 -translate-y-1/2 rounded-lg p-1.5 text-gray-500 transition hover:bg-[#2A9D8F]/10 hover:text-[#178377] dark:text-gray-400 dark:hover:text-teal-300 ltr:right-14 rtl:left-14"
+            >
+                <icon-printer class="h-5 w-5" />
+            </button>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (campusComparisonLoading) {
+        <p class="text-sm text-gray-500 dark:text-gray-400">Loading both campuses…</p>
+        } @else if (campusComparisonError) {
+        <p class="text-xs text-danger">{{ campusComparisonError }}</p>
+        } @else if (campusComparisonRows?.length) {
+        <div class="grid gap-4 md:grid-cols-2">
+            @for (row of campusComparisonRows; track row.id; let i = $index) {
+            <div
+                class="rounded-xl border p-4"
+                [ngClass]="
+                    i === 0
+                        ? 'border-[#2A9D8F]/30 bg-[#2A9D8F]/[0.04] dark:border-[#2A9D8F]/40'
+                        : 'border-[#E76F51]/30 bg-[#E76F51]/[0.04] dark:border-[#E76F51]/40'
+                "
+            >
+                <div class="mb-3 flex items-center justify-between gap-2">
+                    <h6 class="min-w-0 truncate text-sm font-bold text-[#0e1726] dark:text-white">
+                        {{ row.name || 'Campus' }}
+                    </h6>
+                    <span
+                        class="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                        [ngClass]="
+                            i === 0
+                                ? 'bg-[#2A9D8F]/15 text-[#178377] dark:text-teal-300'
+                                : 'bg-[#E76F51]/15 text-[#d2542f] dark:text-orange-300'
+                        "
+                    >
+                        {{ i === 0 ? 'Campus A' : 'Campus B' }}
+                    </span>
+                </div>
+                @if (!row.stats) {
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    No growth metrics available for this campus in the selected window.
+                </p>
+                } @else {
+                <div class="flex flex-col gap-1.5">
+                    @for (m of comparisonMetricRows; track m.key) {
+                    <div
+                        class="flex items-center justify-between gap-2 border-b border-dashed border-slate-100 pb-1.5 last:border-0 last:pb-0 dark:border-[#1b2e4b]"
+                    >
+                        <span class="text-xs font-medium text-gray-500 dark:text-gray-400">{{ m.label }}</span>
+                        <span class="flex items-center gap-2">
+                            @if (m.key === 'cs' && row.stats.csGrade) {
+                            <span class="text-[10px] font-bold text-gray-400">{{ row.stats.csGrade }}</span>
+                            } @if (m.key === 'growth' && row.stats.growthGrade) {
+                            <span class="text-[10px] font-bold text-gray-400">{{ row.stats.growthGrade }}</span>
+                            }
+                            <span class="text-sm font-bold text-[#0e1726] dark:text-white">
+                                {{ fmtComparison(comparisonValue(row.stats, m.key)) }}%
+                            </span>
+                            @if (comparisonLeader(m.key) === i) {
+                            <span
+                                class="rounded-full bg-[#2A9D8F]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#178377] dark:text-teal-300"
+                                >▲ leads</span
+                            >
+                            }
+                        </span>
+                    </div>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </div>
+        <div class="mt-4 flex items-center justify-end gap-2 border-t border-white-light pt-3 dark:border-[#1b2e4b]">
+            <button type="button" class="btn btn-outline-danger px-5" (click)="clearCampusComparison()">
+                Clear comparison
+            </button>
+            <button type="button" class="btn btn-primary px-5" (click)="closeComparisonModal()">Done</button>
+        </div>
+        }
+    </ng-template>
+</ngx-custom-modal>
+
+
+

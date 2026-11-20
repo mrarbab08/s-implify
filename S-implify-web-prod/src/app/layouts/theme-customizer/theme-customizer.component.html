@@ -1,0 +1,270 @@
+@if (showFilterGear) {
+<div>
+    <!-- Floating gear FAB (Search Filters launcher) -->
+    <button
+        type="button"
+        class="btn btn-primary fixed bottom-6 z-50 h-11 w-11 rounded-full p-0 shadow-lg ltr:right-6 rtl:left-6"
+        (click)="toggleCustomizer()"
+        title="Search Filters"
+    >
+        <icon-settings class="h-5 w-5" />
+    </button>
+
+    <!-- Search Filters popup (wide rectangle, 2-column field grid) -->
+    <ngx-custom-modal #filtersModal customClass="modal-top filters-modal" class="no-footer" (closed)="onFiltersModalClosed()">
+        <ng-template #modalHeader>
+            <div class="relative w-full text-center">
+                <h4 class="mb-1 text-lg font-bold text-[#0e1726] dark:text-white-light">Search Filters</h4>
+                <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                    These are the search filters for dashboard.
+                </p>
+                <button
+                    type="button"
+                    (click)="openCampusComparison()"
+                    title="Select two campuses to compare on the dashboard"
+                    class="absolute top-1/2 -translate-y-1/2 rounded-lg border border-[#2A9D8F]/40 bg-[#2A9D8F]/10 px-3 py-1.5 text-xs font-semibold text-[#178377] transition hover:bg-[#2A9D8F]/20 dark:border-[#2A9D8F]/50 dark:bg-[#2A9D8F]/20 dark:text-teal-300 dark:hover:bg-[#2A9D8F]/30 ltr:right-12 rtl:left-12"
+                >
+                    Campus Comparison
+                </button>
+            </div>
+        </ng-template>
+        <ng-template #modalBody>
+            <div class="flex flex-col gap-4">
+                <!-- District Context (state + district) — select disabled when the role pins the district -->
+                <div class="rounded-md border border-dashed border-[#e0e6ed] p-3 dark:border-[#1b2e4b]">
+                    @if (contextToolbarLoading) {
+                        <span class="text-xs text-gray-400">Loading context…</span>
+                    } @else if (districtContext.bootstrapError) {
+                        <span class="text-xs text-danger">{{ districtContext.bootstrapError }}</span>
+                    } @else if (districtContext.selection$ | async; as ctx) {
+                        <div class="flex flex-col gap-2">
+                            <select
+                                class="form-select w-full rounded-md border border-white-light bg-white py-1.5 text-xs font-semibold text-gray-800 shadow-sm dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                [ngModel]="ctx.stateId"
+                                (ngModelChange)="districtContext.setStateId($event)"
+                                [disabled]="auth.locksDistrictSelection()"
+                                title="State"
+                            >
+                                <option [ngValue]="null">State</option>
+                                @for (st of districtContext.states; track st.stateId) {
+                                    <option [ngValue]="st.stateId">{{ st.stateCode }}</option>
+                                }
+                            </select>
+
+                            <select
+                                class="form-select w-full rounded-md border border-white-light bg-white py-1.5 text-xs font-semibold text-gray-800 shadow-sm dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                [ngModel]="ctx.districtId"
+                                (ngModelChange)="districtContext.setDistrictId($event)"
+                                [disabled]="auth.locksDistrictSelection()"
+                                title="District"
+                            >
+                                <option [ngValue]="null">District</option>
+                                @for (d of districtContext.districts; track d.districtId) {
+                                    <option [ngValue]="d.districtId">{{ d.districtName }}</option>
+                                }
+                            </select>
+                            @if (auth.locksDistrictSelection()) {
+                            <p class="text-[10px] text-gray-400 dark:text-gray-500">
+                                District is fixed by your role — stats are scoped to it automatically.
+                            </p>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <!-- Search Filters form -->
+                @if (contextToolbarLoading) {
+                    <span class="text-xs text-gray-400">Loading filters…</span>
+                } @else if (districtContext.selection$ | async; as ctx) {
+                    <div class="flex flex-col gap-3">
+                        <!-- Campuses row: comparison picks two, normal mode scopes one -->
+                        <div class="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                            @if (comparisonMode) {
+                            <div>
+                                <label class="mb-1 block text-sm font-semibold dark:text-white">Campus A</label>
+                                <select
+                                    class="form-select w-full rounded-md border border-white-light bg-white py-2 text-sm text-gray-800 dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                    [(ngModel)]="campusADraft"
+                                    name="compareCampusA"
+                                >
+                                    <option [ngValue]="null">Select campus A</option>
+                                    @for (c of campusOptions; track c.campusId) {
+                                        <option [ngValue]="c.campusId">{{ c.campusName }}</option>
+                                    }
+                                </select>
+                            </div>
+                            <div>
+                                <label class="mb-1 block text-sm font-semibold dark:text-white">Campus B</label>
+                                <select
+                                    class="form-select w-full rounded-md border border-white-light bg-white py-2 text-sm text-gray-800 dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                    [(ngModel)]="campusBDraft"
+                                    name="compareCampusB"
+                                >
+                                    <option [ngValue]="null">Select campus B</option>
+                                    @for (c of campusOptions; track c.campusId) {
+                                        <option [ngValue]="c.campusId">{{ c.campusName }}</option>
+                                    }
+                                </select>
+                            </div>
+                            @if (comparisonError) {
+                            <p class="text-xs font-semibold text-danger sm:col-span-2">{{ comparisonError }}</p>
+                            }
+                            } @else {
+                            <div>
+                                <label class="mb-1 block text-sm font-semibold dark:text-white">Campus</label>
+                                <select
+                                    class="form-select w-full rounded-md border border-white-light bg-white py-2 text-sm text-gray-800 dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                    [(ngModel)]="campusDraft"
+                                    name="filterCampus"
+                                >
+                                    <option [ngValue]="null">All Campuses (District)</option>
+                                    @for (c of campusOptions; track c.campusId) {
+                                        <option [ngValue]="c.campusId">{{ c.campusName }}</option>
+                                    }
+                                </select>
+                            </div>
+                            }
+                        </div>
+
+                        <!-- Grade / Subject / Special Education share one row -->
+                        <div class="grid gap-x-6 gap-y-3 sm:grid-cols-3">
+                        <!-- Grade -->
+                        <div>
+                            <label class="mb-1 block text-sm font-semibold dark:text-white">Grade</label>
+                            <ng-select
+                                [items]="gradeOptions"
+                                bindLabel="label"
+                                bindValue="value"
+                                [(ngModel)]="filtersDraft.grades"
+                                name="filterGrades"
+                                [multiple]="true"
+                                [closeOnSelect]="false"
+                                [searchable]="true"
+                                [clearable]="false"
+                                placeholder="Select grades"
+                                class="custom-multiselect w-full"
+                                appendTo="body"
+                            ></ng-select>
+                        </div>
+
+                        <!-- Subject -->
+                        <div>
+                            <label class="mb-1 block text-sm font-semibold dark:text-white">Subject</label>
+                            <ng-select
+                                [items]="subjectOptions"
+                                bindLabel="label"
+                                bindValue="value"
+                                [(ngModel)]="filtersDraft.subjects"
+                                name="filterSubjects"
+                                [multiple]="true"
+                                [closeOnSelect]="false"
+                                [searchable]="true"
+                                [clearable]="false"
+                                placeholder="Select subjects"
+                                class="custom-multiselect w-full"
+                                appendTo="body"
+                            ></ng-select>
+                        </div>
+
+                        <!-- Special Education -->
+                        <div>
+                            <label class="mb-1 block text-sm font-semibold dark:text-white">Special Education</label>
+                            <select
+                                class="form-select w-full rounded-md border border-white-light bg-white py-2 text-sm text-gray-800 dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                [(ngModel)]="filtersDraft.specialEducation"
+                            >
+                                <option [ngValue]="null">Select Special Education</option>
+                                @for (opt of tristateBoolOptions; track opt.label) {
+                                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </div>
+                        </div>
+
+                        <!-- Economical Disadvantage / Emergent Bilingual / Ethnicity / Test Language (pairs) -->
+                        <div class="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                        <!-- Economic Disadvantage -->
+                        <div>
+                            <label class="mb-1 block text-sm font-semibold dark:text-white">
+                                Economical Disadvantage
+                            </label>
+                            <select
+                                class="form-select w-full rounded-md border border-white-light bg-white py-2 text-sm text-gray-800 dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                [(ngModel)]="filtersDraft.economicDisadvantage"
+                            >
+                                <option [ngValue]="null">Select Economical Disadvantage</option>
+                                @for (opt of tristateBoolOptions; track opt.label) {
+                                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Emergent Bilingual -->
+                        <div>
+                            <label class="mb-1 block text-sm font-semibold dark:text-white">Emergent Bilingual</label>
+                            <select
+                                class="form-select w-full rounded-md border border-white-light bg-white py-2 text-sm text-gray-800 dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                [(ngModel)]="filtersDraft.emergentBilingual"
+                            >
+                                <option [ngValue]="null">Select Emergent Bilingual</option>
+                                @for (opt of emergentBilingualOptions; track opt.value) {
+                                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Ethnicity -->
+                        <div>
+                            <label class="mb-1 block text-sm font-semibold dark:text-white">Ethnicity</label>
+                            <select
+                                class="form-select w-full rounded-md border border-white-light bg-white py-2 text-sm text-gray-800 dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                [(ngModel)]="filtersDraft.ethnicity"
+                            >
+                                <option [ngValue]="null">Select Ethnicity</option>
+                                @for (opt of ethnicityOptions; track opt.value) {
+                                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Test Language -->
+                        <div>
+                            <label class="mb-1 block text-sm font-semibold dark:text-white">Test Language</label>
+                            <select
+                                class="form-select w-full rounded-md border border-white-light bg-white py-2 text-sm text-gray-800 dark:border-[#191e3a] dark:bg-[#1b2e4b] dark:text-white"
+                                [(ngModel)]="filtersDraft.testLanguage"
+                            >
+                                <option [ngValue]="null">Select Test Language</option>
+                                @for (opt of testLanguageOptions; track opt.value) {
+                                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </div>
+
+                        <!-- Action buttons -->
+                        <div
+                            class="col-span-full mt-1 flex items-center justify-end gap-2 border-t border-white-light pt-3 dark:border-[#1b2e4b]"
+                        >
+                            <button
+                                type="button"
+                                class="btn btn-outline-danger px-5"
+                                (click)="resetFilters()"
+                            >
+                                Reset
+                            </button>
+                            <button
+                                type="button"
+                                class="btn btn-primary px-5"
+                                (click)="applyFilters()"
+                            >
+                                Search
+                            </button>
+                        </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </ng-template>
+    </ngx-custom-modal>
+</div>
+}

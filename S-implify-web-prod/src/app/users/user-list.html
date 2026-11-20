@@ -1,0 +1,388 @@
+<div class="panel h-full border-white-light dark:border-[#1b2e4b]">
+    <div class="mb-5 flex flex-col gap-5 md:flex-row md:items-center justify-between">
+        <h5 class="text-lg font-semibold dark:text-white-light">All Users</h5>
+
+        @if (loadError) {
+        <p class="text-sm text-danger">{{ loadError }}</p>
+        }
+
+        <div class="flex items-center gap-5 ltr:ml-auto rtl:mr-auto">
+            <button
+                type="button"
+                class="btn btn-primary btn-sm flex items-center justify-center gap-2"
+                (click)="openAddUserModal()"
+            >
+                <icon-user-plus class="h-4 w-4" /> Add User
+            </button>
+        </div>
+    </div>
+
+    <div class="datatable">
+        <ng-datatable
+            [rows]="rows"
+            [columns]="cols"
+            [columnFilter]="false"
+            [sortable]="true"
+            [pageSize]="10"
+            skin="whitespace-nowrap table-hover text-xs"
+            firstArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M13 19L7 12L13 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> <path opacity="0.5" d="M16.9998 19L10.9998 12L16.9998 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg>'
+            lastArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M11 19L17 12L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> <path opacity="0.5" d="M6.99976 19L12.9998 12L6.99976 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg> '
+            previousArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M15 5L9 12L15 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg>'
+            nextArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M9 5L15 12L9 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg>'
+        >
+            <ng-template slot="firstName" let-value="data">
+                <div class="flex items-center gap-3">
+                    <div class="h-8 w-8 rounded-full bg-[#f4f7f8] flex items-center justify-center dark:bg-[#1b2e4b]">
+                        <icon-user class="h-5 w-5 text-gray-500" />
+                    </div>
+                    <span class="font-semibold">{{ value.firstName }}</span>
+                </div>
+            </ng-template>
+
+            <ng-template slot="actions" let-value="data">
+                <div class="flex items-center gap-2">
+                    <button type="button" class="text-gray-500 hover:text-primary" title="View" (click)="viewUser(value)">
+                        <icon-eye class="h-4.5 w-4.5" />
+                    </button>
+                    <button type="button" class="text-gray-500 hover:text-success" title="Edit" (click)="editUser(value)">
+                        <icon-pencil class="h-4.5 w-4.5" />
+                    </button>
+                    <button type="button" class="text-gray-500 hover:text-danger" title="Remove" (click)="deleteUser(value)">
+                        <icon-trash-lines class="h-4.5 w-4.5" />
+                    </button>
+                </div>
+            </ng-template>
+        </ng-datatable>
+    </div>
+</div>
+
+<ngx-custom-modal #addUserModal customClass="add-user-modal">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20"
+            >
+                @if (isViewMode) {
+                <icon-eye class="h-4 w-4" />
+                } @else {
+                <icon-user-plus class="h-4 w-4" />
+                }
+            </div>
+            <div>
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">
+                    @if (isViewMode) { View user } @else if (isEditMode) { Edit user } @else { Add user }
+                </div>
+                <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
+                    @if (isViewMode) {
+                    Review district scope, role, and account details.
+                    } @else if (isEditMode) {
+                    Update district scope, role, and account details.
+                    } @else {
+                    Assign district scope, role, and credentials.
+                    }
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (userModalLoading) {
+        <div class="flex min-h-[12rem] items-center justify-center text-sm text-gray-500">Loading user…</div>
+        } @else {
+        <div class="add-user-form-grid">
+            <!-- District scope -->
+            <section class="add-user-form-section lg:col-span-1">
+                <h6 class="add-user-form-section-title">
+                    <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px]">1</span>
+                    District scope
+                </h6>
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="col-span-1">
+                        <label class="add-user-field-label">State</label>
+                        <select
+                            class="add-user-field-select w-full"
+                            [(ngModel)]="addForm.stateId"
+                            (ngModelChange)="onStateChange()"
+                            [disabled]="isFormReadonly || statesLoading"
+                        >
+                            <option [ngValue]="null" disabled>Select state</option>
+                            @for (s of states; track s.stateId) {
+                            <option [ngValue]="s.stateId">{{ s.stateName }} ({{ s.stateCode }})</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-span-1">
+                        <label class="add-user-field-label">District</label>
+                        <select
+                            class="add-user-field-select w-full"
+                            [(ngModel)]="addForm.districtId"
+                            (ngModelChange)="onDistrictChange()"
+                            [disabled]="isFormReadonly || districtsLoading || !addForm.stateId"
+                        >
+                            @if (isSuperAdminRole) {
+                            <option [ngValue]="null">All</option>
+                            } @else {
+                            <option [ngValue]="null" disabled>Select district</option>
+                            }
+                            @for (d of districts; track d.districtId) {
+                            <option [ngValue]="d.districtId">{{ d.districtName }}</option>
+                            }
+                        </select>
+                    </div>
+
+                    @if (addForm.districtId) {
+                    <div [class.col-span-2]="!addForm.campusId" [class.col-span-1]="addForm.campusId">
+                        <label class="add-user-field-label">Campus</label>
+                        <select
+                            class="add-user-field-select w-full"
+                            [(ngModel)]="addForm.campusId"
+                            (ngModelChange)="onCampusChange()"
+                            [disabled]="isFormReadonly || campusesLoading"
+                        >
+                            @if (showCampusAllOption) {
+                            <option [ngValue]="null">All</option>
+                            } @else {
+                            <option [ngValue]="null" disabled>Select campus</option>
+                            }
+                            @for (c of campuses; track c.campusId) {
+                            <option [ngValue]="c.campusId">{{ c.campusName }} ({{ c.campusCode }})</option>
+                            }
+                        </select>
+                    </div>
+                    }
+
+                    @if (addForm.campusId) {
+                    <div class="col-span-1">
+                        <label class="add-user-field-label">Teacher</label>
+                        <select
+                            class="add-user-field-select w-full"
+                            [(ngModel)]="addForm.teacherId"
+                            (ngModelChange)="onTeacherChange()"
+                            [disabled]="isFormReadonly || teachersLoading"
+                        >
+                            <option [ngValue]="null" disabled>Select teacher</option>
+                            @for (t of teachers; track t.teacherId ?? t.teacherIdExternal ?? t.teacherName) {
+                            <option [ngValue]="t.teacherId" [disabled]="t.teacherId == null">
+                                {{ teacherDisplayName(t) }}
+                            </option>
+                            }
+                        </select>
+                    </div>
+                    }
+                </div>
+            </section>
+
+            <!-- Account details -->
+            <section class="add-user-form-section lg:col-span-1">
+                <h6 class="add-user-form-section-title">
+                    <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px]">2</span>
+                    Account details
+                </h6>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="add-user-field-label">First name</label>
+                        <input
+                            type="text"
+                            class="add-user-field-input w-full"
+                            [(ngModel)]="addForm.firstName"
+                            placeholder="First name"
+                            autocomplete="off"
+                            [disabled]="isFormReadonly"
+                        />
+                    </div>
+                    <div>
+                        <label class="add-user-field-label">Last name</label>
+                        <input
+                            type="text"
+                            class="add-user-field-input w-full"
+                            [(ngModel)]="addForm.lastName"
+                            placeholder="Last name"
+                            autocomplete="off"
+                            [disabled]="isFormReadonly"
+                        />
+                    </div>
+                    <div>
+                        <label class="add-user-field-label">Username</label>
+                        <input
+                            type="text"
+                            class="add-user-field-input w-full"
+                            [(ngModel)]="addForm.userName"
+                            placeholder="Login display name"
+                            autocomplete="off"
+                            [disabled]="isFormReadonly"
+                        />
+                    </div>
+                    <div>
+                        <label class="add-user-field-label">Email</label>
+                        <input
+                            type="email"
+                            class="add-user-field-input w-full"
+                            [(ngModel)]="addForm.email"
+                            placeholder="user@district.org"
+                            autocomplete="off"
+                            [disabled]="isFormReadonly"
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <!-- Role & security — full width row -->
+            <section class="add-user-form-section lg:col-span-2">
+                <div class="mb-4 flex flex-wrap items-start justify-between gap-2">
+                    <h6 class="add-user-form-section-title !mb-0">
+                        <span class="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[10px]">3</span>
+                        Role &amp; security
+                    </h6>
+                    @if (!rolesLoading && roles.length && !isViewMode) {
+                    <span class="add-user-role-count-badge">{{ selectedRoleCount }} selected</span>
+                    }
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <div class="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                            <label class="add-user-field-label !mb-0">Group types &amp; descriptions</label>
+                            @if (!isViewMode) {
+                            <span class="add-user-section-hint">Select one or more group types.</span>
+                            }
+                        </div>
+
+                        @if (rolesLoading) {
+                        <p class="add-user-role-empty">Loading group types…</p>
+                        } @else if (!roles.length) {
+                        <p class="add-user-role-empty">No group types available.</p>
+                        } @else {
+                        <div class="add-user-role-list">
+                            @for (role of roles; track role.roleId) {
+                            <div
+                                class="add-user-role-item"
+                                [class.add-user-role-item--active]="isRoleSelected(role.roleId)"
+                            >
+                                <label
+                                    class="add-user-role-item-head"
+                                    [class.pointer-events-none]="isFormReadonly || rolesLoading"
+                                >
+                                    <input
+                                        type="checkbox"
+                                        class="form-checkbox shrink-0"
+                                        [checked]="isRoleSelected(role.roleId)"
+                                        (change)="toggleRole(role.roleId)"
+                                        [disabled]="isFormReadonly || rolesLoading"
+                                    />
+                                    <span class="add-user-role-item-title">{{ roleLabel(role) }}</span>
+                                </label>
+                                @if (isRoleSelected(role.roleId)) {
+                                <div class="add-user-role-item-body">
+                                    @if (isTtessAccessRoleId(role.roleId)) {
+                                    <div class="flex flex-wrap items-end gap-3">
+                                        <div class="min-w-0 flex-1">
+                                            <label class="add-user-field-label">Role description</label>
+                                            <input
+                                                type="text"
+                                                class="add-user-field-input w-full"
+                                                [ngModel]="roleDescriptionFor(role.roleId)"
+                                                (ngModelChange)="setRoleDescription(role.roleId, $event)"
+                                                [placeholder]="'Optional description for ' + roleLabel(role)"
+                                                autocomplete="off"
+                                                [disabled]="isFormReadonly"
+                                            />
+                                        </div>
+                                        <div class="flex shrink-0 flex-col items-end gap-1.5 pb-0.5">
+                                            <span class="add-user-field-label !mb-0">T-TESS</span>
+                                            <label
+                                                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center"
+                                                [class.pointer-events-none]="isFormReadonly"
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    class="peer sr-only"
+                                                    [ngModel]="roleTtessAccessFor(role.roleId)"
+                                                    (ngModelChange)="setRoleTtessAccess(role.roleId, $event)"
+                                                    [disabled]="isFormReadonly"
+                                                />
+                                                <span
+                                                    class="block h-full w-full rounded-full bg-[#ebedf2] transition-colors peer-checked:bg-primary peer-disabled:opacity-60 dark:bg-[#1b2e4b]"
+                                                ></span>
+                                                <span
+                                                    class="absolute bottom-0.5 left-0.5 h-5 w-5 rounded-full bg-white transition-transform peer-checked:translate-x-5 dark:bg-white-dark"
+                                                ></span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    } @else {
+                                    <label class="add-user-field-label">Role description</label>
+                                    <input
+                                        type="text"
+                                        class="add-user-field-input w-full"
+                                        [ngModel]="roleDescriptionFor(role.roleId)"
+                                        (ngModelChange)="setRoleDescription(role.roleId, $event)"
+                                        [placeholder]="'Optional description for ' + roleLabel(role)"
+                                        autocomplete="off"
+                                        [disabled]="isFormReadonly"
+                                    />
+                                    }
+                                </div>
+                                }
+                            </div>
+                            }
+                        </div>
+                        }
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-3 border-t border-white-light pt-4 dark:border-[#1b2e4b] sm:grid-cols-3">
+                        @if (!isViewMode) {
+                        <div>
+                            <label class="add-user-field-label">Password</label>
+                            <input
+                                type="password"
+                                class="add-user-field-input w-full"
+                                [(ngModel)]="addForm.password"
+                                [placeholder]="isEditMode ? 'Leave blank to keep current' : 'Min. 6 characters'"
+                                autocomplete="new-password"
+                            />
+                        </div>
+                        <div>
+                            <label class="add-user-field-label">Confirm password</label>
+                            <input
+                                type="password"
+                                class="add-user-field-input w-full"
+                                [(ngModel)]="addForm.confirmPassword"
+                                [placeholder]="isEditMode ? 'Confirm new password' : 'Re-enter password'"
+                                autocomplete="new-password"
+                            />
+                        </div>
+                        }
+                        @if (isViewMode) {
+                        <div>
+                            <label class="add-user-field-label">Status</label>
+                            <input
+                                type="text"
+                                class="add-user-field-input w-full"
+                                [value]="viewStatusLabel"
+                                disabled
+                                readonly
+                            />
+                        </div>
+                        }
+                    </div>
+                </div>
+            </section>
+        </div>
+        }
+    </ng-template>
+    <ng-template #modalFooter>
+        <button type="button" class="btn btn-outline-danger px-5" [disabled]="saving || userModalLoading" (click)="closeAddUserModal()">
+            @if (isViewMode) { Close } @else { Cancel }
+        </button>
+        @if (!isViewMode) {
+        <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="saving || userModalLoading" (click)="saveUser()">
+            @if (saving) {
+            Saving…
+            } @else if (isEditMode) {
+            Update user
+            } @else {
+            Save user
+            }
+        </button>
+        }
+    </ng-template>
+</ngx-custom-modal>

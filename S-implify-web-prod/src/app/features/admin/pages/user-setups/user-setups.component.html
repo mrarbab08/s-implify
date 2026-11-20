@@ -1,0 +1,1192 @@
+<div class="space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold dark:text-white-light">Setups</h1>
+        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+            Manage states, districts, academic years, quarters, academies, grades, campus categories, campuses, campus grades, subjects, and district subject associations.
+        </p>
+    </div>
+
+    <ul class="flex flex-wrap gap-2 border-b border-white-light pb-1 dark:border-[#191e3a]">
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'states' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('states')"
+            >
+                States
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'districts' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('districts')"
+            >
+                Districts
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'academicYears' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('academicYears')"
+            >
+                Academic years
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'quarters' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('quarters')"
+            >
+                District quarters
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'academies' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('academies')"
+            >
+                District academies
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'categories' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('categories')"
+            >
+                Campus categories
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'campuses' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('campuses')"
+            >
+                Campuses
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'campusGrades' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('campusGrades')"
+            >
+                Campus grades
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'subjects' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('subjects')"
+            >
+                Subjects
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'districtSubjects' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('districtSubjects')"
+            >
+                District subjects
+            </button>
+        </li>
+        <li>
+            <button
+                type="button"
+                class="rounded px-4 py-2 text-sm font-semibold transition"
+                [ngClass]="activeTab === 'grades' ? 'bg-primary text-white' : 'text-gray-600 hover:bg-white-light/60 dark:text-gray-300 dark:hover:bg-dark/40'"
+                (click)="setTab('grades')"
+            >
+                Grades
+            </button>
+        </li>
+    </ul>
+
+    @if (activeTab === 'states') {
+    <div class="panel space-y-4">
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg font-semibold dark:text-white-light">States</h2>
+            <button type="button" class="btn btn-primary btn-sm" (click)="startCreateState()">Add state</button>
+        </div>
+        @if (statesLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!states.length) {
+        <p class="text-sm text-gray-500">No states found.</p>
+        } @else {
+        <div class="table-responsive">
+            <table class="table-hover table-striped-first-white text-sm">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Active</th>
+                        <th class="w-32 shrink-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of states; track row.stateId) {
+                    <tr>
+                        <td>{{ row.stateCode }}</td>
+                        <td>{{ row.stateName }}</td>
+                        <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+                        <td class="w-32 shrink-0">
+                            <div class="flex justify-center">
+                            <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEditState(row)">
+                                Edit
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'districts') {
+    <div class="panel space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold dark:text-white-light">Districts</h2>
+                <label class="mb-1 mt-2 block text-xs font-semibold uppercase text-gray-500">Filter by state</label>
+                <select
+                    class="form-select min-w-[12rem]"
+                    [(ngModel)]="districtFilterStateId"
+                    (ngModelChange)="onDistrictFilterChange()"
+                >
+                    <option [ngValue]="null">All states</option>
+                    @for (s of states; track s.stateId) {
+                    <option [ngValue]="s.stateId">{{ s.stateName }} ({{ s.stateCode }})</option>
+                    }
+                </select>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" (click)="startCreateDistrict()">Add district</button>
+        </div>
+        @if (districtsLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!districts.length) {
+        <p class="text-sm text-gray-500">No districts found.</p>
+        } @else {
+        <div class="table-responsive">
+            <table class="table-hover table-striped-first-white text-sm">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Code</th>
+                        <th>State</th>
+                        <th>Active</th>
+                        <th class="w-32 shrink-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of districts; track row.districtId) {
+                    <tr>
+                        <td>
+                            <a
+                                class="font-semibold text-primary hover:underline dark:text-primary"
+                                [routerLink]="['/district-profile', row.districtId]"
+                            >{{ row.districtName }}</a>
+                        </td>
+                        <td>{{ row.districtCode || '—' }}</td>
+                        <td>{{ stateName(row.stateId) }}</td>
+                        <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+                        <td class="w-32 shrink-0">
+                            <div class="flex justify-center gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEditDistrict(row)">
+                                Edit
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" (click)="deleteDistrict(row)">
+                                Delete
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'quarters') {
+    <div class="panel space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold dark:text-white-light">District quarters</h2>
+                <div class="mt-2 flex flex-wrap items-end gap-4">
+                    <div>
+                        <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Filter by district</label>
+                        <select
+                            class="form-select min-w-[14rem]"
+                            [(ngModel)]="quarterFilterDistrictId"
+                            (ngModelChange)="onQuarterFilterChange()"
+                        >
+                            <option [ngValue]="null">All districts</option>
+                            @for (d of districts; track d.districtId) {
+                            <option [ngValue]="d.districtId">{{ d.districtName }}</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Filter by academic year</label>
+                        <select
+                            class="form-select min-w-[14rem]"
+                            [(ngModel)]="quarterFilterAcademicYearId"
+                            (ngModelChange)="onQuarterFilterChange()"
+                        >
+                            <option [ngValue]="null">All academic years</option>
+                            @for (y of academicYears; track y.academicYearId) {
+                            <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" (click)="startCreateQuarter()">Add quarter</button>
+        </div>
+        @if (quartersLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!quarters.length) {
+        <p class="text-sm text-gray-500">No quarters found.</p>
+        } @else {
+        <div class="table-responsive" [class.setups-list-scroll]="quarters.length > 7">
+            <table class="table-hover table-striped-first-white text-sm">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Academic year</th>
+                        <th>District</th>
+                        <th>Dates</th>
+                        <th>Active</th>
+                        <th class="w-32 shrink-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of quarters; track row.districtQuarterId) {
+                    <tr>
+                        <td>{{ row.quarterCode }}</td>
+                        <td>{{ row.quarterName || '—' }}</td>
+                        <td>{{ academicYearLabel(row.academicYearId) }}</td>
+                        <td>{{ districtName(row.districtId) }}</td>
+                        <td>{{ row.startDate }} – {{ row.endDate }}</td>
+                        <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+                        <td class="w-32 shrink-0">
+                            <div class="flex justify-center">
+                            <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEditQuarter(row)">
+                                Edit
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'academies') {
+    <div class="panel space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold dark:text-white-light">District academies</h2>
+                <label class="mb-1 mt-2 block text-xs font-semibold uppercase text-gray-500">Filter by district</label>
+                <select
+                    class="form-select min-w-[14rem]"
+                    [(ngModel)]="academyFilterDistrictId"
+                    (ngModelChange)="onAcademyFilterChange()"
+                >
+                    <option [ngValue]="null">All districts</option>
+                    @for (d of districts; track d.districtId) {
+                    <option [ngValue]="d.districtId">{{ d.districtName }}</option>
+                    }
+                </select>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" (click)="startCreateAcademy()">Add academy</button>
+        </div>
+        @if (academiesLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!academies.length) {
+        <p class="text-sm text-gray-500">No academies found.</p>
+        } @else {
+        <div class="table-responsive" [class.setups-list-scroll]="academies.length > 7">
+            <table class="table-hover table-striped-first-white text-sm">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>District</th>
+                        <th>Sort</th>
+                        <th>Active</th>
+                        <th class="w-32 shrink-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of academies; track row.districtAcademyId) {
+                    <tr>
+                        <td>{{ row.academyCode }}</td>
+                        <td>{{ row.academyName }}</td>
+                        <td>{{ districtName(row.districtId) }}</td>
+                        <td>{{ row.sortOrder ?? '—' }}</td>
+                        <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+                        <td class="w-32 shrink-0">
+                            <div class="flex justify-center">
+                            <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEditAcademy(row)">
+                                Edit
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'grades') {
+    <div class="panel space-y-4">
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg font-semibold dark:text-white-light">Grades</h2>
+            <button type="button" class="btn btn-primary btn-sm" (click)="startCreateGrade()">Add grade</button>
+        </div>
+        @if (gradesLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!grades.length) {
+        <p class="text-sm text-gray-500">No grades found.</p>
+        } @else {
+        <div class="table-responsive" [class.setups-list-scroll]="grades.length > 7">
+            <table class="table-hover table-striped-first-white text-sm">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Sort</th>
+                        <th>Active</th>
+                        <th class="w-32 shrink-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of grades; track row.gradeId) {
+                    <tr>
+                        <td>{{ row.gradeCode }}</td>
+                        <td>{{ row.gradeName || '—' }}</td>
+                        <td>{{ row.sortOrder ?? '—' }}</td>
+                        <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+                        <td class="w-32 shrink-0">
+                            <div class="flex justify-center">
+                            <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEditGrade(row)">
+                                Edit
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'categories') {
+    <div class="panel space-y-4">
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg font-semibold dark:text-white-light">Campus categories</h2>
+            <button type="button" class="btn btn-primary btn-sm" (click)="startCreateCategory()">Add category</button>
+        </div>
+        @if (categoriesLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!campusCategories.length) {
+        <p class="text-sm text-gray-500">No campus categories found.</p>
+        } @else {
+        <div class="table-responsive" [class.setups-list-scroll]="campusCategories.length > 7">
+            <table class="table-hover table-striped-first-white text-sm">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Active</th>
+                        <th class="w-32 shrink-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of campusCategories; track row.campusCategoryId) {
+                    <tr>
+                        <td>{{ row.categoryCode || '—' }}</td>
+                        <td>{{ row.categoryName }}</td>
+                        <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+                        <td class="w-32 shrink-0">
+                            <div class="flex justify-center">
+                            <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEditCategory(row)">
+                                Edit
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'campuses') {
+    <div class="panel space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold dark:text-white-light">Campuses</h2>
+                <label class="mb-1 mt-2 block text-xs font-semibold uppercase text-gray-500">Filter by district</label>
+                <select
+                    class="form-select min-w-[14rem]"
+                    [(ngModel)]="campusFilterDistrictId"
+                    (ngModelChange)="onCampusFilterChange()"
+                >
+                    <option [ngValue]="null">All districts</option>
+                    @for (d of districts; track d.districtId) {
+                    <option [ngValue]="d.districtId">{{ d.districtName }}</option>
+                    }
+                </select>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" (click)="startCreateCampus()">Add campus</button>
+        </div>
+        @if (campusesLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!campuses.length) {
+        <p class="text-sm text-gray-500">No campuses found.</p>
+        } @else {
+        <div class="table-responsive" [class.setups-list-scroll]="campuses.length > 7">
+            <table class="table-hover table-striped-first-white text-sm">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>District</th>
+                        <th>Category</th>
+                        <th>Active</th>
+                        <th class="w-32 shrink-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of campuses; track row.campusId) {
+                    <tr>
+                        <td>{{ row.campusCode }}</td>
+                        <td>{{ row.campusName }}</td>
+                        <td>{{ districtName(row.districtId) }}</td>
+                        <td>{{ categoryName(row.campusCategoryId) }}</td>
+                        <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+                        <td class="w-32 shrink-0">
+                            <div class="flex justify-center gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEditCampus(row)">
+                                Edit
+                            </button>
+                            <button type="button" class="btn btn-outline-danger btn-sm" (click)="deleteCampus(row)">
+                                Delete
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'campusGrades') {
+    <div class="panel space-y-5">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-semibold dark:text-white-light">Campus grades</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Associate multiple grades with a campus. Sync replaces all grade associations for the selected campus.
+                </p>
+                <div class="mt-3 flex flex-wrap items-end gap-4">
+                    <div>
+                        <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">District</label>
+                        <select
+                            class="form-select min-w-[14rem]"
+                            [(ngModel)]="campusGradeFilterDistrictId"
+                            (ngModelChange)="onCampusGradeDistrictFilterChange()"
+                        >
+                            <option [ngValue]="null" disabled>Select district</option>
+                            @for (d of districts; track d.districtId) {
+                            <option [ngValue]="d.districtId">{{ d.districtName }}</option>
+                            }
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Campus</label>
+                        <select
+                            class="form-select min-w-[14rem]"
+                            [(ngModel)]="campusGradeFilterCampusId"
+                            (ngModelChange)="onCampusGradeCampusFilterChange()"
+                            [disabled]="!campusGradeCampuses.length"
+                        >
+                            <option [ngValue]="null" disabled>Select campus</option>
+                            @for (c of campusGradeCampuses; track c.campusId) {
+                            <option [ngValue]="c.campusId">{{ c.campusName }} ({{ c.campusCode }})</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            @if (campusGradeFilterCampusId) {
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                    {{ campusGradeSelectedCount }} selected
+                </span>
+                @if (campusGradesHasUnsavedChanges) {
+                <span class="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">
+                    Unsaved changes
+                </span>
+                }
+            </div>
+            }
+        </div>
+
+        @if (campusGradesLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!campusGradeFilterDistrictId) {
+        <p class="text-sm text-gray-500">Select a district to manage campus grade associations.</p>
+        } @else if (!campusGradeFilterCampusId) {
+        <p class="text-sm text-gray-500">Select a campus to manage grade associations.</p>
+        } @else if (!grades.length) {
+        <p class="text-sm text-gray-500">No grades found. Add grades in the Grades tab first.</p>
+        } @else {
+        <div class="space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="relative min-w-[14rem] flex-1">
+                    <input
+                        type="search"
+                        class="form-input w-full ltr:pl-9 rtl:pr-9"
+                        placeholder="Search grades…"
+                        [(ngModel)]="campusGradeSearch"
+                    />
+                    <icon-search class="absolute top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 ltr:left-3 rtl:right-3" />
+                </div>
+                <label class="flex cursor-pointer items-center gap-2 text-sm dark:text-white-light">
+                    <input
+                        type="checkbox"
+                        class="form-checkbox"
+                        [checked]="allFilteredCampusGradesSelected"
+                        (change)="toggleSelectAllCampusGrades($any($event.target).checked)"
+                    />
+                    Select all shown
+                </label>
+            </div>
+
+            @if (!filteredCampusGradesForAssociation.length) {
+            <p class="text-sm text-gray-500">No grades match your search.</p>
+            } @else {
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                @for (grade of filteredCampusGradesForAssociation; track grade.gradeId) {
+                <label
+                    class="flex cursor-pointer items-start gap-3 rounded-lg border border-white-light p-3 transition hover:border-primary/40 dark:border-[#191e3a] dark:hover:border-primary/40"
+                    [class.border-primary]="isCampusGradeSelected(grade.gradeId)"
+                    [class.bg-primary/5]="isCampusGradeSelected(grade.gradeId)"
+                >
+                    <input
+                        type="checkbox"
+                        class="form-checkbox mt-0.5"
+                        [checked]="isCampusGradeSelected(grade.gradeId)"
+                        (change)="toggleCampusGrade(grade.gradeId, $any($event.target).checked)"
+                    />
+                    <span class="min-w-0">
+                        <span class="block text-sm font-semibold dark:text-white-light">
+                            {{ grade.gradeName || grade.gradeCode }}
+                        </span>
+                        <span class="mt-0.5 block text-xs text-gray-500">{{ grade.gradeCode }}</span>
+                    </span>
+                </label>
+                }
+            </div>
+            }
+
+            <div class="flex flex-wrap items-center gap-2 border-t border-white-light pt-4 dark:border-[#191e3a]">
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    [disabled]="campusGradesSaving || !campusGradesHasUnsavedChanges"
+                    (click)="saveCampusGradeAssociations()"
+                >
+                    @if (campusGradesSaving) { Syncing… } @else { Sync associations }
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="campusGradesSaving || !campusGradesHasUnsavedChanges"
+                    (click)="resetCampusGradeSelection()"
+                >
+                    Reset
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'subjects') {
+    <div class="panel space-y-4">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+            <div>
+                <h2 class="text-lg font-semibold dark:text-white-light">Subjects</h2>
+                <label class="mb-1 mt-2 block text-xs font-semibold uppercase text-gray-500">Show</label>
+                <select
+                    class="form-select min-w-[14rem]"
+                    [(ngModel)]="subjectFilterActiveOnly"
+                    (ngModelChange)="onSubjectFilterChange()"
+                >
+                    <option [ngValue]="false">All subjects</option>
+                    <option [ngValue]="true">Active only</option>
+                </select>
+            </div>
+            <button type="button" class="btn btn-primary btn-sm" (click)="startCreateSubject()">
+                Add subject
+            </button>
+        </div>
+        @if (subjectsLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!subjects.length) {
+        <p class="text-sm text-gray-500">No subjects found.</p>
+        } @else {
+        <div class="table-responsive" [class.setups-list-scroll]="subjects.length > 7">
+            <table class="table-hover table-striped-first-white text-sm">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Active</th>
+                        <th class="w-32 shrink-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of subjects; track row.subjectId) {
+                    <tr>
+                        <td>{{ row.subjectCode }}</td>
+                        <td>{{ row.subjectName }}</td>
+                        <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+                        <td class="w-32 shrink-0">
+                            <div class="flex justify-center">
+                            <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEditSubject(row)">
+                                Edit
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'districtSubjects') {
+    <div class="panel space-y-5">
+        <div class="flex flex-wrap items-end justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-semibold dark:text-white-light">District subjects</h2>
+                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Associate multiple subjects with a district.
+                </p>
+                <label class="mb-1 mt-3 block text-xs font-semibold uppercase text-gray-500">District</label>
+                <select
+                    class="form-select min-w-[16rem]"
+                    [(ngModel)]="districtSubjectFilterDistrictId"
+                    (ngModelChange)="onDistrictSubjectFilterChange()"
+                >
+                    <option [ngValue]="null">Select district</option>
+                    @for (d of districts; track d.districtId) {
+                    <option [ngValue]="d.districtId">{{ d.districtName }} ({{ d.districtCode }})</option>
+                    }
+                </select>
+            </div>
+
+            @if (districtSubjectFilterDistrictId) {
+            <div class="flex flex-wrap items-center gap-2">
+                <span class="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                    {{ districtSubjectSelectedCount }} selected
+                </span>
+                @if (districtSubjectsHasUnsavedChanges) {
+                <span class="rounded-full bg-warning/10 px-3 py-1 text-xs font-semibold text-warning">
+                    Unsaved changes
+                </span>
+                }
+            </div>
+            }
+        </div>
+
+        @if (districtSubjectsLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!districtSubjectFilterDistrictId) {
+        <p class="text-sm text-gray-500">Select a district to manage subject associations.</p>
+        } @else if (!masterSubjects.length) {
+        <p class="text-sm text-gray-500">No subjects found. Add subjects in the Subjects tab first.</p>
+        } @else {
+        <div class="space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="relative min-w-[14rem] flex-1">
+                    <input
+                        type="search"
+                        class="form-input w-full ltr:pl-9 rtl:pr-9"
+                        placeholder="Search subjects…"
+                        [(ngModel)]="districtSubjectSearch"
+                    />
+                    <icon-search class="absolute top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 ltr:left-3 rtl:right-3" />
+                </div>
+                <label class="flex cursor-pointer items-center gap-2 text-sm dark:text-white-light">
+                    <input
+                        type="checkbox"
+                        class="form-checkbox"
+                        [checked]="allFilteredDistrictSubjectsSelected"
+                        (change)="toggleSelectAllDistrictSubjects($any($event.target).checked)"
+                    />
+                    Select all shown
+                </label>
+            </div>
+
+            @if (!filteredMasterSubjects.length) {
+            <p class="text-sm text-gray-500">No subjects match your search.</p>
+            } @else {
+            <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                @for (subject of filteredMasterSubjects; track subject.subjectId) {
+                <label
+                    class="flex cursor-pointer items-start gap-3 rounded-lg border border-white-light p-3 transition hover:border-primary/40 dark:border-[#191e3a] dark:hover:border-primary/40"
+                    [class.border-primary]="isDistrictSubjectSelected(subject.subjectId)"
+                    [class.bg-primary/5]="isDistrictSubjectSelected(subject.subjectId)"
+                >
+                    <input
+                        type="checkbox"
+                        class="form-checkbox mt-0.5"
+                        [checked]="isDistrictSubjectSelected(subject.subjectId)"
+                        (change)="toggleDistrictSubject(subject.subjectId, $any($event.target).checked)"
+                    />
+                    <span class="min-w-0">
+                        <span class="block text-sm font-semibold dark:text-white-light">
+                            {{ subject.subjectName }}
+                        </span>
+                        <span class="mt-0.5 block text-xs text-gray-500">{{ subject.subjectCode }}</span>
+                        @if (!subject.isActive) {
+                        <span class="mt-1 inline-block rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-gray-500 dark:bg-dark">
+                            Inactive
+                        </span>
+                        }
+                    </span>
+                </label>
+                }
+            </div>
+            }
+
+            <div class="flex flex-wrap items-center gap-2 border-t border-white-light pt-4 dark:border-[#191e3a]">
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    [disabled]="districtSubjectsSaving || !districtSubjectsHasUnsavedChanges"
+                    (click)="saveDistrictSubjectAssociations()"
+                >
+                    @if (districtSubjectsSaving) { Syncing… } @else { Sync associations }
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="districtSubjectsSaving || !districtSubjectsHasUnsavedChanges"
+                    (click)="resetDistrictSubjectSelection()"
+                >
+                    Reset
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+    }
+
+    @if (activeTab === 'academicYears') {
+    <div class="panel space-y-4">
+        <div class="flex items-center justify-between gap-2">
+            <h2 class="text-lg font-semibold dark:text-white-light">Academic years</h2>
+            <button type="button" class="btn btn-primary btn-sm" (click)="startCreateAcademicYear()">Add academic year</button>
+        </div>
+        @if (academicYearsLoading) {
+        <p class="text-sm text-gray-500">Loading…</p>
+        } @else if (!academicYears.length) {
+        <p class="text-sm text-gray-500">No academic years found.</p>
+        } @else {
+        <div class="table-responsive" [class.setups-list-scroll]="academicYears.length > 7">
+            <table class="table-hover table-striped-first-white text-sm">
+                <thead>
+                    <tr>
+                        <th>Label</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Active</th>
+                        <th class="w-32 shrink-0 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of academicYears; track row.academicYearId) {
+                    <tr>
+                        <td>{{ row.yearLabel }}</td>
+                        <td>{{ row.startDate }}</td>
+                        <td>{{ row.endDate }}</td>
+                        <td>{{ row.isActive ? 'Yes' : 'No' }}</td>
+                        <td class="w-32 shrink-0">
+                            <div class="flex justify-center">
+                            <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEditAcademicYear(row)">
+                                Edit
+                            </button>
+                            </div>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
+    }
+</div>
+
+<ngx-custom-modal #setupModal customClass="setup-modal">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20"
+            >
+                <icon-pencil-paper class="h-4 w-4" />
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">{{ setupModalTitle() }}</div>
+                <p class="text-xs font-normal text-gray-500 dark:text-gray-400">{{ setupModalSubtitle() }}</p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        @switch (activeTab) {
+            @case ('states') {
+            <div class="add-user-form-grid">
+                <div>
+                    <label class="add-user-field-label">State code</label>
+                    <input type="text" class="add-user-field-input w-full" maxlength="2" [(ngModel)]="stateForm.stateCode" placeholder="TX" [disabled]="editingStateId != null" />
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">State name</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="stateForm.stateName" placeholder="Texas" />
+                </div>
+                <div class="flex items-center gap-2 lg:col-span-2">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="stateForm.isActive" id="stateActive" />
+                    <label for="stateActive" class="text-sm dark:text-white-light">Active</label>
+                </div>
+            </div>
+            }
+            @case ('districts') {
+            <div class="add-user-form-grid">
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">State</label>
+                    <select class="add-user-field-select w-full" [(ngModel)]="districtForm.stateId">
+                        <option [ngValue]="0" disabled>Select state</option>
+                        @for (s of states; track s.stateId) {
+                        <option [ngValue]="s.stateId">{{ s.stateName }}</option>
+                        }
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">District name</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="districtForm.districtName" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">District code</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="districtForm.districtCode" [disabled]="editingDistrictId != null" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Abbreviation</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="districtForm.districtAbbreviation" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Phone</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="districtForm.districtPhone" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Time zone</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="districtForm.districtTimeZone" placeholder="America/Chicago" />
+                </div>
+                <div class="flex items-center gap-2 lg:col-span-2">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="districtForm.isActive" id="districtActive" />
+                    <label for="districtActive" class="text-sm dark:text-white-light">Active</label>
+                </div>
+            </div>
+            }
+            @case ('quarters') {
+            <div class="add-user-form-grid">
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">District</label>
+                    <select class="add-user-field-select w-full" [(ngModel)]="quarterForm.districtId">
+                        <option [ngValue]="0" disabled>Select district</option>
+                        @for (d of districts; track d.districtId) {
+                        <option [ngValue]="d.districtId">{{ d.districtName }}</option>
+                        }
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">Academic year</label>
+                    <select class="add-user-field-select w-full" [(ngModel)]="quarterForm.academicYearId">
+                        <option [ngValue]="0" disabled>Select academic year</option>
+                        @for (y of academicYears; track y.academicYearId) {
+                        <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="add-user-field-label">Quarter code</label>
+                    <select
+                        class="add-user-field-select w-full"
+                        [(ngModel)]="quarterForm.quarterCode"
+                        (ngModelChange)="onQuarterCodeChange()"
+                        [disabled]="editingQuarterId != null"
+                    >
+                        <option value="" disabled>Select quarter code</option>
+                        @for (opt of quarterCodeSelectOptions; track opt.code) {
+                        <option [value]="opt.code">{{ opt.code }} — {{ opt.name }}</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="add-user-field-label">Quarter name</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="quarterForm.quarterName" placeholder="Quarter 1" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Start date</label>
+                    <input type="date" class="add-user-field-input w-full" [(ngModel)]="quarterForm.startDate" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">End date</label>
+                    <input type="date" class="add-user-field-input w-full" [(ngModel)]="quarterForm.endDate" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Sort order</label>
+                    <input type="number" class="add-user-field-input w-full" [(ngModel)]="quarterForm.sortOrder" min="0" />
+                </div>
+                <div class="flex items-center gap-2 lg:col-span-2">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="quarterForm.isActive" id="quarterActive" />
+                    <label for="quarterActive" class="text-sm dark:text-white-light">Active</label>
+                </div>
+            </div>
+            }
+            @case ('academies') {
+            <div class="add-user-form-grid">
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">District</label>
+                    <select class="add-user-field-select w-full" [(ngModel)]="academyForm.districtId">
+                        <option [ngValue]="0" disabled>Select district</option>
+                        @for (d of districts; track d.districtId) {
+                        <option [ngValue]="d.districtId">{{ d.districtName }}</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="add-user-field-label">Academy code</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="academyForm.academyCode" placeholder="ECH" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Academy name</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="academyForm.academyName" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Sort order</label>
+                    <input type="number" class="add-user-field-input w-full" [(ngModel)]="academyForm.sortOrder" min="0" />
+                </div>
+                <div class="flex items-center gap-2 lg:col-span-2">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="academyForm.isActive" id="academyActive" />
+                    <label for="academyActive" class="text-sm dark:text-white-light">Active</label>
+                </div>
+            </div>
+            }
+            @case ('grades') {
+            <div class="add-user-form-grid">
+                <div>
+                    <label class="add-user-field-label">Grade code</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="gradeForm.gradeCode" placeholder="03" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Grade name</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="gradeForm.gradeName" placeholder="3rd" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Sort order</label>
+                    <input type="number" class="add-user-field-input w-full" [(ngModel)]="gradeForm.sortOrder" min="0" />
+                </div>
+                <div class="flex items-center gap-2 lg:col-span-2">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="gradeForm.isActive" id="gradeActive" />
+                    <label for="gradeActive" class="text-sm dark:text-white-light">Active</label>
+                </div>
+            </div>
+            }
+            @case ('categories') {
+            <div class="add-user-form-grid">
+                <div>
+                    <label class="add-user-field-label">Category code</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="categoryForm.categoryCode" placeholder="ES" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Category name</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="categoryForm.categoryName" placeholder="Elementary School" />
+                </div>
+                <div class="flex items-center gap-2 lg:col-span-2">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="categoryForm.isActive" id="categoryActive" />
+                    <label for="categoryActive" class="text-sm dark:text-white-light">Active</label>
+                </div>
+            </div>
+            }
+            @case ('campuses') {
+            <div class="add-user-form-grid">
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">District</label>
+                    <select class="add-user-field-select w-full" [(ngModel)]="campusForm.districtId">
+                        <option [ngValue]="0" disabled>Select district</option>
+                        @for (d of districts; track d.districtId) {
+                        <option [ngValue]="d.districtId">{{ d.districtName }}</option>
+                        }
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">Campus category</label>
+                    <select class="add-user-field-select w-full" [(ngModel)]="campusForm.campusCategoryId">
+                        <option [ngValue]="0" disabled>Select category</option>
+                        @for (c of campusCategories; track c.campusCategoryId) {
+                        <option [ngValue]="c.campusCategoryId">{{ c.categoryName }}</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label class="add-user-field-label">Campus code</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="campusForm.campusCode" placeholder="001" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">External ID</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="campusForm.campusIdExternal" />
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">Campus name</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="campusForm.campusName" />
+                </div>
+                <div class="flex items-center gap-2 lg:col-span-2">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="campusForm.isActive" id="campusActive" />
+                    <label for="campusActive" class="text-sm dark:text-white-light">Active</label>
+                </div>
+            </div>
+            }
+            @case ('subjects') {
+            <div class="add-user-form-grid">
+                <div>
+                    <label class="add-user-field-label">Subject code</label>
+                    <input type="text" class="add-user-field-input w-full" maxlength="20" [(ngModel)]="subjectForm.subjectCode" placeholder="MATH" [disabled]="editingSubjectId != null" />
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">Subject name</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="subjectForm.subjectName" placeholder="Mathematics" />
+                </div>
+                <div class="flex items-center gap-2 lg:col-span-2">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="subjectForm.isActive" id="subjectActive" />
+                    <label for="subjectActive" class="text-sm dark:text-white-light">Active</label>
+                </div>
+            </div>
+            }
+            @case ('academicYears') {
+            <div class="add-user-form-grid">
+                <div class="lg:col-span-2">
+                    <label class="add-user-field-label">Year label</label>
+                    <input type="text" class="add-user-field-input w-full" [(ngModel)]="academicYearForm.yearLabel" placeholder="2024-2025" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">Start date</label>
+                    <input type="date" class="add-user-field-input w-full" [(ngModel)]="academicYearForm.startDate" />
+                </div>
+                <div>
+                    <label class="add-user-field-label">End date</label>
+                    <input type="date" class="add-user-field-input w-full" [(ngModel)]="academicYearForm.endDate" />
+                </div>
+                <div class="flex items-center gap-2 lg:col-span-2">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="academicYearForm.isActive" id="academicYearActive" />
+                    <label for="academicYearActive" class="text-sm dark:text-white-light">Active</label>
+                </div>
+            </div>
+            }
+        }
+    </ng-template>
+    <ng-template #modalFooter>
+        <button type="button" class="btn btn-outline-danger px-5" (click)="closeSetupModalForTab()">Cancel</button>
+        @switch (activeTab) {
+            @case ('states') {
+            <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="stateSaving" (click)="saveState()">
+                @if (stateSaving) { Saving… } @else { Save }
+            </button>
+            }
+            @case ('districts') {
+            <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="districtSaving" (click)="saveDistrict()">
+                @if (districtSaving) { Saving… } @else { Save }
+            </button>
+            }
+            @case ('quarters') {
+            <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="quarterSaving" (click)="saveQuarter()">
+                @if (quarterSaving) { Saving… } @else { Save }
+            </button>
+            }
+            @case ('academies') {
+            <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="academySaving" (click)="saveAcademy()">
+                @if (academySaving) { Saving… } @else { Save }
+            </button>
+            }
+            @case ('grades') {
+            <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="gradeSaving" (click)="saveGrade()">
+                @if (gradeSaving) { Saving… } @else { Save }
+            </button>
+            }
+            @case ('categories') {
+            <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="categorySaving" (click)="saveCategory()">
+                @if (categorySaving) { Saving… } @else { Save }
+            </button>
+            }
+            @case ('campuses') {
+            <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="campusSaving" (click)="saveCampus()">
+                @if (campusSaving) { Saving… } @else { Save }
+            </button>
+            }
+            @case ('subjects') {
+            <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="subjectSaving" (click)="saveSubject()">
+                @if (subjectSaving) { Saving… } @else { Save }
+            </button>
+            }
+            @case ('academicYears') {
+            <button type="button" class="btn btn-primary px-5 ltr:ml-3 rtl:mr-3" [disabled]="academicYearSaving" (click)="saveAcademicYear()">
+                @if (academicYearSaving) { Saving… } @else { Save }
+            </button>
+            }
+        }
+    </ng-template>
+</ngx-custom-modal>

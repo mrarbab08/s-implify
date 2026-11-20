@@ -1,0 +1,341 @@
+<div>
+    @if (!districtContext.isAttendanceContextReady()) {
+    <div class="mb-6 rounded-lg bg-warning/10 px-4 py-3 text-sm text-warning">
+        Select <strong>District</strong> and <strong>School year</strong> in the header to load attendance analytics.
+    </div>
+    }
+
+    @if (attendanceError) {
+    <div class="mb-6 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+        {{ attendanceError }}
+    </div>
+    }
+
+    <!-- Top Row -->
+    <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <!-- ADA -->
+        <div class="panel h-full flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <h5 class="text-lg font-semibold dark:text-white-light">ADA</h5>
+                @if (attendanceLoading) {
+                <span class="text-xs text-gray-400">Loading…</span>
+                }
+            </div>
+            <div class="mt-4 flex items-center justify-between">
+                <div class="text-3xl font-bold text-[#e1684c]">{{ districtAdaPctDisplay }}</div>
+            </div>
+            <div class="mt-4 min-h-[50px]">
+                <apx-chart
+                    *ngIf="!isLoading && adaSparklineOptions"
+                    [series]="adaSparklineOptions.series"
+                    [chart]="adaSparklineOptions.chart"
+                    [stroke]="adaSparklineOptions.stroke"
+                    [colors]="adaSparklineOptions.colors"
+                    [tooltip]="adaSparklineOptions.tooltip"
+                ></apx-chart>
+            </div>
+        </div>
+
+        <!-- ESTIMATED $ MISSED ANNUALLY -->
+        <div class="panel h-full flex flex-col justify-between">
+            <div class="flex items-start justify-between">
+                <h5 class="text-lg font-semibold uppercase dark:text-white-light">Estimated $ Missed (year window)</h5>
+            </div>
+            <div class="mt-4 flex items-center gap-2">
+                <div class="text-3xl font-bold text-[#e1684c]">
+                    {{ estimatedMissedAnnual | currency : 'USD' : 'symbol' : '1.0-0' }}
+                </div>
+                <span class="text-sm font-semibold uppercase text-gray-500">Sum of months</span>
+            </div>
+            <div class="mt-8">
+                <div class="flex items-center gap-4">
+                    <div class="h-3 w-full rounded-full bg-gray-200 dark:bg-dark-light">
+                        <div class="h-3 rounded-full bg-primary" [style.width.%]="districtAdaPctNum"></div>
+                    </div>
+                    <span class="font-semibold text-gray-500">{{ districtAdaPctDisplay }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- BLUE CARD -->
+        <div class="panel h-full p-0 flex flex-col justify-between overflow-hidden relative">
+            <div
+                class="absolute -right-20 -bottom-20 w-64 h-64 rounded-full bg-[#1e40af] mix-blend-multiply opacity-50 z-0 pointer-events-none">
+            </div>
+            <div class="bg-blue-600 h-full w-full text-white p-6 relative z-10 flex flex-col justify-between shadow">
+                <div class="mb-8 flex items-center justify-between gap-4">
+                    <h5 class="min-w-0 flex-1 text-lg font-semibold uppercase leading-tight">
+                        Estimated $ Per Student
+                    </h5>
+                    <div class="shrink-0 whitespace-nowrap text-3xl font-bold tabular-nums leading-none">
+                        $55.00
+                    </div>
+                </div>
+                <div class="mt-auto flex items-center justify-between gap-4">
+                    <h5 class="min-w-0 flex-1 text-lg font-semibold uppercase leading-tight">District Goal</h5>
+                    <div class="shrink-0 whitespace-nowrap text-3xl font-bold tabular-nums leading-none">95%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Middle Row: Monthly ADA + Campus $Missed (stacked vertically) -->
+    <div class="mb-6 flex flex-col gap-6">
+        <!-- MONTHLY ADA -->
+        <div class="panel">
+            <div class="mb-5 flex items-center justify-between">
+                <h5 class="text-lg font-semibold uppercase dark:text-white-light">Monthly ADA</h5>
+            </div>
+            <div
+                #monthlyAdaChartContainer
+                class="w-full max-w-full overflow-y-hidden [scrollbar-width:thin]"
+                [class.overflow-x-auto]="useMonthlyAdaHorizontalScroll"
+                [class.overflow-x-hidden]="!useMonthlyAdaHorizontalScroll"
+            >
+                <apx-chart
+                    *ngIf="!isLoading && monthlyAdaOptions"
+                    [series]="monthlyAdaOptions.series"
+                    [chart]="monthlyAdaOptions.chart"
+                    [colors]="monthlyAdaOptions.colors"
+                    [stroke]="monthlyAdaOptions.stroke"
+                    [dataLabels]="monthlyAdaOptions.dataLabels"
+                    [xaxis]="monthlyAdaOptions.xaxis"
+                    [yaxis]="monthlyAdaOptions.yaxis"
+                    [legend]="monthlyAdaOptions.legend"
+                    [plotOptions]="monthlyAdaOptions.plotOptions"
+                    [grid]="monthlyAdaOptions.grid"
+                    [tooltip]="monthlyAdaOptions.tooltip"
+                    class="block w-full min-w-0 rounded-lg"
+                    [style.min-width.px]="useMonthlyAdaHorizontalScroll ? monthlyAdaScrollWidth : null"
+                ></apx-chart>
+            </div>
+        </div>
+
+        <!-- CAMPUS $ MISSED -->
+        <div class="panel flex flex-col">
+            <div class="mb-4 flex shrink-0 flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h5 class="text-lg font-semibold uppercase dark:text-white-light">Campus $ Missed</h5>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Ranked by estimated $ missed. Bar color by ADA band (green ≥95%, amber 90–95%, red
+                        &lt;90%). Click a bar for attendance records.
+                    </p>
+                </div>
+                <div class="flex flex-wrap items-center gap-3 text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="h-2 w-2 rounded-full bg-[#00ab55]"></span> ≥95%
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="h-2 w-2 rounded-full bg-[#e2a03f]"></span> 90–95%
+                    </span>
+                    <span class="inline-flex items-center gap-1.5">
+                        <span class="h-2 w-2 rounded-full bg-[#e7515a]"></span> &lt;90%
+                    </span>
+                </div>
+            </div>
+            @if (!campusMissedChartRows.length && !attendanceLoading) {
+            <p class="text-sm text-gray-500">No campus-wise rows for this selection.</p>
+            }
+            <div
+                *ngIf="campusMissedChart"
+                class="max-h-[420px] w-full overflow-y-auto overflow-x-hidden [scrollbar-width:thin]"
+            >
+                <apx-chart
+                    [series]="campusMissedChart.series"
+                    [chart]="campusMissedChart.chart"
+                    [colors]="campusMissedChart.colors"
+                    [plotOptions]="campusMissedChart.plotOptions"
+                    [dataLabels]="campusMissedChart.dataLabels"
+                    [stroke]="campusMissedChart.stroke"
+                    [xaxis]="campusMissedChart.xaxis"
+                    [yaxis]="campusMissedChart.yaxis"
+                    [grid]="campusMissedChart.grid"
+                    [legend]="campusMissedChart.legend"
+                    [tooltip]="campusMissedChart.tooltip"
+                    class="block w-full cursor-pointer rounded-lg"
+                ></apx-chart>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bottom Row: Lowest ADA + stacked category spark cards (fixed min-height avoids jump on month change) -->
+    <div class="mb-6 grid min-h-[21rem] grid-cols-1 gap-4 lg:min-h-[22rem] lg:grid-cols-3 lg:items-stretch">
+        <!-- LOWEST ADA -->
+        <div class="panel flex min-h-[21rem] flex-col lg:col-span-1 lg:min-h-[22rem]">
+            <div class="mb-3 flex shrink-0 flex-col gap-2">
+                <h5 class="text-lg font-semibold uppercase dark:text-white-light">Lowest ADA</h5>
+                <div class="flex flex-wrap gap-2">
+                    <select
+                        class="form-select min-w-[120px] flex-1 text-xs"
+                        [(ngModel)]="selectedLowAdaMonth"
+                        (ngModelChange)="onLowAdaFilterChange()"
+                    >
+                        @for (m of lowAdaMonthNames; track m) {
+                        <option [value]="m">{{ m }}</option>
+                        }
+                    </select>
+                    <select
+                        class="form-select min-w-[120px] flex-1 text-xs"
+                        [(ngModel)]="selectedLowAdaCampusCode"
+                        (ngModelChange)="onLowAdaFilterChange()"
+                        (focus)="loadCampusFilterOptions()"
+                        [disabled]="campusFilterLocked"
+                    >
+                        @if (!campusFilterLocked) {
+                        <option value="">All campuses</option>
+                        }
+                        @if (campusFilterLoading) {
+                        <option disabled>Loading campuses…</option>
+                        }
+                        @for (camp of campusFilterOptions; track camp.campusId) {
+                        <option [value]="camp.campusCode">{{ camp.campusCode }} — {{ camp.campusName }}</option>
+                        }
+                    </select>
+                </div>
+            </div>
+            <div class="relative min-h-[13rem] flex-1">
+                @if (lowestAdaLoading) {
+                <span class="pointer-events-none absolute right-0 top-0 text-xs text-gray-400">Loading…</span>
+                }
+                <div class="flex flex-col gap-4">
+                    @if (!lowestAdaSnapshots.length && !lowestAdaLoading) {
+                    <p class="text-xs text-gray-500">No lowest-ADA rows for this month.</p>
+                    }
+                    @for (snap of lowestAdaSnapshots; track $index) {
+                    <div>
+                        <div class="mb-1 flex justify-between text-xs font-semibold text-gray-500">
+                            <span>{{ snap.lowestAdaDayWeekday }}</span>
+                            <span>{{ snap.noOfStudentAbsent ?? '—' }} absent</span>
+                        </div>
+                        <div class="grid grid-cols-[3.75rem_minmax(0,1fr)_3.5rem] items-center gap-2">
+                            <span
+                                class="badge w-full justify-center truncate rounded-md bg-secondary-light px-1.5 py-0.5 text-center text-secondary"
+                                style="border: 1px solid currentColor;"
+                                [title]="snap.campusCode"
+                                >{{ snap.campusCode }}</span
+                            >
+                            <div class="h-2 w-full rounded-full bg-gray-200 dark:bg-dark-light">
+                                <div
+                                    class="h-2 rounded-full"
+                                    [style.width.%]="lowestAdaBarWidth(snap.campusAdaPct)"
+                                    [style.background-color]="lowestAdaBarColor($index)"
+                                ></div>
+                            </div>
+                            <span class="text-right text-xs tabular-nums"
+                                >{{ snap.campusAdaPct | number : '1.1-2' }}%</span
+                            >
+                        </div>
+                        <div class="mt-1 text-[10px] text-gray-400">Enrollment {{ snap.enrollment ?? '—' }}</div>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Category ADA — stacked beside Lowest ADA -->
+        <div class="flex min-h-[21rem] flex-col gap-3 lg:col-span-2 lg:min-h-[22rem]">
+            @for (slot of categorySparkSlots; track slot.key) {
+            <div class="panel flex min-h-[5.5rem] flex-1 flex-col overflow-hidden p-0">
+                <div class="flex h-full min-h-[5.5rem] flex-1 items-stretch">
+                    <div
+                        class="flex w-[10.5rem] shrink-0 flex-col justify-center gap-1 border-r border-slate-100 px-3 py-2 dark:border-slate-700/80 sm:w-[11.5rem]"
+                    >
+                        <div class="flex items-center gap-2">
+                            <div class="shrink-0 rounded-md bg-primary-light p-1.5 text-primary">
+                                <icon-users-group class="h-4 w-4" />
+                            </div>
+                            <span class="shrink-0 text-xs font-bold tabular-nums text-[#e1684c]">{{
+                                slot.latestAdaDisplay
+                            }}</span>
+                        </div>
+                        <h5
+                            class="line-clamp-2 text-[11px] font-semibold uppercase leading-tight tracking-wide dark:text-white-light"
+                            [title]="slot.title"
+                        >
+                            {{ slot.title }}
+                        </h5>
+                    </div>
+                    <div class="min-h-0 flex-1 self-stretch px-1 py-1">
+                        <apx-chart
+                            *ngIf="slot.sparklineOptions"
+                            [series]="slot.sparklineOptions.series"
+                            [chart]="slot.sparklineOptions.chart"
+                            [colors]="slot.sparklineOptions.colors"
+                            [stroke]="slot.sparklineOptions.stroke"
+                            [fill]="slot.sparklineOptions.fill"
+                            [tooltip]="slot.sparklineOptions.tooltip"
+                            class="block h-full w-full"
+                        ></apx-chart>
+                    </div>
+                </div>
+            </div>
+            }
+        </div>
+    </div>
+</div>
+
+<ngx-custom-modal #attendanceRecordsModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary dark:bg-primary/20"
+            >
+                <icon-users-group class="h-4 w-4" />
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">Attendance Records</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {{ selectedCampusLabel }}
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <div class="mb-4 flex flex-wrap items-center justify-end gap-2">
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="!canExportAttendanceRecords"
+                (click)="exportAttendanceRecords('csv')"
+            >
+                <icon-file class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                EXCEL
+            </button>
+            <button
+                type="button"
+                class="btn btn-primary btn-sm"
+                [disabled]="!canExportAttendanceRecords"
+                (click)="exportAttendanceRecords('print')"
+            >
+                <icon-printer class="h-5 w-5 ltr:mr-2 rtl:ml-2" />
+                PRINT
+            </button>
+        </div>
+
+        <p *ngIf="attendanceRecordsLoading" class="mb-4 text-sm text-white-dark">Loading records…</p>
+
+        <p
+            *ngIf="!attendanceRecordsLoading && attendanceRecordsRows.length === 0"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            No attendance records available for this campus.
+        </p>
+
+        <div
+            *ngIf="attendanceRecordsRows.length > 0"
+            class="datatable records-datatable attendance-records-datatable"
+        >
+            <ng-datatable
+                [rows]="attendanceRecordsRows"
+                [columns]="attendanceRecordCols"
+                [columnFilter]="false"
+                [sortable]="true"
+                [search]="attendanceRecordsSearch"
+                [loading]="attendanceRecordsLoading"
+                [pageSize]="10"
+                skin="whitespace-nowrap table-hover text-xs"
+            >
+            </ng-datatable>
+        </div>
+    </ng-template>
+</ngx-custom-modal>

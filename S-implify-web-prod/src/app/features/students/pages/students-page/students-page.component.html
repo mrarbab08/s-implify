@@ -1,0 +1,471 @@
+<div class="flex flex-col gap-5">
+    @if (districtContext.isGrowthContextReady()) {
+    <div class="panel overflow-hidden border border-white-light p-0 dark:border-[#1b2e4b]">
+        <div
+            class="flex flex-wrap items-center justify-between gap-3 border-b border-white-light bg-[#f8fafc] px-4 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50"
+        >
+            <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h5 class="text-sm font-semibold text-[#0e1726] dark:text-white-light">Filter records</h5>
+                    @if (table.filterOptionsLoading()) {
+                    <span class="text-xs text-gray-400">Loading options…</span>
+                    }
+                </div>
+            </div>
+            <div class="flex shrink-0 flex-wrap gap-2">
+                <button
+                    type="button"
+                    class="btn btn-outline-primary btn-sm"
+                    [disabled]="table.loading() || !table.canClearFilters"
+                    (click)="clearFilters()"
+                >
+                    Clear all
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm"
+                    [disabled]="table.loading() || table.filterOptionsLoading()"
+                    (click)="applyFilters()"
+                >
+                    Apply filters
+                </button>
+            </div>
+        </div>
+
+        <div class="grid gap-4 p-4 pb-3 md:grid-cols-2 xl:grid-cols-4">
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Campus</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [ngModel]="table.filtersDraft().campusCode"
+                    (ngModelChange)="onCampusDraftChange($event)"
+                    [disabled]="table.filterOptionsLoading() || table.loading() || campusFilterLocked"
+                >
+                    @if (!campusFilterLocked) {
+                    <option [ngValue]="null">All campuses</option>
+                    }
+                    @for (c of visibleCampuses; track c.campusId) {
+                    <option [ngValue]="c.campusCode">{{ c.campusName || c.campusCode }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Grade</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [ngModel]="table.filtersDraft().gradeCode"
+                    (ngModelChange)="onGradeDraftChange($event)"
+                    [disabled]="
+                        table.filterOptionsLoading() ||
+                        table.loading() ||
+                        !table.filtersDraft().campusCode
+                    "
+                >
+                    <option [ngValue]="null">All grades</option>
+                    @for (g of table.filterCampusGrades(); track g.campusGradeId) {
+                    <option [ngValue]="g.gradeCode">{{ g.gradeName || g.gradeCode }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Subject</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [ngModel]="table.filtersDraft().subjectCode"
+                    (ngModelChange)="onSubjectDraftChange($event)"
+                    [disabled]="table.filterOptionsLoading() || table.loading()"
+                >
+                    <option [ngValue]="null">All subjects</option>
+                    @for (s of table.filterSubjects(); track s.subjectId) {
+                    <option [ngValue]="s.subjectCode">{{ s.subjectName || s.subjectCode }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Teacher</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [ngModel]="table.filtersDraft().teacherId"
+                    (ngModelChange)="table.setFilterDraftField('teacherId', $event)"
+                    [disabled]="
+                        table.filterOptionsLoading() ||
+                        table.loading() ||
+                        !table.filtersDraft().campusCode
+                    "
+                >
+                    <option [ngValue]="null">All teachers</option>
+                    @for (t of table.filterTeachers(); track t.teacherIdExternal ?? t.teacherId) {
+                    @if (table.teacherFilterValue(t); as teacherExternalId) {
+                    <option [ngValue]="teacherExternalId">{{ table.teacherDisplayName(t) }}</option>
+                    }
+                    }
+                </select>
+            </div>
+        </div>
+
+        <div class="border-t border-white-light px-4 py-2 dark:border-[#1b2e4b]">
+            <button
+                type="button"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-primary transition-colors hover:text-primary/80"
+                [attr.aria-expanded]="demographicFiltersOpen"
+                (click)="toggleDemographicFilters()"
+            >
+                @if (demographicFiltersOpen) {
+                <span>Hide demographic filters</span>
+                <icon-caret-down class="h-3.5 w-3.5 rotate-180 transition-transform" />
+                } @else {
+                <span>
+                    Show demographic filters
+                    @if (appliedDemographicFilterCount) {
+                    <span class="text-gray-500 dark:text-gray-400">({{ appliedDemographicFilterCount }} applied)</span>
+                    }
+                </span>
+                <icon-caret-down class="h-3.5 w-3.5 transition-transform" />
+                }
+            </button>
+        </div>
+
+        <div class="accordion-content" [class.accordion-collapsed]="!demographicFiltersOpen">
+            <div class="grid gap-4 border-t border-white-light p-4 md:grid-cols-2 xl:grid-cols-3 dark:border-[#1b2e4b]">
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Special Education</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [ngModel]="table.filtersDraft().specialEducation"
+                    (ngModelChange)="table.setFilterDraftField('specialEducation', $event)"
+                    [disabled]="table.loading()"
+                >
+                    <option [ngValue]="null">All</option>
+                    @for (opt of table.tristateBoolOptions; track opt.label) {
+                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Economic Disadvantage</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [ngModel]="table.filtersDraft().economicDisadvantage"
+                    (ngModelChange)="table.setFilterDraftField('economicDisadvantage', $event)"
+                    [disabled]="table.loading()"
+                >
+                    <option [ngValue]="null">All</option>
+                    @for (opt of table.tristateBoolOptions; track opt.label) {
+                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Emergent Bilingual</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [ngModel]="table.filtersDraft().emergentBilingual"
+                    (ngModelChange)="table.setFilterDraftField('emergentBilingual', $event)"
+                    [disabled]="table.loading()"
+                >
+                    <option [ngValue]="null">All</option>
+                    @for (opt of table.emergentBilingualOptions; track opt.value) {
+                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Test Language</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [ngModel]="table.filtersDraft().testLanguage"
+                    (ngModelChange)="table.setFilterDraftField('testLanguage', $event)"
+                    [disabled]="table.loading()"
+                >
+                    <option [ngValue]="null">All</option>
+                    @for (opt of table.testLanguageOptions; track opt.value) {
+                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300">Ethnicity</label>
+                <select
+                    class="form-select w-full text-sm"
+                    [ngModel]="table.filtersDraft().ethnicity"
+                    (ngModelChange)="table.setFilterDraftField('ethnicity', $event)"
+                    [disabled]="table.loading()"
+                >
+                    <option [ngValue]="null">All</option>
+                    @for (opt of table.ethnicityOptions; track opt.value) {
+                    <option [ngValue]="opt.value">{{ opt.label }}</option>
+                    }
+                </select>
+            </div>
+            </div>
+        </div>
+
+        @if (table.activeFilterChips.length) {
+        <div
+            class="flex flex-wrap items-center gap-2 border-t border-white-light bg-white-light/20 px-4 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/20"
+        >
+            <span class="text-xs font-semibold uppercase tracking-wide text-gray-500">Applied</span>
+            @for (chip of table.activeFilterChips; track chip.label) {
+            <button
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+                [attr.aria-label]="'Remove filter: ' + chip.label"
+                (click)="removeFilterChip(chip.id)"
+            >
+                <span>{{ chip.label }}</span>
+                <span aria-hidden="true" class="text-sm leading-none">&times;</span>
+            </button>
+            }
+        </div>
+        }
+    </div>
+    }
+
+<div class="panel h-full border-white-light dark:border-[#1b2e4b]">
+    @if (!districtContext.isGrowthContextReady()) {
+    <div class="mb-5 rounded-lg bg-warning/10 px-4 py-3 text-sm text-warning">
+        Select <strong>District</strong>, <strong>School year</strong>, and <strong>Quarter</strong> in the header to load student records.
+    </div>
+    }
+
+    @if (table.loadError()) {
+    <div class="mb-5 rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">
+        {{ table.loadError() }}
+    </div>
+    }
+
+    <div class="mb-5 flex flex-col gap-5 md:flex-row md:items-center justify-between">
+        <div>
+            <h5 class="text-lg font-semibold dark:text-white-light">All Students</h5>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-5 ltr:ml-auto rtl:mr-auto">
+            @if (table.loading()) {
+            <span class="text-xs text-gray-400">Loading…</span>
+            }
+
+            <div hlMenu class="dropdown">
+                <button
+                    hlMenuButton
+                    type="button"
+                    class="flex items-center rounded-md border border-[#e0e6ed] px-4 py-2 text-sm font-semibold dark:border-[#253b5c] dark:bg-[#1b2e4b] dark:text-white-dark transition-all hover:border-primary"
+                >
+                    <span class="ltr:mr-1 rtl:ml-1">Columns</span>
+                    <icon-caret-down class="h-5 w-5" />
+                </button>
+                <ul
+                    *hlMenuItems
+                    animate.enter="anim-enter-toggle"
+                    animate.leave="anim-leave-toggle"
+                    class="w-max ltr:left-0 rtl:right-0"
+                >
+                    <ng-container *ngFor="let col of table.columns(); let i = index">
+                        <li>
+                            <div class="flex items-center px-4 py-1">
+                                <label [for]="'chk-s-' + i" class="mb-0 cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        [id]="'chk-s-' + i"
+                                        class="form-checkbox"
+                                        [ngModel]="!col.hide"
+                                        (ngModelChange)="table.onColumnVisibleChange(col.field, $event)"
+                                    />
+                                    <span class="ltr:ml-2 rtl:mr-2">{{ col.title }}</span>
+                                </label>
+                            </div>
+                        </li>
+                    </ng-container>
+                </ul>
+            </div>
+
+            <div>
+                <input
+                    type="text"
+                    class="form-input w-48"
+                    placeholder="Search this page…"
+                    [ngModel]="table.searchQuery()"
+                    (ngModelChange)="table.setSearchQuery($event)"
+                    [disabled]="table.loading() || table.rows().length === 0"
+                />
+            </div>
+
+            <div class="flex flex-wrap items-center">
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm m-1 transition-all"
+                    [disabled]="table.rows().length === 0 || table.loading()"
+                    (click)="table.exportTable('csv')"
+                >
+                    <icon-file class="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                    EXCEL
+                </button>
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm m-1 transition-all"
+                    [disabled]="table.rows().length === 0 || table.loading()"
+                    (click)="table.exportTable('print')"
+                >
+                    <icon-printer class="h-4 w-4 ltr:mr-2 rtl:ml-2" />
+                    PRINT
+                </button>
+            </div>
+        </div>
+    </div>
+
+    @if (districtContext.isGrowthContextReady() && !table.loading() && !table.loadError() && table.rows().length === 0) {
+    <div class="mb-5 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400">
+        No student growth records match the current context and filters.
+    </div>
+    }
+
+    <div class="datatable students-datatable">
+        <ng-datatable
+            [rows]="table.rows()"
+            [columns]="table.columns()"
+            [sortable]="true"
+            [search]="table.searchQuery()"
+            [rowClass]="componentScoreRowClass"
+            [loading]="table.loading()"
+            [pageSize]="table.pageSize()"
+            [showPageSize]="false"
+            [showFirstPage]="false"
+            [showLastPage]="false"
+            [showNumbers]="false"
+            skin="whitespace-nowrap table-hover text-xs"
+            firstArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M13 19L7 12L13 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> <path opacity="0.5" d="M16.9998 19L10.9998 12L16.9998 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg>'
+            lastArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M11 19L17 12L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> <path opacity="0.5" d="M6.99976 19L12.9998 12L6.99976 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg> '
+            previousArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M15 5L9 12L15 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg>'
+            nextArrow='<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="w-4.5 h-4.5 rtl:rotate-180"> <path d="M9 5L15 12L9 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/> </svg>'
+        >
+            @for (field of table.diffColumnFields(); track field) {
+            <ng-template [slot]="field" let-value="data">
+                @let diff = table.quarterDiffValue(value, field);
+                @if (diff != null) {
+                <span
+                    class="flex items-center justify-center gap-1 font-bold"
+                    [ngClass]="diff > 0 ? 'text-success' : diff < 0 ? 'text-danger' : ''"
+                >
+                    {{ diff }}
+                    @if (diff > 0) {
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-3 w-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M12 19V6w0M5 12l7-7 7 7" />
+                    </svg>
+                    }
+                    @if (diff < 0) {
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        class="h-3 w-3"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="3"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M12 5v13w0M19 12l-7 7-7-7" />
+                    </svg>
+                    }
+                </span>
+                } @else {
+                <span class="text-gray-400">—</span>
+                }
+            </ng-template>
+            }
+        </ng-datatable>
+    </div>
+
+    @if (table.totalCount() > 0) {
+    <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-white-light pt-4 dark:border-[#1b2e4b]">
+        <div class="flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+            <span>
+                Showing {{ table.rangeStart }} to {{ table.rangeEnd }} of {{ table.totalCount() }} entries
+            </span>
+            <select
+                class="form-select w-auto min-w-[4.5rem] py-1.5 text-sm font-semibold"
+                [ngModel]="table.pageSize()"
+                (ngModelChange)="table.onPageSizeChange($event)"
+                [disabled]="table.loading()"
+            >
+                @for (size of table.pageSizeOptions; track size) {
+                <option [ngValue]="size">{{ size }}</option>
+                }
+            </select>
+        </div>
+        <div class="students-server-pagination inline-flex items-center gap-1 ltr:ml-auto rtl:mr-auto">
+            <button
+                type="button"
+                class="bh-page-item"
+                [class.disabled]="table.currentOffset() <= 0 || table.loading()"
+                [disabled]="table.currentOffset() <= 0 || table.loading()"
+                aria-label="First page"
+                (click)="table.firstServerPage()"
+            >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 rtl:rotate-180">
+                    <path d="M13 19L7 12L13 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <path opacity="0.5" d="M16.9998 19L10.9998 12L16.9998 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+            <button
+                type="button"
+                class="bh-page-item"
+                [class.disabled]="table.currentOffset() <= 0 || table.loading()"
+                [disabled]="table.currentOffset() <= 0 || table.loading()"
+                aria-label="Previous page"
+                (click)="table.prevServerPage()"
+            >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 rtl:rotate-180">
+                    <path d="M15 5L9 12L15 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+            @for (page of table.visiblePageNumbers; track page) {
+            <button
+                type="button"
+                class="bh-page-item"
+                [class.bh-active]="page === table.currentServerPage"
+                [disabled]="table.loading()"
+                [attr.aria-current]="page === table.currentServerPage ? 'page' : null"
+                [attr.aria-label]="'Page ' + page"
+                (click)="table.goToServerPage(page)"
+            >
+                {{ page }}
+            </button>
+            }
+            <button
+                type="button"
+                class="bh-page-item"
+                [class.disabled]="table.loading() || table.currentOffset() + table.pageSize() >= table.totalCount()"
+                [disabled]="table.loading() || table.currentOffset() + table.pageSize() >= table.totalCount()"
+                aria-label="Next page"
+                (click)="table.nextServerPage()"
+            >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 rtl:rotate-180">
+                    <path d="M9 5L15 12L9 19" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+            <button
+                type="button"
+                class="bh-page-item"
+                [class.disabled]="table.loading() || table.currentServerPage >= table.totalServerPages"
+                [disabled]="table.loading() || table.currentServerPage >= table.totalServerPages"
+                aria-label="Last page"
+                (click)="table.lastServerPage()"
+            >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5 rtl:rotate-180">
+                    <path d="M11 19L17 12L11 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                    <path opacity="0.5" d="M6.99976 19L12.9998 12L6.99976 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+        </div>
+    </div>
+    }
+</div>
+</div>

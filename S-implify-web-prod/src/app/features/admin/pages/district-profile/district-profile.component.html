@@ -1,0 +1,1155 @@
+<div class="flex flex-col gap-5">
+    @if (loading) {
+    <div class="panel flex items-center gap-3 px-5 py-4 text-sm text-gray-500">
+        <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+        Loading district profile…
+    </div>
+    }
+
+    @if (loadError) {
+    <div class="panel flex flex-wrap items-center justify-between gap-3 border border-danger/30 px-5 py-4">
+        <span class="text-sm text-danger">{{ loadError }}</span>
+        <button type="button" class="btn btn-outline-primary btn-sm" routerLink="/user-setups">Back to Setups</button>
+    </div>
+    }
+
+    @if (!loading && district) {
+    <div class="flex flex-col gap-5 lg:flex-row-reverse lg:items-start">
+        <!-- ============ Right sidebar navigation ============ -->
+        <aside class="lg:w-64 lg:shrink-0 lg:sticky lg:top-[90px]">
+            <div class="panel overflow-hidden p-0">
+                <div class="border-b border-white-light bg-[#f8fafc] px-4 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                    <h6 class="text-sm font-semibold text-[#0e1726] dark:text-white-light">On this page</h6>
+                </div>
+                <nav class="flex flex-col py-1">
+                    @for (s of sections; track s.id) {
+                    <a
+                        class="border-l-2 px-4 py-2.5 text-sm transition-colors"
+                        [class.border-primary]="activeSection() === s.id"
+                        [class.bg-primary/5]="activeSection() === s.id"
+                        [class.font-semibold]="activeSection() === s.id"
+                        [class.text-primary]="activeSection() === s.id"
+                        [class.border-transparent]="activeSection() !== s.id"
+                        [class.text-gray-500]="activeSection() !== s.id"
+                        [class.hover:text-primary]="activeSection() !== s.id"
+                        [class.dark:text-white/60]="activeSection() !== s.id"
+                        href="#{{ s.id }}"
+                        (click)="scrollTo(s.id, $event)"
+                    >{{ s.label }}</a>
+                    }
+                </nav>
+            </div>
+        </aside>
+
+        <!-- ============ Main column ============ -->
+        <div class="flex min-w-0 flex-1 flex-col gap-5">
+            <!-- Page heading -->
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="min-w-0">
+                    <h4 class="text-2xl font-bold text-[#0e1726] dark:text-white">{{ district.districtName }}</h4>
+                    <div class="mt-1 flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                        <span class="font-semibold text-primary">{{ district.districtCode || '—' }}</span>
+                        <span>·</span>
+                        <span>{{ stateName(district.stateId) }}</span>
+                        <span>·</span>
+                        <span
+                            class="rounded-full px-2 py-0.5 text-xs font-semibold"
+                            [class.bg-success/10]="district.isActive"
+                            [class.text-success]="district.isActive"
+                            [class.bg-danger/10]="!district.isActive"
+                            [class.text-danger]="!district.isActive"
+                        >{{ district.isActive ? 'Active' : 'Inactive' }}</span>
+                    </div>
+                </div>
+                <button type="button" class="btn btn-outline-primary btn-sm" routerLink="/user-setups">
+                    ← Back to Setups
+                </button>
+            </div>
+
+            @if (logoError) {
+            <div class="rounded-lg bg-danger/10 px-4 py-3 text-sm text-danger">{{ logoError }}</div>
+            }
+
+            <!-- ============ BASIC INFO ============ -->
+            <div id="section-basic" class="section-anchor panel overflow-hidden p-0">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white-light bg-[#f8fafc] px-5 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                    <div>
+                        <h5 class="text-base font-semibold text-[#0e1726] dark:text-white-light">Basic Info</h5>
+                        <p class="text-xs text-gray-500">Manage school district basic information.</p>
+                    </div>
+                    @if (!editing) {
+                    <button type="button" class="btn btn-outline-primary btn-sm" (click)="startEdit()">
+                        ✎ Edit
+                    </button>
+                    } @else {
+                    <div class="flex gap-2">
+                        <button type="button" class="btn btn-primary btn-sm" [disabled]="saving" (click)="saveEdit()">
+                            @if (saving) { Saving… } @else { Save }
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="saving" (click)="cancelEdit()">
+                            Cancel
+                        </button>
+                    </div>
+                    }
+                </div>
+
+                @if (editError) {
+                <div class="mx-5 mt-4 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ editError }}</div>
+                }
+
+                @if (!editing) {
+                <!-- Read view -->
+                <div class="grid gap-6 px-5 py-5 md:grid-cols-[220px_1fr]">
+                    <!-- Logo + phone (left column, like the reference) -->
+                    <div class="flex flex-col items-start gap-4">
+                        <div class="relative">
+                            @if (logoUrl) {
+                            <img
+                                class="h-28 w-28 rounded-full border border-white-light object-cover shadow dark:border-[#1b2e4b]"
+                                [src]="logoUrl"
+                                [alt]="district.districtName + ' logo'"
+                            />
+                            } @else {
+                            <div class="flex h-28 w-28 items-center justify-center rounded-full border border-white-light bg-primary/10 text-3xl font-bold text-primary dark:border-[#1b2e4b]">
+                                {{ initials }}
+                            </div>
+                            }
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">Phone Number</div>
+                            <div class="mt-0.5 text-sm font-semibold text-[#0e1726] dark:text-white">{{ district.districtPhone || '—' }}</div>
+                        </div>
+                    </div>
+
+                    <!-- Fields grid -->
+                    <div class="grid gap-x-8 gap-y-5 sm:grid-cols-2 xl:grid-cols-3">
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">Name</div>
+                            <div class="mt-0.5 text-sm font-semibold text-[#0e1726] dark:text-white">{{ district.districtName }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">Abbreviation</div>
+                            <div class="mt-0.5 text-sm font-semibold text-[#0e1726] dark:text-white">{{ district.districtAbbreviation || '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">Code</div>
+                            <div class="mt-0.5 text-sm font-semibold text-[#0e1726] dark:text-white">{{ district.districtCode || '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">Time Zone</div>
+                            <div class="mt-0.5 text-sm font-semibold text-[#0e1726] dark:text-white">{{ district.districtTimeZone || '—' }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">State</div>
+                            <div class="mt-0.5 text-sm font-semibold text-[#0e1726] dark:text-white">{{ stateName(district.stateId) }}</div>
+                        </div>
+                        <div>
+                            <div class="text-xs font-semibold uppercase tracking-wide text-gray-400">Status</div>
+                            <div class="mt-0.5 text-sm font-semibold" [class.text-success]="district.isActive" [class.text-danger]="!district.isActive">
+                                {{ district.isActive ? 'Active' : 'Inactive' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                } @else {
+                <!-- Edit form -->
+                <div class="grid gap-6 px-5 py-5 md:grid-cols-[220px_1fr]">
+                    <div class="flex flex-col items-start gap-3">
+                        <div class="relative">
+                            @if (logoUrl) {
+                            <img
+                                class="h-28 w-28 rounded-full border border-white-light object-cover shadow dark:border-[#1b2e4b]"
+                                [src]="logoUrl"
+                                [alt]="district.districtName + ' logo'"
+                            />
+                            } @else {
+                            <div class="flex h-28 w-28 items-center justify-center rounded-full border border-white-light bg-primary/10 text-3xl font-bold text-primary dark:border-[#1b2e4b]">
+                                {{ initials }}
+                            </div>
+                            }
+                            @if (logoUploading) {
+                            <div class="absolute inset-0 flex items-center justify-center rounded-full bg-black/40">
+                                <span class="inline-block h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+                            </div>
+                            }
+                        </div>
+                        <label class="btn btn-outline-primary btn-xs cursor-pointer">
+                            {{ logoUrl ? 'Change logo' : 'Upload logo' }}
+                            <input type="file" accept="image/*" class="hidden" (change)="onLogoChosen($event)" />
+                        </label>
+                        @if (logoUrl) {
+                        <button type="button" class="btn btn-outline-danger btn-xs" [disabled]="logoUploading" (click)="removeLogo()">
+                            Remove logo
+                        </button>
+                        }
+                        <p class="text-[11px] leading-4 text-gray-400">PNG, JPG, GIF, WEBP or SVG · max 5 MB</p>
+                    </div>
+
+                    <div class="grid gap-x-6 gap-y-4 sm:grid-cols-2">
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Name *</label>
+                            <input class="form-input w-full" [(ngModel)]="editForm.districtName" [disabled]="saving" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Abbreviation</label>
+                            <input class="form-input w-full" [(ngModel)]="editForm.districtAbbreviation" [disabled]="saving" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Code</label>
+                            <input class="form-input w-full" [(ngModel)]="editForm.districtCode" [disabled]="true" title="District code cannot be changed" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">State *</label>
+                            <select class="form-select w-full" [(ngModel)]="editForm.stateId" [disabled]="saving">
+                                @for (s of states; track s.stateId) {
+                                <option [ngValue]="s.stateId">{{ s.stateName }} ({{ s.stateCode }})</option>
+                                }
+                            </select>
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Phone Number</label>
+                            <input class="form-input w-full" [(ngModel)]="editForm.districtPhone" [disabled]="saving" placeholder="+1 (xxx) xxx-xxxx" />
+                        </div>
+                        <div>
+                            <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Time Zone</label>
+                            <input class="form-input w-full" [(ngModel)]="editForm.districtTimeZone" [disabled]="saving" placeholder="America/Chicago" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#0e1726] dark:text-white">
+                                <input type="checkbox" class="form-checkbox" [(ngModel)]="editForm.isActive" [disabled]="saving" />
+                                District is active
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                }
+            </div>
+
+            <!-- ============ SCHOOLS (CAMPUSES) ============ -->
+            <div id="section-schools" class="section-anchor panel overflow-hidden p-0">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white-light bg-[#f8fafc] px-5 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                    <div>
+                        <h5 class="text-base font-semibold text-[#0e1726] dark:text-white-light">Schools (Campuses)</h5>
+                        <p class="text-xs text-gray-500">{{ campuses.length }} campus{{ campuses.length === 1 ? '' : 'es' }} configured for this district.</p>
+                    </div>
+                    @if (canManage) {
+                    <button type="button" class="btn btn-outline-primary btn-sm" (click)="openCampusModal(null)">
+                        + Add Campus
+                    </button>
+                    }
+                </div>
+                @if (!campuses.length) {
+                <p class="px-5 py-6 text-sm text-gray-500">No campuses configured yet. Add them under Setups → Campuses.</p>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table-hover text-sm">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Code</th>
+                                <th>Category</th>
+                                <th>Principal</th>
+                                <th>Phone</th>
+                                <th>Status</th>
+                                @if (canManage) {
+                                <th class="col-actions">Actions</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (c of campuses; track c.campusId) {
+                            <tr>
+                                <td class="font-semibold">{{ c.campusName }}</td>
+                                <td>{{ c.campusCode || '—' }}</td>
+                                <td>{{ categoryName(c.campusCategoryId) }}</td>
+                                <td>{{ c.principalName || '—' }}</td>
+                                <td>{{ c.campusPhone || '—' }}</td>
+                                <td>
+                                    <span [class.text-success]="c.isActive" [class.text-danger]="!c.isActive">
+                                        {{ c.isActive ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </td>
+                                @if (canManage) {
+                                <td class="col-actions">
+                                    <div class="table-actions">
+                                        <button type="button" class="btn btn-outline-primary btn-xs" (click)="openCampusModal(c)">Edit</button>
+                                        <button
+                                            type="button"
+                                            class="btn btn-xs"
+                                            [ngClass]="c.isActive ? 'btn-outline-danger' : 'btn-outline-success'"
+                                            (click)="toggleCampus(c)"
+                                        >
+                                            {{ c.isActive ? 'Deactivate' : 'Activate' }}
+                                        </button>
+                                    </div>
+                                </td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            </div>
+
+            <!-- ============ ACADEMIES ============ -->
+            <div id="section-academies" class="section-anchor panel overflow-hidden p-0">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white-light bg-[#f8fafc] px-5 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                    <div>
+                        <h5 class="text-base font-semibold text-[#0e1726] dark:text-white-light">Academies</h5>
+                        <p class="text-xs text-gray-500">Campus categories used for academy-level analytics.</p>
+                    </div>
+                    @if (canManage) {
+                    <button type="button" class="btn btn-outline-primary btn-sm" (click)="openAcademyModal(null)">
+                        + Add Academy
+                    </button>
+                    }
+                </div>
+                @if (!academies.length) {
+                <p class="px-5 py-6 text-sm text-gray-500">No academies configured. Add them under Setups → Academies.</p>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table-hover text-sm">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th>Sort order</th>
+                                <th>Status</th>
+                                @if (canManage) {
+                                <th class="col-actions">Actions</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (a of academies; track a.districtAcademyId) {
+                            <tr>
+                                <td class="font-semibold">{{ a.academyCode }}</td>
+                                <td>{{ a.academyName }}</td>
+                                <td>{{ a.sortOrder ?? '—' }}</td>
+                                <td>
+                                    <span [class.text-success]="a.isActive" [class.text-danger]="!a.isActive">
+                                        {{ a.isActive ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </td>
+                                @if (canManage) {
+                                <td class="col-actions">
+                                    <div class="table-actions">
+                                        <button type="button" class="btn btn-outline-primary btn-xs" (click)="openAcademyModal(a)">Edit</button>
+                                        <button
+                                            type="button"
+                                            class="btn btn-xs"
+                                            [ngClass]="a.isActive ? 'btn-outline-danger' : 'btn-outline-success'"
+                                            (click)="toggleAcademy(a)"
+                                        >
+                                            {{ a.isActive ? 'Deactivate' : 'Activate' }}
+                                        </button>
+                                    </div>
+                                </td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            </div>
+
+            <!-- ============ ASSESSMENT PERIODS ============ -->
+            <div id="section-periods" class="section-anchor panel overflow-hidden p-0">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white-light bg-[#f8fafc] px-5 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                    <div>
+                        <h5 class="text-base font-semibold text-[#0e1726] dark:text-white-light">Assessment Periods</h5>
+                        <p class="text-xs text-gray-500">Grading windows (quarters) driving the dashboard and growth analytics.</p>
+                    </div>
+                    @if (canManage) {
+                    <button type="button" class="btn btn-outline-primary btn-sm" (click)="openPeriodModal(null)">
+                        + Add Period
+                    </button>
+                    }
+                </div>
+                @if (!quarters.length) {
+                <p class="px-5 py-6 text-sm text-gray-500">No assessment periods configured. Add them under Setups → Quarters.</p>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table-hover text-sm">
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Name</th>
+                                <th>Start</th>
+                                <th>End</th>
+                                <th>School year</th>
+                                <th>Status</th>
+                                @if (canManage) {
+                                <th class="col-actions">Actions</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (q of quarters; track q.districtQuarterId) {
+                            <tr>
+                                <td class="font-semibold">{{ q.quarterCode }}</td>
+                                <td>{{ q.quarterName || '—' }}</td>
+                                <td>{{ q.startDate || '—' }}</td>
+                                <td>{{ q.endDate || '—' }}</td>
+                                <td>{{ yearLabel(q.academicYearId) }}</td>
+                                <td>
+                                    <span [class.text-success]="q.isActive" [class.text-danger]="!q.isActive">
+                                        {{ q.isActive ? 'Active' : 'Inactive' }}
+                                    </span>
+                                    @if (q.isCurrentWindow) {
+                                    <span class="ml-1.5 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                                        Current window
+                                    </span>
+                                    }
+                                </td>
+                                @if (canManage) {
+                                <td class="col-actions">
+                                    <div class="table-actions">
+                                        <button type="button" class="btn btn-outline-primary btn-xs" (click)="openPeriodModal(q)">Edit</button>
+                                        <button
+                                            type="button"
+                                            class="btn btn-xs"
+                                            [ngClass]="q.isActive ? 'btn-outline-danger' : 'btn-outline-success'"
+                                            (click)="togglePeriod(q)"
+                                        >
+                                            {{ q.isActive ? 'Deactivate' : 'Activate' }}
+                                        </button>
+                                    </div>
+                                </td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            </div>
+
+            <!-- ============ T-TESS QUESTIONS (Super Admin / District Admin only) ============ -->
+            @if (canManage) {
+            <div id="section-ttess-questions" class="section-anchor panel overflow-hidden p-0">
+                <div class="border-b border-white-light bg-[#f8fafc] px-5 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                    <h5 class="text-base font-semibold text-[#0e1726] dark:text-white-light">T-TESS Questions</h5>
+                    <p class="text-xs text-gray-500">Domains, questions and answer options used by the T-TESS assessment form.</p>
+                </div>
+
+                @if (ttessRubricLoading) {
+                <div class="flex items-center gap-3 px-5 py-6 text-sm text-gray-500">
+                    <span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></span>
+                    Loading T-TESS rubric…
+                </div>
+                } @else if (!ttessRubric) {
+                <p class="px-5 py-6 text-sm text-gray-500">T-TESS rubric could not be loaded for this district.</p>
+                } @else {
+                <!-- Domains + questions -->
+                <div class="flex flex-col gap-4 px-5 py-5">
+                    @for (d of ttessRubric.domains; track d.ttessDomainId) {
+                    <div class="rounded-lg border border-white-light dark:border-[#1b2e4b]">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white-light bg-[#f8fafc] px-4 py-2.5 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                            @if (ttessDomainEditingId === d.ttessDomainId) {
+                            <div class="flex min-w-0 flex-1 items-center gap-2">
+                                <input
+                                    class="form-input w-full text-sm"
+                                    [(ngModel)]="ttessDomainEditName"
+                                    [ngModelOptions]="{ standalone: true }"
+                                    [disabled]="ttessDomainSaving"
+                                    (keyup.enter)="saveTtessDomain(d)"
+                                />
+                                <button type="button" class="btn btn-primary btn-xs" [disabled]="ttessDomainSaving" (click)="saveTtessDomain(d)">Save</button>
+                                <button type="button" class="btn btn-outline-secondary btn-xs" [disabled]="ttessDomainSaving" (click)="cancelTtessDomainEdit()">Cancel</button>
+                            </div>
+                            } @else {
+                            <div class="text-sm font-bold text-[#0e1726] dark:text-white-light">{{ d.domainName }}</div>
+                            }
+                            @if (canManage && ttessDomainEditingId !== d.ttessDomainId) {
+                            <div class="flex items-center gap-2">
+                                <button type="button" class="btn btn-outline-primary btn-xs" (click)="startTtessDomainEdit(d)">Rename</button>
+                                <button type="button" class="btn btn-outline-secondary btn-xs" (click)="openTtessQuestionModal(d.ttessDomainId, null)">+ Add Question</button>
+                            </div>
+                            }
+                        </div>
+                        <div class="table-responsive">
+                            <table class="text-xs">
+                                <thead>
+                                    <tr>
+                                        <th class="w-10">Code</th>
+                                        <th>Question</th>
+                                        <th class="w-24">Status</th>
+                                        @if (canManage) {
+                                        <th class="col-actions-xl">Actions</th>
+                                        }
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (q of d.questions; track q.ttessQuestionId; let i = $index) {
+                                    <tr [class.opacity-50]="!q.isActive">
+                                        <td class="font-semibold text-gray-500">{{ q.questionCode }}</td>
+                                        <td>{{ q.questionText }}</td>
+                                        <td>
+                                            <span [class.text-success]="q.isActive" [class.text-danger]="!q.isActive">
+                                                {{ q.isActive ? 'Active' : 'Inactive' }}
+                                            </span>
+                                        </td>
+                                        @if (canManage) {
+                                        <td class="col-actions-xl">
+                                            <div class="table-actions">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-outline-secondary btn-xs btn-xs-icon"
+                                                    [disabled]="i === 0 || ttessRubricBusy"
+                                                    (click)="moveTtessQuestion(d, i, -1)"
+                                                    title="Move up"
+                                                >↑</button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-outline-secondary btn-xs btn-xs-icon"
+                                                    [disabled]="i === d.questions.length - 1 || ttessRubricBusy"
+                                                    (click)="moveTtessQuestion(d, i, 1)"
+                                                    title="Move down"
+                                                >↓</button>
+                                                <button type="button" class="btn btn-outline-primary btn-xs" (click)="openTtessQuestionModal(d.ttessDomainId, q)">Edit</button>
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-xs"
+                                                    [ngClass]="q.isActive ? 'btn-outline-danger' : 'btn-outline-success'"
+                                                    [disabled]="ttessRubricBusy"
+                                                    (click)="toggleTtessQuestion(q)"
+                                                >
+                                                    {{ q.isActive ? 'Deactivate' : 'Activate' }}
+                                                </button>
+                                            </div>
+                                        </td>
+                                        }
+                                    </tr>
+                                    }
+                                    @if (!d.questions.length) {
+                                    <tr>
+                                        <td colspan="4" class="py-3 text-center text-gray-400">No questions in this domain yet.</td>
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    }
+
+                    <!-- Answer options (rating scale) -->
+                    <div class="rounded-lg border border-white-light dark:border-[#1b2e4b]">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-white-light bg-[#f8fafc] px-4 py-2.5 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                            <div>
+                                <div class="text-sm font-bold text-[#0e1726] dark:text-white-light">Answer Options (rating scale)</div>
+                                <p class="text-[11px] text-gray-500">
+                                    Overall score = (average of selected points ÷ maximum points) × 100.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="text-xs">
+                                <thead>
+                                    <tr>
+                                        <th class="w-16">Points</th>
+                                        <th>Option label</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @for (o of ttessOptionsDraft; track o.ttessOptionId) {
+                                    <tr>
+                                        <td>
+                                            @if (canManage) {
+                                            <input
+                                                type="number"
+                                                min="0"
+                                                class="form-input w-20 text-xs"
+                                                [(ngModel)]="o.pointValue"
+                                                [ngModelOptions]="{ standalone: true }"
+                                            />
+                                            } @else {
+                                            {{ o.pointValue }}
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (canManage) {
+                                            <input
+                                                type="text"
+                                                class="form-input w-full max-w-xs text-xs"
+                                                [(ngModel)]="o.optionLabel"
+                                                [ngModelOptions]="{ standalone: true }"
+                                            />
+                                            } @else {
+                                            {{ o.optionLabel }}
+                                            }
+                                        </td>
+                                    </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        @if (ttessOptionsError) {
+                        <div class="mx-4 mt-2 rounded bg-danger/10 px-3 py-1.5 text-xs text-danger">{{ ttessOptionsError }}</div>
+                        }
+                        @if (canManage) {
+                        <div class="flex justify-end px-4 py-3">
+                            <button type="button" class="btn btn-primary btn-sm" [disabled]="ttessOptionsSaving" (click)="saveTtessOptions()">
+                                @if (ttessOptionsSaving) { Saving… } @else { Save Rating Scale }
+                            </button>
+                        </div>
+                        }
+                    </div>
+                </div>
+                }
+            </div>
+            }
+
+            <!-- ============ SUBJECTS ============ -->
+            <div id="section-subjects" class="section-anchor panel overflow-hidden p-0">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white-light bg-[#f8fafc] px-5 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                    <div>
+                        <h5 class="text-base font-semibold text-[#0e1726] dark:text-white-light">Subjects</h5>
+                        <p class="text-xs text-gray-500">Subjects enabled for this district's analytics.</p>
+                    </div>
+                    @if (canManage) {
+                    <button type="button" class="btn btn-outline-primary btn-sm" (click)="openSubjectModal(null)">
+                        + Add Subject
+                    </button>
+                    }
+                </div>
+                @if (!subjects.length) {
+                <p class="px-5 py-6 text-sm text-gray-500">No subjects linked. Manage them under Setups → District subjects.</p>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table-hover text-sm">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Code</th>
+                                <th>Status</th>
+                                @if (canManage) {
+                                <th class="col-actions">Actions</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (s of subjects; track s.subjectId) {
+                            <tr [class.opacity-60]="s.isActive === false">
+                                <td class="font-semibold">{{ s.subjectName }}</td>
+                                <td>{{ s.subjectCode }}</td>
+                                <td>
+                                    <span
+                                        [class.text-success]="s.isActive !== false"
+                                        [class.text-gray-400]="s.isActive === false"
+                                    >
+                                        {{ s.isActive === false ? 'Inactive' : 'Active' }}
+                                    </span>
+                                </td>
+                                @if (canManage) {
+                                <td class="col-actions">
+                                    <div class="table-actions">
+                                        <button type="button" class="btn btn-outline-primary btn-xs" (click)="openSubjectModal(s)">Edit</button>
+                                        <button
+                                            type="button"
+                                            class="btn btn-xs"
+                                            [ngClass]="s.isActive === false ? 'btn-outline-success' : 'btn-outline-danger'"
+                                            (click)="toggleSubject(s)"
+                                        >
+                                            {{ s.isActive === false ? 'Activate' : 'Deactivate' }}
+                                        </button>
+                                    </div>
+                                </td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            </div>
+
+            <!-- ============ USERS ============ -->
+            <div id="section-users" class="section-anchor panel overflow-hidden p-0">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white-light bg-[#f8fafc] px-5 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                    <div>
+                        <h5 class="text-base font-semibold text-[#0e1726] dark:text-white-light">Users</h5>
+                        <p class="text-xs text-gray-500">People with access to this district.</p>
+                    </div>
+                    @if (canManage) {
+                    <button type="button" class="btn btn-outline-primary btn-sm" (click)="openUserModal(null)">
+                        + Add User
+                    </button>
+                    }
+                </div>
+                @if (!users.length) {
+                <p class="px-5 py-6 text-sm text-gray-500">No users assigned to this district yet.</p>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table-hover table-fixed text-sm">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Campus</th>
+                                <th>Status</th>
+                                @if (canManage) {
+                                <th class="col-actions-wide">Actions</th>
+                                }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (u of users; track u.userId) {
+                            <tr [class.opacity-60]="!u.isActive">
+                                <td class="font-semibold"><span class="block truncate" [title]="userLabel(u)">{{ userLabel(u) }}</span></td>
+                                <td><span class="block truncate" [title]="u.email">{{ u.email }}</span></td>
+                                <td><span class="block truncate" [title]="userAssignmentRole(u)">{{ userAssignmentRole(u) }}</span></td>
+                                <td><span class="block truncate" [title]="userAssignmentCampus(u)">{{ userAssignmentCampus(u) }}</span></td>
+                                <td>
+                                    <span [class.text-success]="u.isActive" [class.text-danger]="!u.isActive">
+                                        {{ u.isActive ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </td>
+                                @if (canManage) {
+                                <td class="col-actions-wide">
+                                    <div class="table-actions">
+                                        <button type="button" class="btn btn-outline-primary btn-xs" (click)="openUserModal(u)">Edit</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-xs" (click)="openResetPasswordModal(u)">Reset Password</button>
+                                        <button
+                                            type="button"
+                                            class="btn btn-xs"
+                                            [ngClass]="u.isActive ? 'btn-outline-danger' : 'btn-outline-success'"
+                                            (click)="toggleUser(u)"
+                                        >
+                                            {{ u.isActive ? 'Deactivate' : 'Activate' }}
+                                        </button>
+                                    </div>
+                                </td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            </div>
+
+            <!-- ============ DATA UPLOADS ============ -->
+            <div id="section-uploads" class="section-anchor panel overflow-hidden p-0">
+                <div class="border-b border-white-light bg-[#f8fafc] px-5 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50">
+                    <h5 class="text-base font-semibold text-[#0e1726] dark:text-white-light">Data Uploads</h5>
+                    <p class="text-xs text-gray-500">15 most recent data files across every upload flow.</p>
+                </div>
+                @if (!recentUploads.length) {
+                <p class="px-5 py-6 text-sm text-gray-500">No data uploaded for this district yet. Use Data uploads in the sidebar.</p>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table-hover text-sm">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>File</th>
+                                <th>Uploaded by</th>
+                                <th>When</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (u of recentUploads; track u.type + '-' + u.uploadId) {
+                            <tr>
+                                <td><span class="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">{{ u.label }}</span></td>
+                                <td class="font-semibold">{{ u.fileName }}</td>
+                                <td>{{ u.uploadedBy || '—' }}</td>
+                                <td>{{ u.uploadedAt || '—' }}</td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+    }
+
+<!-- ============ Campus add/edit modal ============ -->
+<ngx-custom-modal #campusModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="text-base font-bold text-[#0e1726] dark:text-white-light">
+            {{ campusEditingId ? 'Edit Campus' : 'Add Campus' }}
+        </div>
+        <p class="text-xs text-gray-500">Schools belonging to {{ district?.districtName }}.</p>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (campusError) {
+        <div class="mb-4 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ campusError }}</div>
+        }
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Name *</label>
+                <input class="form-input w-full" [(ngModel)]="campusForm.campusName" [ngModelOptions]="{ standalone: true }" [disabled]="campusSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Code *</label>
+                <input class="form-input w-full" [(ngModel)]="campusForm.campusCode" [ngModelOptions]="{ standalone: true }" [disabled]="campusSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Category</label>
+                <select class="form-select w-full" [(ngModel)]="campusForm.campusCategoryId" [ngModelOptions]="{ standalone: true }" [disabled]="campusSaving">
+                    <option [ngValue]="null">Select category</option>
+                    @for (cat of campusCategories; track cat.campusCategoryId) {
+                    <option [ngValue]="cat.campusCategoryId">{{ cat.categoryName }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Principal</label>
+                <input class="form-input w-full" [(ngModel)]="campusForm.principalName" [ngModelOptions]="{ standalone: true }" [disabled]="campusSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Address</label>
+                <input class="form-input w-full" [(ngModel)]="campusForm.campusAddress" [ngModelOptions]="{ standalone: true }" [disabled]="campusSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Phone</label>
+                <input class="form-input w-full" [(ngModel)]="campusForm.campusPhone" [ngModelOptions]="{ standalone: true }" [disabled]="campusSaving" />
+            </div>
+            <div class="sm:col-span-2">
+                <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#0e1726] dark:text-white">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="campusForm.isActive" [ngModelOptions]="{ standalone: true }" [disabled]="campusSaving" />
+                    Campus is active
+                </label>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="campusSaving" (click)="closeCampusModal()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="campusSaving" (click)="saveCampus()">
+                @if (campusSaving) { Saving… } @else { Save }
+            </button>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- ============ Academy add/edit modal ============ -->
+<ngx-custom-modal #academyModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="text-base font-bold text-[#0e1726] dark:text-white-light">
+            {{ academyEditingId ? 'Edit Academy' : 'Add Academy' }}
+        </div>
+        <p class="text-xs text-gray-500">Academies for {{ district?.districtName }}.</p>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (academyError) {
+        <div class="mb-4 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ academyError }}</div>
+        }
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Code *</label>
+                <input class="form-input w-full" [(ngModel)]="academyForm.academyCode" [ngModelOptions]="{ standalone: true }" [disabled]="academySaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Name *</label>
+                <input class="form-input w-full" [(ngModel)]="academyForm.academyName" [ngModelOptions]="{ standalone: true }" [disabled]="academySaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Sort order</label>
+                <input type="number" class="form-input w-full" [(ngModel)]="academyForm.sortOrder" [ngModelOptions]="{ standalone: true }" [disabled]="academySaving" />
+            </div>
+            <div class="sm:col-span-2">
+                <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#0e1726] dark:text-white">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="academyForm.isActive" [ngModelOptions]="{ standalone: true }" [disabled]="academySaving" />
+                    Academy is active
+                </label>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="academySaving" (click)="closeAcademyModal()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="academySaving" (click)="saveAcademy()">
+                @if (academySaving) { Saving… } @else { Save }
+            </button>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- ============ Assessment period add/edit modal ============ -->
+<ngx-custom-modal #periodModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="text-base font-bold text-[#0e1726] dark:text-white-light">
+            {{ periodEditingId ? 'Edit Assessment Period' : 'Add Assessment Period' }}
+        </div>
+        <p class="text-xs text-gray-500">Grading windows for {{ district?.districtName }}.</p>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (periodError) {
+        <div class="mb-4 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ periodError }}</div>
+        }
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Code *</label>
+                <input class="form-input w-full" [(ngModel)]="periodForm.quarterCode" [ngModelOptions]="{ standalone: true }" [disabled]="periodSaving" placeholder="e.g. MOY" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Name</label>
+                <input class="form-input w-full" [(ngModel)]="periodForm.quarterName" [ngModelOptions]="{ standalone: true }" [disabled]="periodSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Start date *</label>
+                <input type="date" class="form-input w-full" [(ngModel)]="periodForm.startDate" [ngModelOptions]="{ standalone: true }" [disabled]="periodSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">End date *</label>
+                <input type="date" class="form-input w-full" [(ngModel)]="periodForm.endDate" [ngModelOptions]="{ standalone: true }" [disabled]="periodSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">School year *</label>
+                <select class="form-select w-full" [(ngModel)]="periodForm.academicYearId" [ngModelOptions]="{ standalone: true }" [disabled]="periodSaving">
+                    <option [ngValue]="null">Select school year</option>
+                    @for (y of academicYears; track y.academicYearId) {
+                    <option [ngValue]="y.academicYearId">{{ y.yearLabel }}</option>
+                    }
+                </select>
+            </div>
+            <div class="flex flex-col justify-end gap-2">
+                <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#0e1726] dark:text-white">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="periodForm.isCurrentWindow" [ngModelOptions]="{ standalone: true }" [disabled]="periodSaving" />
+                    Current assessment window
+                </label>
+                <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#0e1726] dark:text-white">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="periodForm.isActive" [ngModelOptions]="{ standalone: true }" [disabled]="periodSaving" />
+                    Period is active
+                </label>
+            </div>
+        </div>
+        <p class="mt-2 text-[11px] text-gray-400">Only one period can be the current assessment window at a time — marking another one moves the flag.</p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="periodSaving" (click)="closePeriodModal()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="periodSaving" (click)="savePeriod()">
+                @if (periodSaving) { Saving… } @else { Save }
+            </button>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- ============ Subject add/edit modal ============ -->
+<ngx-custom-modal #subjectModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="text-base font-bold text-[#0e1726] dark:text-white-light">
+            {{ subjectEditingSubjectId ? 'Edit Subject' : 'Add Subject' }}
+        </div>
+        <p class="text-xs text-gray-500">Subjects for {{ district?.districtName }}.</p>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (subjectError) {
+        <div class="mb-4 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ subjectError }}</div>
+        }
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Name *</label>
+                <input class="form-input w-full" [(ngModel)]="subjectForm.subjectName" [ngModelOptions]="{ standalone: true }" [disabled]="subjectSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Code *</label>
+                <input class="form-input w-full" [(ngModel)]="subjectForm.subjectCode" [ngModelOptions]="{ standalone: true }" [disabled]="subjectSaving" />
+            </div>
+            <div class="sm:col-span-2">
+                <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#0e1726] dark:text-white">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="subjectForm.isActive" [ngModelOptions]="{ standalone: true }" [disabled]="subjectSaving" />
+                    Active for this district
+                </label>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="subjectSaving" (click)="closeSubjectModal()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="subjectSaving" (click)="saveSubject()">
+                @if (subjectSaving) { Saving… } @else { Save }
+            </button>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- ============ User add/edit modal ============ -->
+<ngx-custom-modal #userModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="text-base font-bold text-[#0e1726] dark:text-white-light">
+            {{ userEditingId ? 'Edit User' : 'Add User' }}
+        </div>
+        <p class="text-xs text-gray-500">Users with access to {{ district?.districtName }}.</p>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (userError) {
+        <div class="mb-4 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ userError }}</div>
+        }
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">First name</label>
+                <input class="form-input w-full" [(ngModel)]="userForm.firstName" [ngModelOptions]="{ standalone: true }" [disabled]="userSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Last name</label>
+                <input class="form-input w-full" [(ngModel)]="userForm.lastName" [ngModelOptions]="{ standalone: true }" [disabled]="userSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Email *</label>
+                <input type="email" class="form-input w-full" [(ngModel)]="userForm.email" [ngModelOptions]="{ standalone: true }" [disabled]="userSaving" />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Role *</label>
+                <select class="form-select w-full" [(ngModel)]="userForm.roleId" [ngModelOptions]="{ standalone: true }" [disabled]="userSaving">
+                    <option [ngValue]="null">Select role</option>
+                    @for (r of roles; track r.roleId) {
+                    <option [ngValue]="r.roleId">{{ r.roleName }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">
+                    Campus @if (campusRequiredRoleIds.includes(userForm.roleId ?? 0)) { * }
+                </label>
+                <select
+                    class="form-select w-full"
+                    [(ngModel)]="userForm.campusId"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="userSaving"
+                >
+                    <option [ngValue]="null">No campus assignment</option>
+                    @for (c of campuses; track c.campusId) {
+                    <option [ngValue]="c.campusId">{{ c.campusName }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Status</label>
+                <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#0e1726] dark:text-white">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="userForm.isActive" [ngModelOptions]="{ standalone: true }" [disabled]="userSaving" />
+                    User is active
+                </label>
+            </div>
+            @if (!userEditingId) {
+            <div class="sm:col-span-2">
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Password *</label>
+                <input
+                    type="password"
+                    class="form-input w-full"
+                    [(ngModel)]="userForm.password"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="userSaving"
+                    autocomplete="new-password"
+                    placeholder="Initial password (defaults to Temp@123)"
+                />
+            </div>
+            }
+        </div>
+        <p class="mt-2 text-[11px] text-gray-400">Passwords are never stored in plain text or displayed — use Reset Password on an existing user.</p>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="userSaving" (click)="closeUserModal()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="userSaving" (click)="saveUser()">
+                @if (userSaving) { Saving… } @else { Save }
+            </button>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- ============ Reset password modal ============ -->
+<ngx-custom-modal #resetPasswordModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="text-base font-bold text-[#0e1726] dark:text-white-light">Reset Password</div>
+        <p class="text-xs text-gray-500">{{ resetPasswordUser?.email }}</p>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (resetPasswordError) {
+        <div class="mb-4 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ resetPasswordError }}</div>
+        }
+        <div class="grid gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">New password *</label>
+                <input
+                    type="password"
+                    class="form-input w-full"
+                    [(ngModel)]="resetPasswordForm.newPassword"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="resetPasswordSaving"
+                    autocomplete="new-password"
+                />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Confirm new password *</label>
+                <input
+                    type="password"
+                    class="form-input w-full"
+                    [(ngModel)]="resetPasswordForm.confirmPassword"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="resetPasswordSaving"
+                    autocomplete="new-password"
+                />
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="resetPasswordSaving" (click)="closeResetPasswordModal()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="resetPasswordSaving" (click)="saveResetPassword()">
+                @if (resetPasswordSaving) { Resetting… } @else { Reset Password }
+            </button>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- ============ T-TESS question add/edit modal ============ -->
+<ngx-custom-modal #ttessQuestionModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="text-base font-bold text-[#0e1726] dark:text-white-light">
+            {{ ttessQuestionEditingId ? 'Edit Question' : 'Add Question' }}
+        </div>
+        <p class="text-xs text-gray-500">T-TESS rubric questions for {{ district?.districtName }}.</p>
+    </ng-template>
+    <ng-template #modalBody>
+        @if (ttessQuestionError) {
+        <div class="mb-4 rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{{ ttessQuestionError }}</div>
+        }
+        <div class="grid gap-4">
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Domain *</label>
+                <select
+                    class="form-select w-full"
+                    [(ngModel)]="ttessQuestionForm.ttessDomainId"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="ttessQuestionSaving"
+                >
+                    <option [ngValue]="null">Select domain</option>
+                    @for (d of ttessRubric?.domains ?? []; track d.ttessDomainId) {
+                    <option [ngValue]="d.ttessDomainId">{{ d.domainName }}</option>
+                    }
+                </select>
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Code *</label>
+                <input
+                    class="form-input w-full"
+                    [(ngModel)]="ttessQuestionForm.questionCode"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="ttessQuestionSaving"
+                    placeholder="e.g. 2.3"
+                />
+            </div>
+            <div>
+                <label class="mb-1 block text-xs font-semibold uppercase text-gray-500">Question text *</label>
+                <textarea
+                    class="form-textarea w-full text-sm"
+                    rows="3"
+                    [(ngModel)]="ttessQuestionForm.questionText"
+                    [ngModelOptions]="{ standalone: true }"
+                    [disabled]="ttessQuestionSaving"
+                ></textarea>
+            </div>
+            <div>
+                <label class="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-[#0e1726] dark:text-white">
+                    <input type="checkbox" class="form-checkbox" [(ngModel)]="ttessQuestionForm.isActive" [ngModelOptions]="{ standalone: true }" [disabled]="ttessQuestionSaving" />
+                    Active (appears in new assessments)
+                </label>
+                <p class="mt-1 text-[11px] text-gray-400">Deactivating a question never changes already-saved assessments.</p>
+            </div>
+        </div>
+        <div class="mt-5 flex justify-end gap-2">
+            <button type="button" class="btn btn-outline-secondary btn-sm" [disabled]="ttessQuestionSaving" (click)="closeTtessQuestionModal()">Cancel</button>
+            <button type="button" class="btn btn-primary btn-sm" [disabled]="ttessQuestionSaving" (click)="saveTtessQuestion()">
+                @if (ttessQuestionSaving) { Saving… } @else { Save }
+            </button>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
