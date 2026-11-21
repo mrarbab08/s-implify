@@ -1,7 +1,11 @@
 # Production stack: nginx (Angular bundle + /api proxy) + Express/SQLite API.
 #
+# Compatibility alias for `docker compose -f docker-compose.prod.yml ...`.
+# The canonical file is now the root `docker-compose.yml`, so plain
+# `docker compose up -d --build` works too. Keep both files in sync.
+#
 #   cp .env.example .env      # set AI_* keys if you use the AI assistant
-#   docker compose -f docker-compose.prod.yml up -d --build
+#   docker compose up -d --build
 #
 # The app is served on ${WEB_PORT:-80}. Put TLS in front of it with the host
 # nginx/certbot, Caddy, or Cloudflare (see deploy/README.md).

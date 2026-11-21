@@ -33,10 +33,14 @@ To publish the site on another host port, set `WEB_PORT` in `.env`, e.g.
 ## 3. Build and start
 
 ```bash
-docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs -f web
+docker compose up -d --build
+docker compose ps
+docker compose logs -f web
 ```
+
+The root `docker-compose.yml` is the default compose file.
+`docker-compose.prod.yml` is kept as an alias for older deployment scripts:
+`docker compose -f docker-compose.prod.yml up -d --build` does the same thing.
 
 First visit: <http://YOUR_VPS_IP/>.
 
@@ -74,16 +78,16 @@ The app itself is fully same-origin, so no cookie/domain rewrites are needed.
 
 ```bash
 # restart one service
-docker compose -f docker-compose.prod.yml restart api
+docker compose restart api
 
 # check API from the VPS
 curl http://127.0.0.1:8080/health          # only if you publish API_PORT
 
 # rebuild just the web image after a frontend change
-docker compose -f docker-compose.prod.yml up -d --build web
+docker compose up -d --build web
 
 # stop without deleting data
-docker compose -f docker-compose.prod.yml down
+docker compose down
 ```
 
 ## 7. Local development (unchanged)

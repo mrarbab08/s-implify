@@ -42,8 +42,11 @@ Build a single-origin production stack (nginx + API) instead:
 
 ```bash
 cp .env.example .env
-docker compose -f docker-compose.prod.yml up -d --build
+docker compose up -d --build
 ```
+
+The root `docker-compose.yml` is the production stack;
+`docker-compose.prod.yml` is an alias for older scripts.
 
 The Angular bundle is built into an nginx image, served on port 80, and
 `/api/*` is proxied to the backend container. `environment.prod.ts` uses the
