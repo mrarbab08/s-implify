@@ -36,6 +36,20 @@ npm start
 Open <http://localhost:4200>. The application reloads when source files
 change.
 
+## Production deployment
+
+Build a single-origin production stack (nginx + API) instead:
+
+```bash
+cp .env.example .env
+docker compose -f docker-compose.prod.yml up -d --build
+```
+
+The Angular bundle is built into an nginx image, served on port 80, and
+`/api/*` is proxied to the backend container. `environment.prod.ts` uses the
+relative `/api` base and real APIs (no mocks). See `deploy/README.md` for VPS
+setup, TLS, backups, and troubleshooting.
+
 ## Docker development
 
 Build and start the development container:

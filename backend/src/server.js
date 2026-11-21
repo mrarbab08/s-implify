@@ -2,9 +2,45 @@
 /**
  * Local S-Implify API server.
  * Implements the exact HTTP contract consumed by the Angular frontend:
- *   baseURL: http://localhost:8080/api
+ *   baseURL: /api  (same origin in production, proxied by nginx)
  *   envelope: { statusCode, message, data }
  */
+const fs = require('fs');
+const path = require('path');
+
+/**
+ * Minimal .env loader (zero dependencies). Must run before ./db is required
+ * so SIMPLIFY_DB_PATH is honoured. Real process env always wins, and a missing
+ * file is not an error (containers pass config via `environment:`).
+ */
+function loadDotEnv() {
+  const candidates = [
+    path.join(__dirname, '..', '..', '.env'), // repo root
+    path.join(__dirname, '..', '.env'), // backend/
+  ];
+  for (const file of candidates) {
+    if (!fs.existsSync(file)) continue;
+    const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+    for (const rawLine of lines) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#')) continue;
+      const eq = line.indexOf('=');
+      if (eq === -1) continue;
+      const key = line.slice(0, eq).trim();
+      if (!key || key in process.env) continue;
+      let value = line.slice(eq + 1).trim();
+      if (
+        (value.startsWith('"') && value.endsWith('"')) ||
+        (value.startsWith("'") && value.endsWith("'"))
+      ) {
+        value = value.slice(1, -1);
+      }
+      process.env[key] = value;
+    }
+  }
+}
+loadDotEnv();
+
 const express = require('express');
 const cors = require('cors');
 const { DB_PATH } = require('./db');
@@ -81,8 +117,13 @@ app.use((req, res) => {
   res.status(404).json({ statusCode: 404, message: `Endpoint not found: ${req.method} ${req.originalUrl}`, data: null });
 });
 
-const PORT = Number(process.env.PORT) || 8080;
-app.listen(PORT, '0.0.0.0', () => {
+/**
+ * API_PORT (not PORT): hosting panels and PaaS runtimes often inject PORT for
+ * their own proxy, which would silently move this API off the port nginx
+ * proxies to. API_PORT is explicit and never collides.
+ */
+const PORT = Number(process.env.API_PORT) || 8080;
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log('==========================================================');
   console.log('  S-Implify local backend');
   console.log(`  API base : http://localhost:${PORT}/api`);
@@ -94,3 +135,20 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log('    teacher@s-implify.local   / Teacher@123');
   console.log('==========================================================');
 });
+
+/** Graceful shutdown so Docker restarts never corrupt the SQLite WAL. */
+function shutdown(signal) {
+  console.log(`[server] ${signal} received — closing HTTP server`);
+  server.close(() => {
+    try {
+      require('./db').db.close();
+    } catch (_e) {
+      /* already closed */
+    }
+    process.exit(0);
+  });
+  // Do not hang forever on keep-alive connections.
+  setTimeout(() => process.exit(0), 10000).unref();
+}
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));

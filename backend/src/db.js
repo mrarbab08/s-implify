@@ -637,23 +637,42 @@ function seedTtessRubrics() {
 seedTtessRubrics();
 
 // ---------------------------------------------------------------- helpers
+/**
+ * node:sqlite only accepts null, number, bigint, string or Buffer values.
+ * Express request bodies and route handlers routinely pass JS booleans
+ * (`isActive`, `ttessAccess`, ...) and `undefined` for optional columns, and
+ * binding those throws "Provided value cannot be bound to SQLite parameter".
+ * Normalize every parameter once, here, so no query has to care.
+ */
+function normalizeValue(value) {
+  if (value === undefined) return null;
+  if (typeof value === 'boolean') return value ? 1 : 0;
+  if (value instanceof Date) return value.toISOString();
+  return value;
+}
+
+function normalizeParams(params) {
+  if (!Array.isArray(params)) return [];
+  return params.map(normalizeValue);
+}
+
 function getOne(sql, params = []) {
-  return db.prepare(sql).get(...params);
+  return db.prepare(sql).get(...normalizeParams(params));
 }
 
 function getAll(sql, params = []) {
-  return db.prepare(sql).all(...params);
+  return db.prepare(sql).all(...normalizeParams(params));
 }
 
 /** INSERT returns last inserted rowid. */
 function insert(sql, params = []) {
-  const res = db.prepare(sql).run(...params);
+  const res = db.prepare(sql).run(...normalizeParams(params));
   return Number(res.lastInsertRowid);
 }
 
 /** UPDATE / DELETE returns number of affected rows. */
 function run(sql, params = []) {
-  const res = db.prepare(sql).run(...params);
+  const res = db.prepare(sql).run(...normalizeParams(params));
   return Number(res.changes);
 }
 
@@ -678,6 +697,7 @@ module.exports = {
   db,
   DB_PATH,
   DATA_DIR,
+  normalizeParams,
   getOne,
   getAll,
   insert,
