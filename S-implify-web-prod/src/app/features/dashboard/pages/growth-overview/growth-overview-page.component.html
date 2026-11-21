@@ -104,7 +104,8 @@
 
                 <!-- Developing campuses — campuses in the current selection with a latest average CS ≤ 63 (portal band precedent) -->
                 <div
-                    class="kpi-card group relative overflow-hidden rounded-2xl bg-[#F4A261] text-white shadow-[0_14px_30px_-14px_rgba(244,162,97,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(244,162,97,0.8)]"
+                    (click)="openDevelopingCampusesModal()"
+                    class="kpi-card group relative cursor-pointer overflow-hidden rounded-2xl bg-[#F4A261] text-white shadow-[0_14px_30px_-14px_rgba(244,162,97,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(244,162,97,0.8)]"
                 >
                     <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5m3-9h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5M9 21v-5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75V21"/></svg>
                     <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
@@ -119,7 +120,8 @@
 
                 <!-- Progressing campuses — same selection/rows, CS in the portal's 64–74 "Progressing" band -->
                 <div
-                    class="kpi-card group relative overflow-hidden rounded-2xl bg-[#8153FC] text-white shadow-[0_14px_30px_-14px_rgba(129,83,252,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(129,83,252,0.8)]"
+                    (click)="openProgressingCampusesModal()"
+                    class="kpi-card group relative cursor-pointer overflow-hidden rounded-2xl bg-[#8153FC] text-white shadow-[0_14px_30px_-14px_rgba(129,83,252,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(129,83,252,0.8)]"
                 >
                     <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5m3-9h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5M9 21v-5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75V21"/></svg>
                     <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
@@ -1575,6 +1577,102 @@
                                 type="button"
                                 class="text-xs font-semibold text-primary hover:underline dark:text-primary"
                                 (click)="applyCampusFilterFromPopup(row.campusId, row.slug)"
+                                title="Show dashboard stats for this campus"
+                            >View stats</button>
+                            }
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- Developing / Progressing campuses popup — same component, styling, row format
+     and close behaviour as the Campuses stat-card popup above. -->
+<ngx-custom-modal #statusCampusesModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div
+                class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3D91F5]/10 text-[#3D91F5] dark:bg-[#3D91F5]/20"
+            >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.4 60.4 0 0 0 0 3.706c.127.738.575 1.365 1.207 1.75.46.278 1.003.403 1.548.403h9.505c.545 0 1.088-.125 1.548-.403.632-.385 1.08-1.012 1.207-1.75a60.4 60.4 0 0 0 0-3.706 60.4 60.4 0 0 0-.702-3.535A3.001 3.001 0 0 0 16.663 4.5H7.337a3.001 3.001 0 0 0-2.885 2.112 60.4 60.4 0 0 0-.702 3.535Zm4.74 3.353h5.99M12 21V8.25m-6 6.75h.008v.008H6v-.008Z"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">{{ statusCampusModalTitle }}</div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    {{ statusCampusModalSubtitle }} · click a name to open its dashboard
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <p
+            *ngIf="!statusCampusRows.length"
+            class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400"
+        >
+            No {{ statusCampusModalTitle.toLowerCase() }} in the current selection.
+        </p>
+        <div *ngIf="statusCampusRows.length" class="max-h-[60vh] overflow-y-auto">
+            <table class="table-hover min-w-full text-sm">
+                <thead class="sticky top-0 bg-white dark:bg-[#0e1726]">
+                    <tr class="border-b border-white-light text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-[#1b2e4b] dark:text-gray-400">
+                        <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">Campus Name</th>
+                        <th class="px-4 py-3">Code</th>
+                        <th class="px-4 py-3">STAAR Component Score</th>
+                        <th class="px-4 py-3">Growth</th>
+                        <th class="px-4 py-3 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of statusCampusRows; track row.campusId; let i = $index) {
+                    <tr
+                        class="anim-fade-up border-b border-white-light/60 transition-colors hover:bg-gray-50 dark:border-[#1b2e4b]/60 dark:hover:bg-[#1b2e4b]/40"
+                        [style.animation-delay]="orgRowDelay(i)"
+                        [ngClass]="{ 'bg-[#2A9D8F]/5 dark:bg-[#2A9D8F]/10': isCampusFilterRow(row.campusId) }"
+                    >
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ i + 1 }}</td>
+                        <td class="px-4 py-2.5 font-semibold">
+                            <a
+                                [routerLink]="['/dashboard/campus', row.slug]"
+                                class="text-primary hover:underline dark:text-primary"
+                                title="Open campus dashboard"
+                            >{{ row.name }}</a>
+                        </td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.code }}</td>
+                        <td class="px-4 py-2.5">
+                            @if (row.cs != null) {
+                            <span class="font-bold text-primary dark:text-primary">{{ row.cs | number: '1.0-1' }}%</span>
+                            @if (row.csGrade) {
+                            <span class="ml-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-white/10 dark:text-gray-300">{{ row.csGrade }}</span>
+                            }
+                            } @else {
+                            <span class="text-gray-400">—</span>
+                            }
+                        </td>
+                        <td class="px-4 py-2.5">
+                            @if (row.growth != null) {
+                            <span class="font-bold text-primary dark:text-primary">{{ row.growth | number: '1.0-1' }}%</span>
+                            @if (row.growthGrade) {
+                            <span class="ml-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-white/10 dark:text-gray-300">{{ row.growthGrade }}</span>
+                            }
+                            } @else {
+                            <span class="text-gray-400">—</span>
+                            }
+                        </td>
+                        <td class="px-4 py-2.5 text-right">
+                            @if (isCampusFilterRow(row.campusId)) {
+                            <span
+                                class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary dark:bg-primary/20"
+                                title="Dashboard stats are currently scoped to this campus"
+                            >✓ Selected</span>
+                            } @else {
+                            <button
+                                type="button"
+                                class="text-xs font-semibold text-primary hover:underline dark:text-primary"
+                                (click)="applyStatusCampusFilterFromPopup(row.campusId, row.slug)"
                                 title="Show dashboard stats for this campus"
                             >View stats</button>
                             }

@@ -397,6 +397,10 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     @ViewChild('campusesModal')
     campusesModal?: NgxCustomModalComponent;
 
+    /** Same popup component as the Districts/Campuses cards, for the status cards. */
+    @ViewChild('statusCampusesModal')
+    statusCampusesModal?: NgxCustomModalComponent;
+
     @ViewChild('teachersModal')
     teachersModal?: NgxCustomModalComponent;
 
@@ -687,6 +691,29 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     }[] = [];
     orgModalLoading = false;
 
+    /**
+     * The EXACT row arrays the Developing / Progressing cards count. Stored at
+     * the same moment the counts are computed, so a popup built from these can
+     * never disagree with the number on the card. Replaced on every selector
+     * change (and cleared while loading), so it is never a stale district list.
+     */
+    private developingCampusSourceRows: CampusGrowthMetricsResponse[] = [];
+    private progressingCampusSourceRows: CampusGrowthMetricsResponse[] = [];
+
+    /** Row view model for the status-campuses popup (same shape as orgCampusRows + grades). */
+    statusCampusRows: {
+        campusId: number;
+        name: string;
+        code: string;
+        slug: string;
+        cs: number | null;
+        csGrade: string | null;
+        growth: number | null;
+        growthGrade: string | null;
+    }[] = [];
+    statusCampusModalTitle = '';
+    statusCampusModalSubtitle = '';
+
     openDistrictsModal(): void {
         this.orgModalLoading = true;
         this.districtsModal?.open();
@@ -745,6 +772,38 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         });
     }
 
+    /**
+     * Developing / Progressing cards reuse the same popup component and row
+     * action as the Campuses card. No new query: the rows are the exact arrays
+     * that produced the two card counts.
+     */
+    openDevelopingCampusesModal(): void {
+        this.openStatusCampusesModal('Developing Campuses', this.developingCampusSourceRows);
+    }
+
+    openProgressingCampusesModal(): void {
+        this.openStatusCampusesModal('Progressing Campuses', this.progressingCampusSourceRows);
+    }
+
+    private openStatusCampusesModal(
+        title: string,
+        source: CampusGrowthMetricsResponse[],
+    ): void {
+        this.statusCampusModalTitle = title;
+        this.statusCampusModalSubtitle = `${source.length} in the current selection`;
+        this.statusCampusRows = source.map((r) => ({
+            campusId: r.campusId,
+            name: r.campusName || '—',
+            code: r.campusCode || '—',
+            slug: this.campusSlugFromName(r.campusName),
+            cs: r.componentScore ?? null,
+            csGrade: this.gradeLetterForScore(r.componentScore),
+            growth: r.growth ?? null,
+            growthGrade: this.gradeLetterForScore(r.growth),
+        }));
+        this.statusCampusesModal?.open();
+    }
+
     /** True when the popup row's campus is the currently applied campus filter. */
     isCampusFilterRow(campusId: number | null): boolean {
         return this.districtContext.growthFilters.campusId === campusId;
@@ -756,9 +815,20 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
      * no navigation); on a campus/category drill-down it navigates to that campus.
      */
     applyCampusFilterFromPopup(campusId: number | null, slug: string | null): void {
+        this.campusesModal?.close();
+        this.applyCampusFilterFromRow(campusId, slug);
+    }
+
+    /** Same row action for the Developing/Progressing popup, closing its own modal. */
+    applyStatusCampusFilterFromPopup(campusId: number | null, slug: string | null): void {
+        this.statusCampusesModal?.close();
+        this.applyCampusFilterFromRow(campusId, slug);
+    }
+
+    /** Shared row action — identical behaviour for every campus popup in this page. */
+    private applyCampusFilterFromRow(campusId: number | null, slug: string | null): void {
         const onDistrictHome =
             this.router.url.split('?')[0].split('#')[0] === '/dashboard';
-        this.campusesModal?.close();
         if (campusId == null) {
             // "All Campuses (District)" — clear the campus filter.
             this.districtContext.setGrowthFilters({
@@ -1331,6 +1401,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         this.studentsIncomingCount = null;
         this.studentsOutgoingCount = null;
         this.developingCampusesLoading = true;
+        this.developingCampusSourceRows = [];
         this.developingCampusesCount = 0;
         this.developingCampusesTotal = 0;
         this.developingComponentScoreAvg = null;
@@ -1338,6 +1409,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         this.developingGrowthAvg = null;
         this.developingGrowthGrade = null;
         this.progressingCampusesLoading = true;
+        this.progressingCampusSourceRows = [];
         this.progressingCampusesCount = 0;
         this.progressingCampusesTotal = 0;
         this.progressingComponentScoreAvg = null;
@@ -1560,6 +1632,8 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
                     }
                     if (campus == null) {
                         // Request failed — never show invented zeros; dashes like every other card.
+                        this.developingCampusSourceRows = [];
+                        this.progressingCampusSourceRows = [];
                         this.developingCampusesLoading = false;
                         this.developingCampusesCount = 0;
                         this.developingCampusesTotal = 0;
@@ -3140,6 +3214,8 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         );
         this.developingCampusesTotal = list.length;
         this.developingCampusesCount = developing.length;
+        // Same array object => the popup can only ever show these exact campuses.
+        this.developingCampusSourceRows = developing;
         const csVals = developing
             .map((r) => Number(r.componentScore))
             .filter((v) => Number.isFinite(v));
@@ -3175,6 +3251,8 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         );
         this.progressingCampusesTotal = list.length;
         this.progressingCampusesCount = progressing.length;
+        // Same array object => the popup can only ever show these exact campuses.
+        this.progressingCampusSourceRows = progressing;
         const csVals = progressing
             .map((r) => Number(r.componentScore))
             .filter((v) => Number.isFinite(v));
