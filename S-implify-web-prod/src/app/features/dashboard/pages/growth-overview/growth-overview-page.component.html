@@ -78,39 +78,39 @@
                 <button
                     type="button"
                     (click)="openDistrictsModal()"
-                    class="group relative cursor-pointer overflow-hidden rounded-2xl bg-[#2C3E7A] px-4 py-4 text-left text-white shadow-[0_14px_30px_-14px_rgba(44,62,122,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(44,62,122,0.8)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2C3E7A]/60"
+                    class="kpi-card group relative cursor-pointer overflow-hidden rounded-2xl bg-[#2C3E7A] text-white shadow-[0_14px_30px_-14px_rgba(44,62,122,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(44,62,122,0.8)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2C3E7A]/60"
                 >
                     <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21h-7.5M4.5 9.75V21M19.5 21V9.75M3.27 6.96 12 3l8.73 3.96a.75.75 0 0 1 .52.68v.16a2.4 2.4 0 0 1-4.2 1.64l-.36-.37a1.5 1.5 0 0 0-2.2.02l-.4.42a2.25 2.25 0 0 1-3.28 0l-.4-.42a1.5 1.5 0 0 0-2.2-.02l-.36.37a2.4 2.4 0 0 1-4.2-1.64v-.16a.75.75 0 0 1 .52-.68Z"/></svg>
                     <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
-                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ orgDistrictCount }}</h2>
-                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Total Districts</p>
-                    <p class="relative mt-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-white/70">{{ orgDistrictNew }} added this month</p>
+                    <h2 class="kpi-number relative">{{ orgDistrictCount }}</h2>
+                    <p class="kpi-label relative uppercase tracking-[0.08em]">Total Districts</p>
+                    <p class="kpi-subline relative text-[10px] font-semibold uppercase tracking-[0.09em] text-white/70">{{ orgDistrictNew }} added this month</p>
                 </button>
 
                 <!-- Campuses -->
                 <button
                     type="button"
                     (click)="openCampusesModal()"
-                    class="group relative cursor-pointer overflow-hidden rounded-2xl bg-[#2AA8B8] px-4 py-4 text-left text-white shadow-[0_14px_30px_-14px_rgba(42,168,184,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(42,168,184,0.8)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2AA8B8]/60"
+                    class="kpi-card group relative cursor-pointer overflow-hidden rounded-2xl bg-[#2AA8B8] text-white shadow-[0_14px_30px_-14px_rgba(42,168,184,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(42,168,184,0.8)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2AA8B8]/60"
                 >
                     <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.26 10.147a60.4 60.4 0 0 0 0 3.706c.127.738.575 1.365 1.207 1.75.46.278 1.003.403 1.548.403h9.505c.545 0 1.088-.125 1.548-.403.632-.385 1.08-1.012 1.207-1.75a60.4 60.4 0 0 0 0-3.706 60.4 60.4 0 0 0-.702-3.535A3.001 3.001 0 0 0 16.663 4.5H7.337a3.001 3.001 0 0 0-2.885 2.112 60.4 60.4 0 0 0-.702 3.535Zm4.74 3.353h5.99M12 21V8.25m-6 6.75h.008v.008H6v-.008Z"/></svg>
                     <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
-                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ orgCampusCount }}</h2>
-                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Total Campuses</p>
-                    <p class="relative mt-1 text-[10px] font-semibold uppercase tracking-[0.09em] text-white/70">{{ orgCampusNew }} added this month</p>
+                    <h2 class="kpi-number relative">{{ orgCampusCount }}</h2>
+                    <p class="kpi-label relative uppercase tracking-[0.08em]">Total Campuses</p>
+                    <p class="kpi-subline relative text-[10px] font-semibold uppercase tracking-[0.09em] text-white/70">{{ orgCampusNew }} added this month</p>
                 </button>
 
                 <!-- Teachers card removed from this KPI row — teacher data/pages unchanged -->
 
                 <!-- Developing campuses — campuses in the current selection with a latest average CS ≤ 63 (portal band precedent) -->
                 <div
-                    class="group relative overflow-hidden rounded-2xl bg-[#F4A261] px-4 py-4 text-white shadow-[0_14px_30px_-14px_rgba(244,162,97,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(244,162,97,0.8)]"
+                    class="kpi-card group relative overflow-hidden rounded-2xl bg-[#F4A261] text-white shadow-[0_14px_30px_-14px_rgba(244,162,97,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(244,162,97,0.8)]"
                 >
                     <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5m3-9h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5M9 21v-5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75V21"/></svg>
                     <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
-                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ developingCampusesLoading ? '—' : developingCampusesCount }}</h2>
-                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Developing Campuses</p>
-                    <p class="relative mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
+                    <h2 class="kpi-number relative">{{ developingCampusesLoading ? '—' : developingCampusesCount }}</h2>
+                    <p class="kpi-label relative uppercase tracking-[0.08em]">Developing Campuses</p>
+                    <p class="kpi-subline relative flex flex-wrap items-baseline gap-x-4 gap-y-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
                         <span>CS&nbsp;<b class="text-[12px] text-white">{{ developingComponentScoreAvg != null ? (developingComponentScoreAvg | number: '1.1-1') : '—' }}</b>&nbsp;<span class="text-white/70">{{ developingComponentScoreGrade ?? '—' }}</span></span>
                         <span>GROW&nbsp;<b class="text-[12px] text-white">{{ developingGrowthAvg != null ? (developingGrowthAvg | number: '1.1-1') : '—' }}</b>&nbsp;<span class="text-white/70">{{ developingGrowthGrade ?? '—' }}</span></span>
                     </p>
@@ -119,13 +119,13 @@
 
                 <!-- Progressing campuses — same selection/rows, CS in the portal's 64–74 "Progressing" band -->
                 <div
-                    class="group relative overflow-hidden rounded-2xl bg-[#8153FC] px-4 py-4 text-white shadow-[0_14px_30px_-14px_rgba(129,83,252,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(129,83,252,0.8)]"
+                    class="kpi-card group relative overflow-hidden rounded-2xl bg-[#8153FC] text-white shadow-[0_14px_30px_-14px_rgba(129,83,252,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(129,83,252,0.8)]"
                 >
                     <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5m3-9h1.5m-1.5 3h1.5m-1.5 3h1.5m-1.5 3h1.5M9 21v-5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 .75.75V21"/></svg>
                     <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
-                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ progressingCampusesLoading ? '—' : progressingCampusesCount }}</h2>
-                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Progressing Campuses</p>
-                    <p class="relative mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
+                    <h2 class="kpi-number relative">{{ progressingCampusesLoading ? '—' : progressingCampusesCount }}</h2>
+                    <p class="kpi-label relative uppercase tracking-[0.08em]">Progressing Campuses</p>
+                    <p class="kpi-subline relative flex flex-wrap items-baseline gap-x-4 gap-y-0.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
                         <span>CS&nbsp;<b class="text-[12px] text-white">{{ progressingComponentScoreAvg != null ? (progressingComponentScoreAvg | number: '1.1-1') : '—' }}</b>&nbsp;<span class="text-white/70">{{ progressingComponentScoreGrade ?? '—' }}</span></span>
                         <span>GROW&nbsp;<b class="text-[12px] text-white">{{ progressingGrowthAvg != null ? (progressingGrowthAvg | number: '1.1-1') : '—' }}</b>&nbsp;<span class="text-white/70">{{ progressingGrowthGrade ?? '—' }}</span></span>
                     </p>
@@ -134,13 +134,13 @@
 
                 <!-- Students — live mobility totals for the selected district + year + grading window -->
                 <div
-                    class="group relative overflow-hidden rounded-2xl bg-[#10B981] px-4 py-4 text-white shadow-[0_14px_30px_-14px_rgba(16,185,129,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(16,185,129,0.8)]"
+                    class="kpi-card group relative overflow-hidden rounded-2xl bg-[#10B981] text-white shadow-[0_14px_30px_-14px_rgba(16,185,129,0.7)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-16px_rgba(16,185,129,0.8)]"
                 >
                     <svg class="pointer-events-none absolute -bottom-5 -right-4 h-24 w-24 text-white/10 transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21c-2.54 0-4.86-1.052-6.554-2.747M15.75 10.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>
                     <span class="absolute inset-y-0 left-0 w-1 bg-white/25"></span>
-                    <h2 class="relative text-[34px] font-extrabold leading-none tracking-tight">{{ studentsTotalCount != null ? (studentsTotalCount | number) : '—' }}</h2>
-                    <p class="relative mt-2.5 text-[13px] font-bold uppercase tracking-[0.08em]">Total Students</p>
-                    <p class="relative mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
+                    <h2 class="kpi-number relative">{{ studentsTotalCount != null ? (studentsTotalCount | number) : '—' }}</h2>
+                    <p class="kpi-label relative uppercase tracking-[0.08em]">Total Students</p>
+                    <p class="kpi-subline relative flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-white/85">
                         <span class="inline-flex items-center gap-1.5"><span class="text-emerald-200" aria-hidden="true">↑</span> Incoming <b class="text-[13px] text-white">{{ studentsIncomingCount != null ? (studentsIncomingCount | number) : '—' }}</b></span>
                         <span class="inline-flex items-center gap-1.5"><span class="text-rose-200" aria-hidden="true">↓</span> Outgoing <b class="text-[13px] text-white">{{ studentsOutgoingCount != null ? (studentsOutgoingCount | number) : '—' }}</b></span>
                     </p>
