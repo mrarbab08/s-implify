@@ -1,0 +1,175 @@
+<div class="reports-page flex flex-col gap-5">
+    <div class="panel overflow-hidden border border-white-light p-0 dark:border-[#1b2e4b]">
+        <!-- Toolbar -->
+        <div
+            class="flex flex-wrap items-center justify-between gap-3 border-b border-white-light bg-[#f8fafc] px-4 py-3 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50"
+        >
+            <div class="min-w-0">
+                <h5 class="text-sm font-semibold text-[#0e1726] dark:text-white-light">Reports</h5>
+                <p class="text-xs text-gray-500 dark:text-gray-400">
+                    Generated from the current district, campus, academic year and grading window.
+                </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                @if (visibleCampuses.length) {
+                <select
+                    class="form-select w-auto text-sm"
+                    [ngModel]="selectedCampusCode"
+                    (ngModelChange)="onCampusChange($event)"
+                    title="Campus"
+                    aria-label="Campus"
+                >
+                    <option [ngValue]="null">All campuses</option>
+                    @for (c of visibleCampuses; track c.campusId) {
+                    <option [ngValue]="c.campusCode">{{ c.campusName || c.campusCode }}</option>
+                    }
+                </select>
+                }
+                <button
+                    type="button"
+                    class="btn btn-primary btn-sm inline-flex items-center gap-1.5"
+                    [disabled]="loading || !hasRows"
+                    (click)="print()"
+                >
+                    <icon-printer class="h-4 w-4" />
+                    <span>Print</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="grid gap-0 lg:grid-cols-[240px_minmax(0,1fr)]">
+            <!-- Report list -->
+            <aside
+                class="border-b border-white-light p-3 dark:border-[#1b2e4b] lg:border-b-0 lg:border-r"
+            >
+                @for (section of reportMenu; track section.label) {
+                <div class="mb-3">
+                    <p
+                        class="px-2 pb-1.5 text-[11px] font-bold uppercase tracking-[0.1em] text-gray-400 dark:text-gray-500"
+                    >
+                        {{ section.label }}
+                    </p>
+                    @for (group of section.groups; track $index) {
+                    <div class="mb-2">
+                        @if (group.label) {
+                        <p
+                            class="px-2 pb-1 text-[10px] font-bold uppercase tracking-[0.08em] text-gray-500 dark:text-gray-400"
+                        >
+                            {{ group.label }}
+                        </p>
+                        }
+                        @for (item of group.items; track item.id) {
+                        @if (item.id !== 'employee-assessment' || authService.canAccessTtess()) {
+                        <button
+                            type="button"
+                            class="block w-full rounded-lg px-2 py-1.5 text-left text-[13px] transition-colors"
+                            [ngClass]="
+                                selectedId === item.id
+                                    ? 'bg-primary/10 font-semibold text-primary'
+                                    : 'text-[#506690] hover:bg-primary/[0.07] hover:text-black dark:text-[#8fa3c0] dark:hover:text-white-dark'
+                            "
+                            (click)="selectReport(item.id)"
+                        >
+                            {{ item.label }}
+                        </button>
+                        }
+                        }
+                    </div>
+                    }
+                </div>
+                }
+            </aside>
+
+            <!-- Report panel -->
+            <section class="min-w-0 p-4">
+                <!-- Report header (also reproduced in the print document) -->
+                <div
+                    class="mb-4 flex flex-wrap items-start gap-3 border-b border-white-light pb-4 dark:border-[#1b2e4b]"
+                >
+                    <img
+                        class="h-10 w-auto rounded"
+                        src="/assets/images/logo.jpeg"
+                        alt="S-Implify"
+                    />
+                    <div class="min-w-0">
+                        <h4 class="text-base font-semibold text-[#0e1726] dark:text-white-light">
+                            {{ report?.title }}
+                        </h4>
+                        <div
+                            class="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 dark:text-gray-400"
+                        >
+                            @for (line of selectionLines; track line) {
+                            <span>{{ line }}</span>
+                            }
+                        </div>
+                        <p class="mt-1 text-[11px] text-gray-400">Generated: {{ generatedAt }}</p>
+                    </div>
+                </div>
+
+                @if (error) {
+                <p class="mb-3 text-sm text-danger">{{ error }}</p>
+                } @if (loading) {
+                <p class="py-6 text-center text-sm text-gray-400">Loading report…</p>
+                } @else {
+                @if (report?.emptyMessage) {
+                <div
+                    class="mb-3 rounded border border-white-light bg-[#f8fafc] px-3 py-2 text-sm text-gray-500 dark:border-[#1b2e4b] dark:bg-[#0e1726]/50"
+                >
+                    {{ report!.emptyMessage }}
+                </div>
+                }
+
+                @if (selectedId === 'students-report-card') {
+                <div class="mb-4 max-w-md">
+                    <label class="mb-1.5 block text-xs font-semibold text-gray-600 dark:text-gray-300"
+                        >Student</label
+                    >
+                    <select
+                        class="form-select w-full text-sm"
+                        [ngModel]="selectedStudentKey"
+                        (ngModelChange)="onStudentChange($event)"
+                    >
+                        <option [ngValue]="null">Select a student</option>
+                        @for (student of studentOptions; track student.key) {
+                        <option [ngValue]="student.key">{{ student.label }}</option>
+                        }
+                    </select>
+                </div>
+                }
+
+                @for (section of report?.sections ?? []; track $index) {
+                <div class="mb-5">
+                    @if (section.title) {
+                    <h5 class="mb-2 text-sm font-semibold text-gray-800 dark:text-white">
+                        {{ section.title }}
+                    </h5>
+                    }
+                    <div class="table-responsive">
+                        <table class="w-full text-left text-sm text-gray-500">
+                            <thead class="bg-gray-50 text-gray-700 dark:bg-[#1b2e4b] dark:text-white-light">
+                                <tr>
+                                    @for (col of section.columns; track col.field) {
+                                    <th class="p-3">{{ col.title }}</th>
+                                    }
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (row of section.rows; track $index) {
+                                <tr
+                                    class="border-b last:border-0 hover:bg-gray-50 dark:border-[#1b2e4b] dark:hover:bg-[#1b2e4b]/50"
+                                >
+                                    @for (col of section.columns; track col.field) {
+                                    <td class="p-3">{{ row[col.field] ?? '—' }}</td>
+                                    }
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                }
+                }
+            </section>
+        </div>
+    </div>
+</div>

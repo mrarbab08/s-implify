@@ -97,6 +97,11 @@ export const routes: Routes = [
                     import('./features/students/students.routes').then((m) => m.STUDENTS_ROUTES),
             },
             {
+                path: 'reports',
+                loadChildren: () =>
+                    import('./features/reports/reports.routes').then((m) => m.REPORTS_ROUTES),
+            },
+            {
                 path: '',
                 loadChildren: () => import('./features/admin/admin.routes').then((m) => m.ADMIN_ROUTES),
             },

@@ -65,6 +65,7 @@ export class HeaderComponent implements OnInit {
     private readonly quarterSelectorRoutePatterns = [
         /^\/dashboard(\/|$)/,
         /^\/students(\/|$)/,
+        /^\/reports(\/|$)/,
         /^\/academies\/standards-matrix$/,
         /^\/data-uploads$/,
         /^\/attendance\/individual$/,
