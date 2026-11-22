@@ -151,8 +151,97 @@
             </div>
             }
 
+            <!-- District Admin KPI row — same card design, scoped to the admin's own district.
+                 All seven cards share one row; it only scrolls horizontally on small screens. -->
+            @if (showDistrictAdminStats) {
+            <div class="anim-fade-up anim-delay-1 mb-1 -mx-1 overflow-x-auto px-1">
+                <div class="grid grid-cols-7 gap-2 min-w-[1120px]">
+                    <!-- 1. Total Campuses -->
+                    <button
+                        type="button"
+                        (click)="openDistrictAdminCampusesModal()"
+                        class="da-kpi-card kpi-card relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-[#0e1726] shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_-14px_rgba(15,23,42,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2AA8B8]/60"
+                    >
+                        <span class="absolute inset-x-0 top-0 h-1 bg-[#2AA8B8]"></span>
+                        <h2 class="kpi-number relative text-[#2AA8B8]">{{ districtAdminCampusCount }}</h2>
+                        <p class="kpi-label relative uppercase tracking-[0.08em] text-slate-700">Total Campuses</p>
+                    </button>
+
+                    <!-- 2. Developing Campuses -->
+                    <button
+                        type="button"
+                        (click)="openDevelopingCampusesModal()"
+                        class="da-kpi-card kpi-card relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-[#0e1726] shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_-14px_rgba(15,23,42,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F4A261]/60"
+                    >
+                        <span class="absolute inset-x-0 top-0 h-1 bg-[#F4A261]"></span>
+                        <h2 class="kpi-number relative text-[#F4A261]">{{ developingCampusesLoading ? '—' : developingCampusesCount }}</h2>
+                        <p class="kpi-label relative uppercase tracking-[0.08em] text-slate-700">Developing Campuses</p>
+                    </button>
+
+                    <!-- 3. Progressing Campuses -->
+                    <button
+                        type="button"
+                        (click)="openProgressingCampusesModal()"
+                        class="da-kpi-card kpi-card relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-[#0e1726] shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_-14px_rgba(15,23,42,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8153FC]/60"
+                    >
+                        <span class="absolute inset-x-0 top-0 h-1 bg-[#8153FC]"></span>
+                        <h2 class="kpi-number relative text-[#8153FC]">{{ progressingCampusesLoading ? '—' : progressingCampusesCount }}</h2>
+                        <p class="kpi-label relative uppercase tracking-[0.08em] text-slate-700">Progressing Campuses</p>
+                    </button>
+
+                    <!-- 4. Total Classrooms -->
+                    <button
+                        type="button"
+                        (click)="openDistrictAdminClassroomsModal('all')"
+                        class="da-kpi-card kpi-card relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-[#0e1726] shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_-14px_rgba(15,23,42,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2C3E7A]/60"
+                    >
+                        <span class="absolute inset-x-0 top-0 h-1 bg-[#2C3E7A]"></span>
+                        <h2 class="kpi-number relative text-[#2C3E7A]">{{ districtAdminClassroomsLoading ? '—' : districtAdminTotalClassrooms }}</h2>
+                        <p class="kpi-label relative uppercase tracking-[0.08em] text-slate-700">Total Classrooms</p>
+                    </button>
+
+                    <!-- 5. Developing Classrooms -->
+                    <button
+                        type="button"
+                        (click)="openDistrictAdminClassroomsModal('developing')"
+                        class="da-kpi-card kpi-card relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-[#0e1726] shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_-14px_rgba(15,23,42,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#F4A261]/60"
+                    >
+                        <span class="absolute inset-x-0 top-0 h-1 bg-[#F4A261]"></span>
+                        <h2 class="kpi-number relative text-[#F4A261]">{{ districtAdminClassroomsLoading ? '—' : districtAdminDevelopingClassroomsCount }}</h2>
+                        <p class="kpi-label relative uppercase tracking-[0.08em] text-slate-700">Developing Classrooms</p>
+                    </button>
+
+                    <!-- 6. Progressing Classrooms -->
+                    <button
+                        type="button"
+                        (click)="openDistrictAdminClassroomsModal('progressing')"
+                        class="da-kpi-card kpi-card relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-[#0e1726] shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_-14px_rgba(15,23,42,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8153FC]/60"
+                    >
+                        <span class="absolute inset-x-0 top-0 h-1 bg-[#8153FC]"></span>
+                        <h2 class="kpi-number relative text-[#8153FC]">{{ districtAdminClassroomsLoading ? '—' : districtAdminProgressingClassroomsCount }}</h2>
+                        <p class="kpi-label relative uppercase tracking-[0.08em] text-slate-700">Progressing Classrooms</p>
+                    </button>
+
+                    <!-- 7. Total Students -->
+                    <button
+                        type="button"
+                        (click)="openDistrictAdminStudentsModal()"
+                        class="da-kpi-card kpi-card relative cursor-pointer overflow-hidden rounded-2xl border border-slate-200/90 bg-white text-[#0e1726] shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_12px_30px_-14px_rgba(15,23,42,0.25)] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#10B981]/60"
+                    >
+                        <span class="absolute inset-x-0 top-0 h-1 bg-[#10B981]"></span>
+                        <h2 class="kpi-number relative text-[#10B981]">{{ districtAdminStudentsLoading ? '—' : (districtAdminStudentsCount | number) }}</h2>
+                        <p class="kpi-label relative uppercase tracking-[0.08em] text-slate-700">Total Students</p>
+                        <p class="kpi-subline relative flex flex-nowrap items-center justify-between gap-1 whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.03em] text-slate-500">
+                            <span>↑ IN <b class="text-slate-700">{{ studentsIncomingCount != null ? (studentsIncomingCount | number) : '—' }}</b></span>
+                            <span>↓ OUT <b class="text-slate-700">{{ studentsOutgoingCount != null ? (studentsOutgoingCount | number) : '—' }}</b></span>
+                        </p>
+                    </button>
+                </div>
+            </div>
+            }
+
             <!-- Filter bar — Fueling-Brains-style icon dropdowns (real reference data, wired to context) -->
-            @if (showOrgStats) {
+            @if (showOrgStats || showDistrictAdminStats) {
             <div class="anim-fade-up anim-delay-2 mb-1 flex flex-wrap items-stretch gap-3 rounded-2xl border border-slate-200/90 bg-white p-3 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none">
                 <!-- State -->
                 <label class="flex min-w-[168px] flex-1 cursor-pointer items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2 transition-colors hover:border-slate-200 dark:border-slate-700/60 dark:bg-white/5 dark:hover:border-slate-600">
@@ -181,7 +270,8 @@
                     <span class="min-w-0 flex-1">
                         <span class="block text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">District</span>
                         <select
-                            class="w-full cursor-pointer truncate border-0 bg-transparent p-0 text-sm font-semibold text-slate-700 shadow-none focus:outline-none focus:ring-0 dark:text-slate-200"
+                            class="w-full cursor-pointer truncate border-0 bg-transparent p-0 text-sm font-semibold text-slate-700 shadow-none focus:outline-none focus:ring-0 disabled:cursor-default dark:text-slate-200"
+                            [disabled]="showDistrictAdminStats"
                             (change)="districtContext.setDistrictId(this.toNumberOrNull($any($event.target).value))"
                         >
                             <option value="" [selected]="districtContext.selection.districtId == null">All</option>
@@ -240,66 +330,44 @@
                     class="panel flex h-full flex-col rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none"
                 >
                     <h5 class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                        STAAR Component Score
+                        STAAR COMPONENT SCORE
                     </h5>
-                    <div class="flex flex-1 flex-col items-center justify-center gap-2 pt-1 min-[1450px]:flex-row min-[1450px]:gap-4">
-                        <!-- Donut -->
-                        <div class="relative w-[145px] shrink-0 sm:w-[160px] score-donut" [attr.data-hl]="hoveredSliceIndex.cs">
-                            @if (conceptCsDonut) {
-                            <apx-chart
-                                [series]="conceptCsDonut.series"
-                                [labels]="conceptCsDonut.labels"
-                                [chart]="conceptCsDonut.chart"
-                                [colors]="conceptCsDonut.colors"
-                                [stroke]="conceptCsDonut.stroke"
-                                [dataLabels]="conceptCsDonut.dataLabels"
-                                [legend]="conceptCsDonut.legend"
-                                [states]="conceptCsDonut.states"
-                                [plotOptions]="conceptCsDonut.plotOptions"
-                                [tooltip]="conceptCsDonut.tooltip"
-                                class="block w-full"
-                            ></apx-chart>
-                            } @else {
-                            <svg viewBox="0 0 120 120" class="block w-full" role="img" aria-label="No score for this period">
-                                <circle cx="60" cy="60" r="44" fill="none" stroke-width="16" class="stroke-[#e2e8f0] dark:stroke-[#1c2b47]" />
+                    <div class="mt-2 flex items-baseline text-[#ea580c] dark:text-orange-400">
+                        @if (mockComponentScore !== '—') {
+                        <span class="text-[34px] font-extrabold leading-none tracking-tight sm:text-[38px]">{{ mockComponentScore }}</span>
+                        <span class="text-2xl font-semibold">&nbsp;%</span>
+                        } @else {
+                        <span class="text-[34px] font-extrabold leading-none tracking-tight sm:text-[38px]">—</span>
+                        }
+                    </div>
+                    <div class="mt-auto flex items-end justify-between gap-3 pt-6">
+                        <div class="kpi-ring relative h-[4.5rem] w-[4.5rem] shrink-0">
+                            <svg viewBox="0 0 72 72" class="h-full w-full -rotate-90">
+                                <defs>
+                                    <linearGradient id="conceptRingStaar" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#2A9D8F" />
+                                        <stop offset="100%" stop-color="#5FC4B6" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="36" cy="36" r="30" fill="none" stroke="#e6edec" stroke-width="7" class="dark:stroke-[#1c2b47]" />
+                                <circle
+                                    cx="36"
+                                    cy="36"
+                                    r="30"
+                                    fill="none"
+                                    stroke="url(#conceptRingStaar)"
+                                    stroke-width="7"
+                                    stroke-linecap="round"
+                                    [style.stroke-dasharray]="188.5"
+                                    [style.stroke-dashoffset]="kpiRingOffset(componentScoreWidth)"
+                                    class="transition-[stroke-dashoffset] duration-700 ease-out"
+                                />
                             </svg>
-                            }
-                            <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center leading-none">
-                                <div class="text-2xl font-extrabold tracking-tight text-[#ea580c] dark:text-orange-400 sm:text-3xl">
-                                    {{ conceptCsScoreText }}
-                                </div>
-                                <div
-                                    class="mt-1 text-[10px] font-extrabold uppercase tracking-widest"
-                                    [ngClass]="gradeLetterClass(overallCsGrade)"
-                                >
-                                    {{ overallCsGrade || '—' }}
-                                </div>
-                            </div>
                         </div>
-                        <!-- Legend -->
-                        <ul class="flex w-full max-w-[230px] flex-col gap-0.5">
-                            @for (level of conceptCsLevelRings; track level.label) {
-                            <li
-                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-colors"
-                                [class.bg-slate-100]="isScoreLegendRowHovered('cs', level.label)"
-                                [class.dark:bg-slate-800/60]="isScoreLegendRowHovered('cs', level.label)"
-                                (mouseenter)="onScoreLegendEnter('cs', level.label)"
-                                (mouseleave)="onScoreLegendLeave('cs')"
-                            >
-                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="scoreLevelColor(level.label)"></span>
-                                <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                    {{ level.label }}
-                                </span>
-                                <span class="ml-auto flex items-baseline gap-1.5">
-                                    <span class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ scoreLevelText(level.score) }}</span>
-                                    <span
-                                        class="min-w-[0.6rem] text-right text-xs font-extrabold"
-                                        [ngClass]="gradeLetterClass(level.grade)"
-                                    >{{ level.grade || '—' }}</span>
-                                </span>
-                            </li>
-                            }
-                        </ul>
+                        <span
+                            class="text-3xl font-bold"
+                            [ngClass]="gradeLetterClass(overallCsGrade)"
+                        >{{ overallCsGrade || '—' }}</span>
                     </div>
                 </div>
 
@@ -308,125 +376,94 @@
                     class="panel flex h-full flex-col rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none"
                 >
                     <h5 class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                        Growth
+                        GROWTH
                     </h5>
-                    <div class="flex flex-1 flex-col items-center justify-center gap-2 pt-1 min-[1450px]:flex-row min-[1450px]:gap-4">
-                        <!-- Donut -->
-                        <div class="relative w-[145px] shrink-0 sm:w-[160px] score-donut" [attr.data-hl]="hoveredSliceIndex.growth">
-                            @if (conceptGrowthDonut) {
-                            <apx-chart
-                                [series]="conceptGrowthDonut.series"
-                                [labels]="conceptGrowthDonut.labels"
-                                [chart]="conceptGrowthDonut.chart"
-                                [colors]="conceptGrowthDonut.colors"
-                                [stroke]="conceptGrowthDonut.stroke"
-                                [dataLabels]="conceptGrowthDonut.dataLabels"
-                                [legend]="conceptGrowthDonut.legend"
-                                [states]="conceptGrowthDonut.states"
-                                [plotOptions]="conceptGrowthDonut.plotOptions"
-                                [tooltip]="conceptGrowthDonut.tooltip"
-                                class="block w-full"
-                            ></apx-chart>
-                            } @else {
-                            <svg viewBox="0 0 120 120" class="block w-full" role="img" aria-label="No growth data for this period">
-                                <circle cx="60" cy="60" r="44" fill="none" stroke-width="16" class="stroke-[#e2e8f0] dark:stroke-[#1c2b47]" />
+                    <div class="mt-2 flex items-baseline text-[#ea580c] dark:text-orange-400">
+                        @if (mockGrowth !== '—') {
+                        <span class="text-[34px] font-extrabold leading-none tracking-tight sm:text-[38px]">{{ mockGrowth }}</span>
+                        <span class="text-2xl font-semibold">&nbsp;%</span>
+                        } @else {
+                        <span class="text-[34px] font-extrabold leading-none tracking-tight sm:text-[38px]">—</span>
+                        }
+                    </div>
+                    <div class="mt-auto flex items-end justify-between gap-3 pt-6">
+                        <div class="kpi-ring relative h-[4.5rem] w-[4.5rem] shrink-0">
+                            <svg viewBox="0 0 72 72" class="h-full w-full -rotate-90">
+                                <defs>
+                                    <linearGradient id="conceptRingGrowth" x1="0" y1="0" x2="1" y2="1">
+                                        <stop offset="0%" stop-color="#E76F51" />
+                                        <stop offset="100%" stop-color="#F4A261" />
+                                    </linearGradient>
+                                </defs>
+                                <circle cx="36" cy="36" r="30" fill="none" stroke="#f4e8e2" stroke-width="7" class="dark:stroke-[#1c2b47]" />
+                                <circle
+                                    cx="36"
+                                    cy="36"
+                                    r="30"
+                                    fill="none"
+                                    stroke="url(#conceptRingGrowth)"
+                                    stroke-width="7"
+                                    stroke-linecap="round"
+                                    [style.stroke-dasharray]="188.5"
+                                    [style.stroke-dashoffset]="kpiRingOffset(growthWidth)"
+                                    class="transition-[stroke-dashoffset] duration-700 ease-out"
+                                />
                             </svg>
-                            }
-                            <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center leading-none">
-                                <div class="text-2xl font-extrabold tracking-tight text-[#ea580c] dark:text-orange-400 sm:text-3xl">
-                                    {{ conceptGrowthScoreText }}
-                                </div>
-                                <div
-                                    class="mt-1 text-[10px] font-extrabold uppercase tracking-widest"
-                                    [ngClass]="gradeLetterClass(overallGrowthGrade)"
-                                >
-                                    {{ overallGrowthGrade || '—' }}
-                                </div>
-                            </div>
                         </div>
-                        <!-- Legend -->
-                        <ul class="flex w-full max-w-[230px] flex-col gap-0.5">
-                            @for (level of conceptGrowthLevelRings; track level.label) {
-                            <li
-                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-colors"
-                                [class.bg-slate-100]="isScoreLegendRowHovered('growth', level.label)"
-                                [class.dark:bg-slate-800/60]="isScoreLegendRowHovered('growth', level.label)"
-                                (mouseenter)="onScoreLegendEnter('growth', level.label)"
-                                (mouseleave)="onScoreLegendLeave('growth')"
-                            >
-                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="scoreLevelColor(level.label)"></span>
-                                <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                    {{ level.label }}
-                                </span>
-                                <span class="ml-auto flex items-baseline gap-1.5">
-                                    <span class="text-sm font-bold text-slate-800 dark:text-slate-100">{{ scoreLevelText(level.score) }}</span>
-                                    <span
-                                        class="min-w-[0.6rem] text-right text-xs font-extrabold"
-                                        [ngClass]="gradeLetterClass(level.grade)"
-                                    >{{ level.grade || '—' }}</span>
-                                </span>
-                            </li>
-                            }
-                        </ul>
+                        <span
+                            class="text-3xl font-bold"
+                            [ngClass]="gradeLetterClass(overallGrowthGrade)"
+                        >{{ overallGrowthGrade || '—' }}</span>
                     </div>
                 </div>
 
-                <!-- CARD 3 — APP / MEET / MASTER (one donut, three segments) -->
+                <!-- CARD 3 — APP / MEET / MASTER (three slider-style bars) -->
                 <div
                     class="panel flex h-full flex-col justify-center rounded-2xl border border-slate-200/90 bg-white p-5 shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none md:col-span-2 min-[990px]:col-span-1"
                 >
                     <h5 class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
                         APP / MEET / MASTER
                     </h5>
-                    <div class="mt-1 flex flex-1 flex-col items-center justify-center gap-2 min-[1450px]:flex-row min-[1450px]:gap-4">
-                        <!-- Donut -->
-                        <div class="relative w-[135px] shrink-0 sm:w-[150px] score-donut" [attr.data-hl]="hoveredSliceIndex.bands">
-                            @if (conceptBandsDonut) {
-                            <apx-chart
-                                [series]="conceptBandsDonut.series"
-                                [labels]="conceptBandsDonut.labels"
-                                [chart]="conceptBandsDonut.chart"
-                                [colors]="conceptBandsDonut.colors"
-                                [stroke]="conceptBandsDonut.stroke"
-                                [dataLabels]="conceptBandsDonut.dataLabels"
-                                [legend]="conceptBandsDonut.legend"
-                                [states]="conceptBandsDonut.states"
-                                [plotOptions]="conceptBandsDonut.plotOptions"
-                                [tooltip]="conceptBandsDonut.tooltip"
-                                class="block w-full"
-                            ></apx-chart>
-                            } @else {
-                            <svg viewBox="0 0 120 120" class="block w-full" role="img" aria-label="No band data for this period">
-                                <circle cx="60" cy="60" r="44" fill="none" stroke-width="16" class="stroke-[#e2e8f0] dark:stroke-[#1c2b47]" />
-                            </svg>
-                            }
-                            <div class="pointer-events-none absolute inset-0 flex flex-col items-center justify-center leading-none">
-                                <div class="text-2xl font-extrabold tracking-tight text-[#2563eb] dark:text-sky-400 sm:text-3xl">
-                                    {{ conceptAppScoreText }}
-                                </div>
-                                <div class="mt-1 text-[10px] font-extrabold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-                                    APP
-                                </div>
+                    <div class="mt-1 flex flex-1 flex-col justify-center gap-5">
+                        <div>
+                            <div class="mb-2 flex justify-between text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                                <span>APP</span>
+                                @if (mockApp !== '—') {
+                                <span class="font-semibold text-[#2563eb] dark:text-sky-400">{{ mockApp }}&nbsp;%</span>
+                                } @else {
+                                <span class="font-semibold text-[#2563eb] dark:text-sky-400">—</span>
+                                }
+                            </div>
+                            <div class="kpi-metric-bar-track !h-3">
+                                <div class="kpi-metric-bar-fill kpi-bar-app" [style.width.%]="appWidth"></div>
                             </div>
                         </div>
-                        <!-- Legend -->
-                        <ul class="flex w-full max-w-[220px] flex-col gap-0.5">
-                            @for (band of conceptBandLegendRows; track band.label) {
-                            <li
-                                class="flex w-full cursor-pointer items-center gap-2 rounded-lg px-2 py-1 transition-colors"
-                                [class.bg-slate-100]="isScoreLegendRowHovered('bands', band.label)"
-                                [class.dark:bg-slate-800/60]="isScoreLegendRowHovered('bands', band.label)"
-                                (mouseenter)="onScoreLegendEnter('bands', band.label)"
-                                (mouseleave)="onScoreLegendLeave('bands')"
-                            >
-                                <span class="h-2.5 w-2.5 shrink-0 rounded-full" [style.background]="scoreLevelColor(band.label)"></span>
-                                <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                                    {{ band.label }}
-                                </span>
-                                <span class="ml-auto text-sm font-bold text-slate-800 dark:text-slate-100">{{ band.pctText }}</span>
-                            </li>
-                            }
-                        </ul>
+                        <div>
+                            <div class="mb-2 flex justify-between text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                                <span>MEET</span>
+                                @if (mockMeet !== '—') {
+                                <span class="font-semibold text-[#991b1b] dark:text-red-300">{{ mockMeet }}&nbsp;%</span>
+                                } @else {
+                                <span class="font-semibold text-[#991b1b] dark:text-red-300">—</span>
+                                }
+                            </div>
+                            <div class="kpi-metric-bar-track !h-3">
+                                <div class="kpi-metric-bar-fill kpi-bar-meet" [style.width.%]="meetWidth"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="mb-2 flex justify-between text-sm font-bold uppercase tracking-wide text-slate-800 dark:text-slate-200">
+                                <span>MASTER</span>
+                                @if (mockMaster !== '—') {
+                                <span class="font-semibold text-[#ea580c] dark:text-orange-400">{{ mockMaster }}&nbsp;%</span>
+                                } @else {
+                                <span class="font-semibold text-[#ea580c] dark:text-orange-400">—</span>
+                                }
+                            </div>
+                            <div class="kpi-metric-bar-track !h-3">
+                                <div class="kpi-metric-bar-fill kpi-bar-master" [style.width.%]="masterWidth"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1860,6 +1897,146 @@
             <button type="button" class="btn btn-primary px-5" (click)="closeComparisonModal()">Done</button>
         </div>
         }
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- District Admin list popup — rebuilt from the same rows the KPI card counted. -->
+<ngx-custom-modal #districtAdminListModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#3D91F5]/10 text-[#3D91F5] dark:bg-[#3D91F5]/20">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 6.75h7.5m-7.5 3h7.5m-7.5 3h4.5M3.75 3h16.5v18H3.75V3Z"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">
+                    {{ districtAdminListTitle }} ({{ districtAdminListDisplayCount }})
+                </div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    Current selection · {{ districtAdminListDisplayCount }} {{ districtAdminListKind === 'classroom' ? 'classrooms' : 'campuses' }}
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <!-- Same campus dropdown/position/behaviour as the Total Students popup. -->
+        @if (districtAdminListKind === 'classroom') {
+        <div class="mb-3 flex items-center gap-3">
+            <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400" for="district-admin-list-campus">Campus</label>
+            <select
+                id="district-admin-list-campus"
+                class="form-select w-auto max-w-full text-sm"
+                [ngModel]="districtAdminListCampusFilter"
+                (ngModelChange)="onDistrictAdminListCampusChange($event)"
+            >
+                <option [ngValue]="null">All Campuses</option>
+                @for (campus of districtContext.filterCampusesForActiveRole(districtContext.campuses); track campus.campusId) {
+                <option [ngValue]="campus.campusCode">{{ campus.campusName || campus.campusCode }}</option>
+                }
+            </select>
+        </div>
+        }
+        <p *ngIf="!districtAdminFilteredListRows.length" class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400">
+            No {{ districtAdminListKind === 'classroom' ? 'classrooms' : 'campuses' }} in the current selection.
+        </p>
+        <div *ngIf="districtAdminFilteredListRows.length" class="max-h-[60vh] overflow-y-auto">
+            <table class="table-hover min-w-full text-sm">
+                <thead class="sticky top-0 bg-white dark:bg-[#0e1726]">
+                    <tr class="border-b border-white-light text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-[#1b2e4b] dark:text-gray-400">
+                        <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">{{ districtAdminListKind === 'classroom' ? 'Classroom' : 'Campus Name' }}</th>
+                        <th *ngIf="districtAdminListKind === 'classroom'" class="px-4 py-3">Campus</th>
+                        <th *ngIf="districtAdminListKind === 'campus'" class="px-4 py-3">Code</th>
+                        <th class="px-4 py-3">Component</th>
+                        <th class="px-4 py-3">Growth</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of districtAdminFilteredListRows; track row.id; let i = $index) {
+                    <tr class="anim-fade-up border-b border-white-light/60 dark:border-[#1b2e4b]/60">
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ i + 1 }}</td>
+                        <td class="px-4 py-2.5 font-semibold">{{ row.name }}</td>
+                        <td *ngIf="districtAdminListKind === 'classroom'" class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.campus }}</td>
+                        <td *ngIf="districtAdminListKind === 'campus'" class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.code }}</td>
+                        <td class="px-4 py-2.5">
+                            <span *ngIf="row.cs != null" class="font-bold text-primary dark:text-primary">{{ row.cs | number: '1.0-1' }}%</span>
+                            <span *ngIf="row.csGrade" class="ml-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-white/10 dark:text-gray-300">{{ row.csGrade }}</span>
+                            <span *ngIf="row.cs == null" class="text-gray-400">—</span>
+                        </td>
+                        <td class="px-4 py-2.5">
+                            <span *ngIf="row.growth != null" class="font-bold text-primary dark:text-primary">{{ row.growth | number: '1.0-1' }}%</span>
+                            <span *ngIf="row.growthGrade" class="ml-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-xs font-semibold text-gray-600 dark:bg-white/10 dark:text-gray-300">{{ row.growthGrade }}</span>
+                            <span *ngIf="row.growth == null" class="text-gray-400">—</span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </ng-template>
+</ngx-custom-modal>
+
+<!-- District Admin students popup — campus dropdown, count follows the filter. -->
+<ngx-custom-modal #districtAdminStudentsModal customClass="modal-top records-modal" class="no-footer">
+    <ng-template #modalHeader>
+        <div class="flex items-center gap-3">
+            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#10B981]/10 text-[#10B981] dark:bg-[#10B981]/20">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M17.982 18.725A7.488 7.488 0 0 0 12 15.75a7.488 7.488 0 0 0-5.982 2.975m11.963 0a9 9 0 1 0-11.963 0m11.963 0A8.966 8.966 0 0 1 12 21c-2.54 0-4.86-1.052-6.554-2.747M15.75 10.5a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z"/></svg>
+            </div>
+            <div class="min-w-0">
+                <div class="text-base font-bold text-[#0e1726] dark:text-white-light">
+                    Total Students ({{ districtAdminStudentModalCount }})
+                </div>
+                <p class="truncate text-xs font-normal text-gray-500 dark:text-gray-400">
+                    Students in the current selection
+                </p>
+            </div>
+        </div>
+    </ng-template>
+    <ng-template #modalBody>
+        <div class="mb-3 flex items-center gap-3">
+            <label class="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400" for="district-admin-student-campus">Campus</label>
+            <select
+                id="district-admin-student-campus"
+                class="form-select w-auto max-w-full text-sm"
+                [ngModel]="districtAdminStudentCampusFilter"
+                (ngModelChange)="onDistrictAdminStudentCampusChange($event)"
+            >
+                <option [ngValue]="null">All Campuses</option>
+                @for (campus of districtContext.filterCampusesForActiveRole(districtContext.campuses); track campus.campusId) {
+                <option [ngValue]="campus.campusCode">{{ campus.campusName || campus.campusCode }}</option>
+                }
+            </select>
+        </div>
+        <p *ngIf="districtAdminStudentsLoading" class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400">
+            Loading students…
+        </p>
+        <p *ngIf="!districtAdminStudentsLoading && !districtAdminFilteredStudentRows.length" class="mb-4 rounded-lg bg-gray-100 px-4 py-8 text-center text-sm text-gray-500 dark:bg-[#1b2e4b] dark:text-gray-400">
+            No students in the current selection.
+        </p>
+        <div *ngIf="!districtAdminStudentsLoading && districtAdminFilteredStudentRows.length" class="max-h-[60vh] overflow-y-auto">
+            <table class="table-hover min-w-full text-sm">
+                <thead class="sticky top-0 bg-white dark:bg-[#0e1726]">
+                    <tr class="border-b border-white-light text-left text-xs font-semibold uppercase tracking-wide text-gray-500 dark:border-[#1b2e4b] dark:text-gray-400">
+                        <th class="px-4 py-3">#</th>
+                        <th class="px-4 py-3">Student</th>
+                        <th class="px-4 py-3">Campus</th>
+                        <th class="px-4 py-3">Grade</th>
+                        <th class="px-4 py-3">Classroom</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of districtAdminFilteredStudentRows; track row.key; let i = $index) {
+                    <tr class="anim-fade-up border-b border-white-light/60 dark:border-[#1b2e4b]/60">
+                        <td class="px-4 py-2.5 text-gray-500 dark:text-gray-400">{{ i + 1 }}</td>
+                        <td class="px-4 py-2.5 font-semibold">{{ row.name }}</td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.campus }}</td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.grade }}</td>
+                        <td class="px-4 py-2.5 text-gray-600 dark:text-gray-300">{{ row.classroom }}</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     </ng-template>
 </ngx-custom-modal>
 

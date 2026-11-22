@@ -16,9 +16,10 @@
     <!-- Logo -->
     <a
       routerLink="/dashboard"
-      class="main-logo flex shrink-0 items-center"
+      class="main-logo flex shrink-0 items-center cursor-pointer"
       (click)="closeAllMenus()"
-      aria-label="S-Implify dashboard">
+      aria-label="S-Implify dashboard"
+      title="Dashboard">
       <img class="h-10 w-auto rounded md:h-11" src="/assets/images/logo.jpeg" alt="S-Implify" />
     </a>
 
@@ -164,7 +165,7 @@
             <li class="border-t border-white-light dark:border-white-light/10">
               <a routerLink="/auth/login" *hlMenuItem="let menuItem" (click)="signOut()" class="!py-3 text-danger">
                 <icon-logout class="h-4.5 w-4.5 shrink-0 rotate-90 ltr:mr-2 rtl:ml-2" />
-                Sign Out
+                Logout
               </a>
             </li>
           </ul>
@@ -173,25 +174,12 @@
     </div>
   </div>
 
-  <!-- ROW 2 — menu row, directly under Row 1 (visible on lg+); Logout at the far right -->
+  <!-- ROW 2 — menu row, directly under Row 1 (visible on lg+) -->
   <div
-    class="hidden lg:flex items-center gap-2 border-t border-black/5 bg-white px-3 py-2.5 lg:px-5 dark:border-white/10 dark:bg-[#0e1726]"
+    class="hidden lg:flex items-center border-t border-black/5 bg-white px-3 py-2.5 lg:px-5 dark:border-white/10 dark:bg-[#0e1726]"
     [ngClass]="{ 'dark text-white-dark': store.semidark }"
   >
-    <nav class="top-nav flex min-w-0 flex-1 items-center gap-0.5" aria-label="Main navigation">
-      <!-- Dashboard -->
-      @if (!authService.isTeacherRole()) {
-        <a
-          routerLink="/dashboard"
-          routerLinkActive="menu-item-active"
-          [routerLinkActiveOptions]="{exact: true}"
-          class="menu-item flex items-center gap-2 whitespace-nowrap rounded-xl px-1 py-2 text-[13px] font-semibold text-[#506690] transition-colors duration-300 hover:bg-primary/[0.07] hover:text-black dark:text-[#8fa3c0] dark:hover:bg-primary/[0.12] dark:hover:text-white-dark"
-        >
-          <icon-home class="h-4 w-4 shrink-0" />
-          <span>{{ 'dashboard' | translate }}</span>
-        </a>
-      }
-
+    <nav class="top-nav flex min-w-0 flex-1 flex-nowrap items-center justify-between gap-1" aria-label="Main navigation">
       <!-- Campuses -->
       <div class="relative">
         <button
@@ -378,42 +366,15 @@
         }
       </div>
     </nav>
-
-    <!-- Logout — far right of the menu row, same red style/behaviour as before -->
-    <div class="ml-auto flex-none">
-      <button
-        type="button"
-        class="menu-item logout-button flex flex-none items-center gap-2 !text-danger transition-colors duration-300 hover:!bg-danger/10"
-        (click)="signOut()"
-        title="Logout"
-        aria-label="Logout"
-      >
-        <icon-logout class="h-4.5 w-4.5 shrink-0 rotate-90 text-danger" />
-        <span class="whitespace-nowrap">Logout</span>
-      </button>
-    </div>
   </div>
 
-  <!-- Mobile slide-down menu panel: same menu items + Logout at the end, red -->
+  <!-- Mobile slide-down menu panel: same menu items, in the same order -->
   @if (mobileMenuOpen) {
     <div
       id="mobile-top-menu"
       class="absolute inset-x-0 top-full z-50 max-h-[calc(100vh-6rem)] overflow-y-auto border-t border-black/5 bg-white px-3 pb-4 pt-2 shadow-[0_24px_50px_-24px_rgba(15,23,42,0.35)] dark:border-white/10 dark:bg-[#0e1726] lg:hidden"
     >
       <nav class="font-semibold" aria-label="Mobile navigation">
-        @if (!authService.isTeacherRole()) {
-          <a
-            routerLink="/dashboard"
-            routerLinkActive="menu-item-active"
-            [routerLinkActiveOptions]="{exact: true}"
-            class="menu-item mb-0.5 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[#506690] hover:bg-primary/[0.07] hover:text-black dark:text-[#8fa3c0] dark:hover:bg-primary/[0.12] dark:hover:text-white-dark"
-            (click)="onNavClick()"
-          >
-            <icon-home class="h-5 w-5 shrink-0" />
-            <span>{{ 'dashboard' | translate }}</span>
-          </a>
-        }
-
         <button
           type="button"
           class="menu-item mb-0.5 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm text-[#506690] hover:bg-primary/[0.07] hover:text-black dark:text-[#8fa3c0] dark:hover:bg-primary/[0.12] dark:hover:text-white-dark"
@@ -552,18 +513,6 @@
           <icon-clipboard-text class="h-5 w-5 shrink-0" />
           <span>Reports</span>
         </a>
-
-        <div class="mb-1 border-t border-gray-200 pt-2 dark:border-white/10"></div>
-        <button
-          type="button"
-          class="menu-item logout-button w-full justify-start !text-danger"
-          (click)="signOut()"
-          title="Logout"
-          aria-label="Logout"
-        >
-          <icon-logout class="h-4.5 w-4.5 shrink-0 rotate-90 text-danger" />
-          <span class="whitespace-nowrap">Logout</span>
-        </button>
       </nav>
     </div>
   }

@@ -862,6 +862,32 @@ hover:text-primary hover:before:!bg-primary ltr:before:mr-2 rtl:before:ml-2 dark
         min-height: 32px;
         margin: 4px 0 0;
     }
+
+    /* District Admin KPI row — white cards with a colour strip, one shared number
+       baseline, regular-weight labels, tight enough for all seven in one row. */
+    .da-kpi-card {
+        padding: 14px 12px 12px;
+    }
+    .da-kpi-card .kpi-number {
+        flex-basis: 32px;
+        height: 32px;
+        font-size: 28px;
+        font-weight: 700 !important;
+        line-height: 32px;
+    }
+    .da-kpi-card .kpi-label {
+        flex-basis: 16px;
+        height: 16px;
+        margin-top: 4px;
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 16px;
+    }
+    .da-kpi-card .kpi-subline {
+        flex-basis: 20px;
+        min-height: 20px;
+        margin-top: 2px;
+    }
 }
 
 /* perfect scrollbar */

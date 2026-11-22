@@ -25,6 +25,7 @@ import {
 import { ProgressRingComponent } from './progress-ring.component';
 import { DistrictContextService } from '../../../../core/services/district-context.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { ROLE_IDS, roleIdFromName } from '../../../../core/constants/auth-roles';
 
 import { ApiService } from '../../../../core/services/api.service';
 import { SharedModule } from '../../../../shared/shared.module';
@@ -124,6 +125,42 @@ export interface DistrictCampusGrowthRankVm {
     growth: number | null;
     /** Component score (real, from the same campus-metrics payload). */
     score: number | null;
+}
+
+/** District Admin KPI row — one classroom (teacher) with its own calculated metrics. */
+interface DistrictAdminClassroomRow {
+    id: string;
+    name: string;
+    campus: string;
+    campusCode: string;
+    grade: string;
+    cs: number | null;
+    csGrade: string | null;
+    growth: number | null;
+    growthGrade: string | null;
+}
+
+/** District Admin popup row — campuses and classrooms share one table shape. */
+interface DistrictAdminListRow {
+    id: string;
+    name: string;
+    campus?: string;
+    campusCode?: string;
+    code?: string;
+    cs: number | null;
+    csGrade: string | null;
+    growth: number | null;
+    growthGrade: string | null;
+}
+
+/** District Admin students popup row. */
+interface DistrictAdminStudentRow {
+    key: string;
+    name: string;
+    campusCode: string;
+    campus: string;
+    grade: string;
+    classroom: string;
 }
 
 /** District home — academy row sorted by CCMR (POST /ccmr/academy-stats). */
@@ -407,6 +444,13 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     @ViewChild('comparisonModal')
     comparisonModal?: NgxCustomModalComponent;
 
+    /** District Admin list + students popups (same ngx-custom-modal mechanism). */
+    @ViewChild('districtAdminListModal')
+    districtAdminListModal?: NgxCustomModalComponent;
+
+    @ViewChild('districtAdminStudentsModal')
+    districtAdminStudentsModal?: NgxCustomModalComponent;
+
     private chartResizeObserver?: ResizeObserver;
     private chartContainerWidthPx = 0;
     private lastChartLayoutKey = '';
@@ -492,6 +536,44 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         }));
     }
 
+    /** District Admin KPI row — same dashboard, scoped to the admin's own district only. */
+    showDistrictAdminStats = false;
+    districtAdminClassroomsLoading = false;
+    districtAdminCampusCount = 0;
+    districtAdminTotalClassrooms = 0;
+    districtAdminDevelopingClassroomsCount = 0;
+    districtAdminProgressingClassroomsCount = 0;
+    districtAdminDevelopingCsAvg: number | null = null;
+    districtAdminDevelopingCsGrade: string | null = null;
+    districtAdminDevelopingGrowthAvg: number | null = null;
+    districtAdminDevelopingGrowthGrade: string | null = null;
+    districtAdminProgressingCsAvg: number | null = null;
+    districtAdminProgressingCsGrade: string | null = null;
+    districtAdminProgressingGrowthAvg: number | null = null;
+    districtAdminProgressingGrowthGrade: string | null = null;
+    districtAdminStudentsCount = 0;
+    districtAdminStudentsLoading = false;
+
+    private districtAdminCampusRows: DistrictAdminListRow[] = [];
+    private districtAdminAllClassrooms: DistrictAdminClassroomRow[] = [];
+    private districtAdminDevelopingClassrooms: DistrictAdminClassroomRow[] = [];
+    private districtAdminProgressingClassrooms: DistrictAdminClassroomRow[] = [];
+    private districtAdminAllStudents: DistrictAdminStudentRow[] = [];
+
+    /** Generic district-admin list popup (campuses or classrooms). */
+    districtAdminListKind: 'campus' | 'classroom' = 'campus';
+    districtAdminListTitle = '';
+    /** District-wide total behind the card — never changed by the popup filter. */
+    districtAdminListCount = 0;
+    /** Rows actually shown in the popup (follows the campus dropdown). */
+    districtAdminListDisplayCount = 0;
+    districtAdminListCampusFilter: string | null = null;
+    districtAdminListRows: DistrictAdminListRow[] = [];
+
+    /** Students popup — campus dropdown starts on "All Campuses". */
+    districtAdminStudentCampusFilter: string | null = null;
+    districtAdminStudentModalCount = 0;
+
     /** SuperAdmin org stat cards (districts / campuses / teachers). */
     showOrgStats = false;
     orgDistrictCount = 0;
@@ -536,6 +618,27 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
 
     isSuperAdminRole(): boolean {
         return this.auth.isSuperAdminRole();
+    }
+
+    /** District Admin is pinned to one district by the existing role scope. */
+    isDistrictAdminRole(): boolean {
+        const role = this.auth.getCurrentUser()?.activeRole;
+        if (!role) {
+            return false;
+        }
+        return (roleIdFromName(role.roleName) ?? role.roleId) === ROLE_IDS.DistrictAdmin;
+    }
+
+    get districtAdminDevelopingCaption(): string {
+        if (this.districtAdminClassroomsLoading) return 'Loading…';
+        if (!this.districtAdminDevelopingClassroomsCount) return 'NO DEVELOPING CLASSROOMS';
+        return `${this.districtAdminDevelopingClassroomsCount} of ${this.districtAdminTotalClassrooms} classrooms`;
+    }
+
+    get districtAdminProgressingCaption(): string {
+        if (this.districtAdminClassroomsLoading) return 'Loading…';
+        if (!this.districtAdminProgressingClassroomsCount) return 'NO PROGRESSING CLASSROOMS';
+        return `${this.districtAdminProgressingClassroomsCount} of ${this.districtAdminTotalClassrooms} classrooms`;
     }
 
     loadOrgStats(): void {
@@ -872,6 +975,301 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
             .replace(/^-+|-+$/g, '');
     }
 
+    // ── District Admin dashboard (own district only) ─────────────────────────────
+
+    /**
+     * Loads the two extra District Admin measures (classrooms + student list) from
+     * the same endpoints/calculations the rest of the dashboard already uses.
+     * Campus cards reuse the existing Developing/Progressing campus stats and the
+     * existing mobility totals, so no score is recalculated here.
+     */
+    private loadDistrictAdminData(until$: Observable<unknown>): void {
+        const base = this.districtContext.baseGrowthPayload();
+        if (!base) {
+            this.resetDistrictAdminData();
+            return;
+        }
+        const filters = this.districtContext.growthFiltersPayload();
+        const campuses = this.districtContext.filterCampusesForActiveRole(
+            this.districtContext.campuses,
+        );
+
+        this.districtAdminClassroomsLoading = true;
+        this.districtAdminStudentsLoading = true;
+
+        const campusesRequest = this.growthAnalytics
+            .getCampusGrowthMetrics({ ...base, ...filters })
+            .pipe(catchError(() => of<CampusGrowthMetricsResponse[]>([])));
+        const classroomRequests = campuses.length
+            ? forkJoin(
+                  campuses.map((campus) =>
+                      this.growthAnalytics
+                          .getCampusTeacherGrowthMetrics({
+                              ...base,
+                              ...filters,
+                              campusCode: campus.campusCode,
+                          })
+                          .pipe(catchError(() => of<TeacherGrowthMetricsResponse[]>([]))),
+                  ),
+              )
+            : of([] as TeacherGrowthMetricsResponse[][]);
+
+        forkJoin({ campuses: campusesRequest, classrooms: classroomRequests })
+            .pipe(
+                takeUntil(until$),
+                finalize(() => {
+                    this.districtAdminClassroomsLoading = false;
+                    this.cdr.markForCheck();
+                }),
+            )
+            .subscribe(({ campuses: campusRows, classrooms }) => {
+                this.districtAdminCampusRows = campusRows.map((row) => ({
+                    id: String(row.campusId),
+                    name: row.campusName || '—',
+                    code: row.campusCode || '—',
+                    cs: row.componentScore ?? null,
+                    csGrade: this.gradeLetterForScore(row.componentScore),
+                    growth: row.growth ?? null,
+                    growthGrade: this.gradeLetterForScore(row.growth),
+                }));
+                this.districtAdminCampusCount = this.districtAdminCampusRows.length;
+
+                const all: DistrictAdminClassroomRow[] = [];
+                campuses.forEach((campus, index) => {
+                    for (const teacher of classrooms[index] ?? []) {
+                        const cs = Number.isFinite(teacher.componentScore)
+                            ? teacher.componentScore
+                            : null;
+                        const growth = Number.isFinite(teacher.growth) ? teacher.growth : null;
+                        // The backend writes 0 for a missing aggregate; never guess a status.
+                        if (cs == null || growth == null || (cs === 0 && growth === 0)) {
+                            continue;
+                        }
+                        all.push({
+                            id: `${campus.campusCode}|${teacher.teacherIdExternal ?? ''}|${teacher.firstName ?? ''}|${teacher.lastName ?? ''}`,
+                            name:
+                                [teacher.firstName, teacher.lastName]
+                                    .filter((part) => !!part?.trim())
+                                    .join(' ')
+                                    .trim() ||
+                                teacher.teacherIdExternal ||
+                                '—',
+                            campus: campus.campusName || campus.campusCode,
+                            campusCode: campus.campusCode,
+                            grade: teacher.grade?.trim() || '—',
+                            cs,
+                            csGrade: this.gradeLetterForScore(cs),
+                            growth,
+                            growthGrade: this.gradeLetterForScore(growth),
+                        });
+                    }
+                });
+                // Exact same status rule as the campus cards (backend bandOf).
+                const developing = all.filter((row) => row.cs! <= 63);
+                const progressing = all.filter((row) => row.cs! > 63 && row.cs! <= 74);
+                this.districtAdminAllClassrooms = all;
+                this.districtAdminDevelopingClassrooms = developing;
+                this.districtAdminProgressingClassrooms = progressing;
+                this.districtAdminTotalClassrooms = all.length;
+                this.districtAdminDevelopingClassroomsCount = developing.length;
+                this.districtAdminProgressingClassroomsCount = progressing.length;
+                this.districtAdminDevelopingCsAvg = this.meanMetric(developing, 'cs');
+                this.districtAdminDevelopingGrowthAvg = this.meanMetric(developing, 'growth');
+                this.districtAdminProgressingCsAvg = this.meanMetric(progressing, 'cs');
+                this.districtAdminProgressingGrowthAvg = this.meanMetric(progressing, 'growth');
+                this.districtAdminDevelopingCsGrade = this.gradeLetterForScore(
+                    this.districtAdminDevelopingCsAvg,
+                );
+                this.districtAdminDevelopingGrowthGrade = this.gradeLetterForScore(
+                    this.districtAdminDevelopingGrowthAvg,
+                );
+                this.districtAdminProgressingCsGrade = this.gradeLetterForScore(
+                    this.districtAdminProgressingCsAvg,
+                );
+                this.districtAdminProgressingGrowthGrade = this.gradeLetterForScore(
+                    this.districtAdminProgressingGrowthAvg,
+                );
+            });
+
+        this.fetchDistrictAdminStudents()
+            .pipe(
+                takeUntil(until$),
+                finalize(() => {
+                    this.districtAdminStudentsLoading = false;
+                    this.cdr.markForCheck();
+                }),
+            )
+            .subscribe((students) => {
+                this.districtAdminAllStudents = students;
+                this.districtAdminStudentsCount = students.length;
+                this.districtAdminStudentCampusFilter = null;
+                this.districtAdminStudentModalCount = students.length;
+            });
+    }
+
+    private resetDistrictAdminData(): void {
+        this.districtAdminClassroomsLoading = false;
+        this.districtAdminStudentsLoading = false;
+        this.districtAdminCampusCount = 0;
+        this.districtAdminTotalClassrooms = 0;
+        this.districtAdminDevelopingClassroomsCount = 0;
+        this.districtAdminProgressingClassroomsCount = 0;
+        this.districtAdminStudentsCount = 0;
+        this.districtAdminCampusRows = [];
+        this.districtAdminAllClassrooms = [];
+        this.districtAdminDevelopingClassrooms = [];
+        this.districtAdminProgressingClassrooms = [];
+        this.districtAdminAllStudents = [];
+    }
+
+    private meanMetric(
+        rows: DistrictAdminClassroomRow[],
+        key: 'cs' | 'growth',
+    ): number | null {
+        const values = rows
+            .map((row) => row[key])
+            .filter((value): value is number => value != null && Number.isFinite(value));
+        return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+    }
+
+    /** Every page of the existing student-growth-records list for the current scope. */
+    private fetchDistrictAdminStudents(): Observable<DistrictAdminStudentRow[]> {
+        const base = this.districtContext.baseGrowthPayload();
+        if (!base) {
+            return of([]);
+        }
+        const pageSize = 500;
+        const campusByCode = new Map(
+            this.districtContext
+                .filterCampusesForActiveRole(this.districtContext.campuses)
+                .map((campus) => [campus.campusCode, campus.campusName]),
+        );
+        const fetchPage = (offset: number): Observable<StudentGrowthRecordResponse[]> =>
+            this.studentGrowthRecords
+                .listRecords({
+                    districtId: base.districtId,
+                    academicYearId: base.academicYearId,
+                    quarterCode: base.quarterCode,
+                    offset,
+                    limit: pageSize,
+                })
+                .pipe(
+                    switchMap((page) => {
+                        const rows = page.records ?? [];
+                        if (rows.length < pageSize || rows.length >= (page.totalCount ?? 0)) {
+                            return of(rows);
+                        }
+                        return fetchPage(offset + pageSize).pipe(map((more) => [...rows, ...more]));
+                    }),
+                    catchError(() => of<StudentGrowthRecordResponse[]>([])),
+                );
+        return fetchPage(0).pipe(
+            map((records) => {
+                const byKey = new Map<string, DistrictAdminStudentRow>();
+                for (const record of records) {
+                    const campusCode = record.campusCode || '';
+                    const key = `${record.localId || ''}|${record.studentName || ''}|${campusCode}`;
+                    if (!byKey.has(key)) {
+                        byKey.set(key, {
+                            key,
+                            name: record.studentName?.trim() || '—',
+                            campusCode,
+                            campus: campusByCode.get(campusCode) || campusCode || '—',
+                            grade: record.gradeCode || '—',
+                            classroom: record.teacherName || '—',
+                        });
+                    }
+                }
+                return [...byKey.values()];
+            }),
+        );
+    }
+
+    /** Rebuilds the campus row list on every click so it always matches the card. */
+    openDistrictAdminCampusesModal(): void {
+        this.districtAdminListKind = 'campus';
+        this.districtAdminListTitle = 'Total Campuses';
+        this.districtAdminListCampusFilter = null;
+        this.districtAdminListCount = this.districtAdminCampusRows.length;
+        this.districtAdminListDisplayCount = this.districtAdminCampusRows.length;
+        this.districtAdminListRows = [...this.districtAdminCampusRows];
+        this.districtAdminListModal?.open();
+    }
+
+    openDistrictAdminClassroomsModal(kind: 'all' | 'developing' | 'progressing'): void {
+        const source =
+            kind === 'developing'
+                ? this.districtAdminDevelopingClassrooms
+                : kind === 'progressing'
+                  ? this.districtAdminProgressingClassrooms
+                  : this.districtAdminAllClassrooms;
+        this.districtAdminListKind = 'classroom';
+        this.districtAdminListTitle =
+            kind === 'developing'
+                ? 'Developing Classrooms'
+                : kind === 'progressing'
+                  ? 'Progressing Classrooms'
+                  : 'Total Classrooms';
+        this.districtAdminListCampusFilter = null;
+        this.districtAdminListCount = source.length;
+        this.districtAdminListDisplayCount = source.length;
+        this.districtAdminListRows = source.map((row) => ({
+            id: row.id,
+            name: row.name,
+            campus: row.campus,
+            campusCode: row.campusCode,
+            cs: row.cs,
+            csGrade: row.csGrade,
+            growth: row.growth,
+            growthGrade: row.growthGrade,
+        }));
+        this.districtAdminListModal?.open();
+    }
+
+    /** Popup-only campus filter for classroom lists — does not touch card counts. */
+    onDistrictAdminListCampusChange(campusCode: string | null): void {
+        this.districtAdminListCampusFilter = campusCode || null;
+        this.districtAdminListDisplayCount = this.districtAdminFilteredListRows.length;
+    }
+
+    get districtAdminFilteredListRows(): DistrictAdminListRow[] {
+        return this.districtAdminListCampusFilter
+            ? this.districtAdminListRows.filter(
+                  (row) => row.campusCode === this.districtAdminListCampusFilter,
+              )
+            : this.districtAdminListRows;
+    }
+
+    /** Re-fetches the student list on each click; starts on All Campuses. */
+    openDistrictAdminStudentsModal(): void {
+        this.districtAdminStudentCampusFilter = null;
+        this.districtAdminStudentModalCount = this.districtAdminStudentsCount;
+        this.districtAdminStudentsLoading = true;
+        this.districtAdminStudentsModal?.open();
+        this.fetchDistrictAdminStudents()
+            .pipe(takeUntil(this.destroy$))
+            .subscribe((students) => {
+                this.districtAdminAllStudents = students;
+                this.districtAdminStudentsCount = students.length;
+                this.districtAdminStudentModalCount = students.length;
+                this.districtAdminStudentsLoading = false;
+                this.cdr.markForCheck();
+            });
+    }
+
+    onDistrictAdminStudentCampusChange(campusCode: string | null): void {
+        this.districtAdminStudentCampusFilter = campusCode || null;
+        this.districtAdminStudentModalCount = this.districtAdminFilteredStudentRows.length;
+    }
+
+    get districtAdminFilteredStudentRows(): DistrictAdminStudentRow[] {
+        return this.districtAdminStudentCampusFilter
+            ? this.districtAdminAllStudents.filter(
+                  (row) => row.campusCode === this.districtAdminStudentCampusFilter,
+              )
+            : this.districtAdminAllStudents;
+    }
+
     openTeachersModal(): void {
         this.orgModalLoading = true;
         this.teachersModal?.open();
@@ -973,11 +1371,12 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
 
             this.initCharts();
 
-            this.showOrgStats =
-                this.isSuperAdminRole() &&
+            const isPlainDistrictHome =
                 !this.campusId &&
                 this.campusCategoryRouteId == null &&
                 this.districtRouteId == null;
+            this.showOrgStats = this.isSuperAdminRole() && isPlainDistrictHome;
+            this.showDistrictAdminStats = this.isDistrictAdminRole() && isPlainDistrictHome;
             if (this.showOrgStats) {
                 this.loadOrgStats();
             }
@@ -1720,6 +2119,9 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
                 filterCampus?.campusCode ?? null,
                 until$,
             );
+            if (this.isDistrictAdminRole()) {
+                this.loadDistrictAdminData(until$);
+            }
             const baseAttendance = this.districtContext.baseAttendancePayload();
             const attendanceBody = baseAttendance
                 ? { ...baseAttendance, ...(filterCampus ? { campusId: filterCampus.campusId } : {}) }
