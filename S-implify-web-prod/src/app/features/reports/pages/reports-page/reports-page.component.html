@@ -134,6 +134,15 @@
                         <option [ngValue]="student.key">{{ student.label }}</option>
                         }
                     </select>
+                    @if (selectedStudentKey) {
+                    <a
+                        class="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                        [routerLink]="['/reports/student-report-card']"
+                        [queryParams]="{ student: selectedStudentKey }"
+                    >
+                        Open full report card →
+                    </a>
+                    }
                 </div>
                 }
 
@@ -159,7 +168,17 @@
                                     class="border-b last:border-0 hover:bg-gray-50 dark:border-[#1b2e4b] dark:hover:bg-[#1b2e4b]/50"
                                 >
                                     @for (col of section.columns; track col.field) {
-                                    <td class="p-3">{{ row[col.field] ?? '—' }}</td>
+                                    <td class="p-3">
+                                        @if (selectedId === 'students' && col.field === 'student' && row['studentKey']) {
+                                        <a
+                                            class="text-primary hover:underline"
+                                            [routerLink]="['/reports/student-report-card']"
+                                            [queryParams]="{ student: row['studentKey'] }"
+                                        >{{ row[col.field] ?? '—' }}</a>
+                                        } @else {
+                                        {{ row[col.field] ?? '—' }}
+                                        }
+                                    </td>
                                     }
                                 </tr>
                                 }

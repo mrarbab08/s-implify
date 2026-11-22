@@ -133,3 +133,18 @@
 *::after {
     font-weight: 400 !important;
 }
+
+/* Printable reports must never include the portal shell. */
+@media print {
+    .app-header-bar,
+    .main-container footer,
+    setting,
+    app-ai-bot,
+    .screen-only {
+        display: none !important;
+    }
+    .main-container > .main-content > .animation {
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+}

@@ -1,0 +1,178 @@
+<div class="report-canvas">
+    <div class="screen-only mb-3 flex flex-wrap items-center justify-between gap-2">
+        <a routerLink="/reports" [queryParams]="{ report: 'students' }" class="text-sm font-semibold text-primary hover:underline">
+            ← Back to students
+        </a>
+        <div class="flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-primary btn-sm" (click)="print()" title="Save as PDF">Download PDF</button>
+            <button type="button" class="btn btn-primary btn-sm" (click)="print()">Print report</button>
+        </div>
+    </div>
+
+    @if (loading) {
+    <p class="p-8 text-center text-sm text-gray-500">Loading report card…</p>
+    } @else if (!card) {
+    <p class="p-8 text-center text-sm text-gray-500">
+        Select a student in Reports → Students Report Card to open the full report card.
+    </p>
+    } @else {
+    <!-- Header band -->
+    <div class="header-band avoid-break">
+        <img class="header-logo" src="/assets/images/logo-white.png" alt="S-Implify" />
+        <div class="header-copy">
+            <h1>Student Report Card</h1>
+            <p>{{ card.titleLine }}</p>
+        </div>
+    </div>
+
+    <!-- Student strip -->
+    <div class="student-strip avoid-break">
+        <div class="student-initials">{{ card.initials }}</div>
+        <div class="min-w-0">
+            <p class="student-line">{{ card.studentName }} — Student ID {{ card.studentId }}</p>
+            <p class="student-detail">
+                Grade {{ card.grade }} · {{ card.campus }} · Homeroom: {{ card.homeroom }}
+                @for (detail of card.details; track detail.label) {
+                · {{ detail.label }}: {{ detail.value }}
+                }
+            </p>
+        </div>
+    </div>
+
+    <!-- Navy summary bar -->
+    <div class="summary-bar avoid-break">
+        <div class="summary-cell">
+            <p class="summary-label">Last STAAR ({{ card.lastStaar?.subject || '—' }})</p>
+            <p class="summary-value">{{ card.lastStaar?.score ?? '—' }}</p>
+            <p class="summary-band">{{ card.lastStaar?.band || '—' }}</p>
+        </div>
+        <div class="summary-cell">
+            <p class="summary-label">Benchmark ({{ card.benchmark?.subject || '—' }})</p>
+            <p class="summary-value">{{ card.benchmark?.score ?? '—' }}</p>
+            <p class="summary-band">{{ card.benchmark?.band || '—' }}</p>
+        </div>
+        <div class="summary-cell">
+            <p class="summary-label">Change</p>
+            <p class="summary-value" [ngClass]="card.change.startsWith('▼') ? 'change-down' : 'change-up'">{{ card.change }}</p>
+        </div>
+        <div class="summary-cell">
+            <p class="summary-label">Growth status</p>
+            <p class="growth-word">{{ card.growthStatus }}</p>
+        </div>
+        <div class="summary-cell">
+            <p class="summary-label">Attendance</p>
+            @if (card.attendance) {
+            <p class="summary-value">{{ card.attendance.pct != null ? (card.attendance.pct | number: '1.1-1') : '—' }}%</p>
+            <p class="summary-note" [ngClass]="attendanceStatusClass">
+                {{ card.attendance.status || '—' }} · {{ card.attendance.daysPresent ?? '—' }}/{{ card.attendance.daysTotal ?? '—' }} days
+            </p>
+            } @else {
+            <p class="summary-value">—</p>
+            <p class="summary-note">No data</p>
+            }
+        </div>
+    </div>
+
+    <!-- Results + trend -->
+    <section class="white-card results-grid avoid-break">
+        <div>
+            <h2 class="section-title comfortaa">Subject results</h2>
+            <table class="w-full text-left text-xs">
+                <thead>
+                    <tr class="border-b border-[#eef0f6] text-[10px] uppercase text-[#5a6080]">
+                        <th class="py-2">Subject</th>
+                        <th class="py-2">STAAR</th>
+                        <th class="py-2">Window</th>
+                        <th class="py-2">Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of card.subjectRows; track row.subject) {
+                    <tr class="border-b border-[#f5f6fa]">
+                        <td class="py-2">{{ row.subject }}</td>
+                        <td class="py-2">{{ row.staar ?? '—' }}</td>
+                        <td class="py-2">{{ row.current ?? '—' }}</td>
+                        <td class="py-2 text-[#2a9d8f]">{{ row.level || '—' }}</td>
+                    </tr>
+                    }
+                    @if (!card.subjectRows.length) {
+                    <tr><td colspan="4" class="py-3 text-gray-400">No subject results.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h2 class="section-title comfortaa">{{ card.trendSubject }} benchmark trend</h2>
+            @if (card.trend.length) {
+            <svg viewBox="0 0 100 44" class="h-32 w-full overflow-visible" role="img" aria-label="Benchmark trend">
+                <line x1="0" y1="38" x2="100" y2="38" stroke="#e4e7f2" stroke-width="0.4" />
+                <polyline [attr.points]="trendPoints" fill="none" stroke="#2a9d8f" stroke-width="0.9" stroke-linecap="round" stroke-linejoin="round" />
+                @for (dot of trendDots; track $index) {
+                <text [attr.x]="dot.x" [attr.y]="dot.y - 2.5" text-anchor="middle" font-size="4.5" fill="#111a33">{{ dot.score }}</text>
+                <circle [attr.cx]="dot.x" [attr.cy]="dot.y" r="1" fill="#2a9d8f" />
+                }
+            </svg>
+            <div class="flex justify-between text-[10px] text-[#5a6080]">
+                @for (point of card.trend; track point.period) {
+                <span>{{ point.period }}</span>
+                }
+            </div>
+            } @else {
+            <p class="rounded-lg bg-[#f7f8fc] px-3 py-8 text-center text-xs text-gray-400">
+                More points appear as the year runs.
+            </p>
+            }
+        </div>
+    </section>
+
+    <!-- Standards as bars -->
+    @if (card.standards.length) {
+    <section class="white-card avoid-break">
+        <h2 class="section-title comfortaa">Grade {{ card.grade }} {{ card.standardsSubject }} standards — as bars</h2>
+        <div class="mb-2 flex gap-3 text-[10px] text-[#5a6080]">
+            <span class="inline-flex items-center gap-1"><i class="legend-mastered h-2 w-2 rounded-full"></i> Mastered</span>
+            <span class="inline-flex items-center gap-1"><i class="legend-developing h-2 w-2 rounded-full"></i> Developing</span>
+            <span class="inline-flex items-center gap-1"><i class="legend-reteach h-2 w-2 rounded-full"></i> Re-teach</span>
+        </div>
+        <div class="std-grid">
+            @for (standard of card.standards; track standard.code) {
+            <div class="std-row">
+                <span>{{ standard.code }}</span>
+                <div class="bar-track">
+                    <div
+                        class="bar-fill"
+                        [ngClass]="standard.band === 'Mastered' ? 'bar-mastered' : standard.band === 'Developing' ? 'bar-developing' : 'bar-reteach'"
+                        [style.width.%]="standard.pct"
+                    ></div>
+                </div>
+                <span class="text-right">{{ standard.pct }}%</span>
+            </div>
+            }
+        </div>
+    </section>
+    }
+
+    <!-- Teacher comments -->
+    <section class="white-card avoid-break">
+        <h2 class="section-title comfortaa">Teacher comments</h2>
+        <div class="min-h-[6.5rem] rounded-lg border border-[#e4e7f2] bg-white px-3 py-2 text-xs">
+            @if (card.comment) {
+            <p>{{ card.comment }}</p>
+            } @else {
+            <div class="flex h-20 flex-col justify-between">
+                <div class="border-b border-dashed border-[#cbd5e1]"></div>
+                <div class="border-b border-dashed border-[#cbd5e1]"></div>
+                <div class="border-b border-dashed border-[#cbd5e1]"></div>
+            </div>
+            }
+        </div>
+    </section>
+
+    <!-- Signatures -->
+    <section class="signatures avoid-break">
+        <div><div>Teacher signature</div></div>
+        <div><div>Principal signature</div></div>
+        <div><div>Parent / guardian signature</div></div>
+    </section>
+    }
+</div>

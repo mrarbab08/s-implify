@@ -968,6 +968,8 @@ export interface StudentGrowthRecordResponse {
     meets?: number | null;
     masters?: number | null;
     totalGrowthForQuarter?: number | null;
+    specialEducation?: number | null;
+    economicDisadvantage?: number | null;
     hb1416?: number | null;
     hb1416Delta?: number | null;
     quarterScoreProgression?: StudentGrowthQuarterScoreProgression[];

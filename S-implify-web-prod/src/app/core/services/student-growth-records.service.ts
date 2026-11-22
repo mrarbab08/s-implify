@@ -126,6 +126,8 @@ export class StudentGrowthRecordsService {
             totalGrowthForQuarter: num('totalGrowthForQuarter', 'TotalGrowthForQuarter'),
             hb1416: num('hb1416', 'Hb1416'),
             hb1416Delta: num('hb1416Delta', 'Hb1416Delta'),
+            specialEducation: num('specialEducation', 'SpecialEducation'),
+            economicDisadvantage: num('economicDisadvantage', 'EconomicDisadvantage'),
             quarterScoreProgression: progressionRaw.map((step) => {
                 const s = (step ?? {}) as Record<string, unknown>;
                 const stepNum = (key: string, alt: string) => {

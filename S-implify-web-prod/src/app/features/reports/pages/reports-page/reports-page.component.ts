@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, DestroyRef, OnInit, inject } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { combineLatest, of } from 'rxjs';
 import {
     catchError,
@@ -28,13 +29,14 @@ import { ReportsService } from '../../services/reports.service';
 @Component({
     selector: 'app-reports-page',
     standalone: true,
-    imports: [CommonModule, FormsModule, SharedModule],
+    imports: [CommonModule, FormsModule, RouterModule, SharedModule],
     templateUrl: './reports-page.component.html',
 })
 export class ReportsPageComponent implements OnInit {
     readonly districtContext = inject(DistrictContextService);
     readonly authService = inject(AuthService);
     private readonly reports = inject(ReportsService);
+    private readonly route = inject(ActivatedRoute);
     private readonly destroyRef = inject(DestroyRef);
 
     /** The report list hierarchy is fixed and mirrors the portal menu structure. */
@@ -78,6 +80,19 @@ export class ReportsPageComponent implements OnInit {
     selectedStudentKey: string | null = null;
 
     ngOnInit(): void {
+        this.route.queryParamMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
+            const requested = params.get('report') as ReportId | null;
+            if (
+                requested &&
+                this.reportMenu.some((section) =>
+                    section.groups.some((group) => group.items.some((item) => item.id === requested)),
+                )
+            ) {
+                this.selectedId = requested;
+                this.selectedStudentKey = null;
+            }
+        });
+
         combineLatest([this.districtContext.selection$, this.districtContext.growthFilters$])
             .pipe(
                 map(([selection, filters]) => ({

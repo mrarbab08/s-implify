@@ -480,69 +480,22 @@ export class ReportsService {
 
     // ── 8. Students report card ────────────────────────────────────────────────
 
+    /**
+     * The old "Student details" / "Assessment results" tables were removed.
+     * This report now only supplies the student picker; the full Aurora-style
+     * report card is the dedicated page opened from the picker/roster row.
+     */
     private loadStudentReportCard(studentKey: string | null): Observable<ReportData> {
         const id: ReportId = 'students-report-card';
         return this.ctx.ensureDistrictCampuses().pipe(
             switchMap(() =>
                 this.allStudentRecords(this.selectedCampus()?.campusCode).pipe(
                     map((records) => {
-                        const studentOptions = this.studentOptions(records);
-                        if (!studentKey) {
-                            const data = this.build(id, []);
-                            data.studentOptions = studentOptions;
-                            data.emptyMessage = studentOptions.length
-                                ? 'Select a student to view the report card.'
-                                : NO_REPORT_DATA;
-                            if (!studentOptions.length) {
-                                data.sections = [this.messageSection()];
-                            }
-                            return data;
-                        }
-                        const own = records.filter((r) => this.studentRecordKey(r) === studentKey);
-                        if (!own.length) {
-                            const data = this.emptyReport(id);
-                            data.studentOptions = studentOptions;
-                            return data;
-                        }
-                        const first = own[0];
-                        const details: ReportRow[] = [
-                            { field: 'Student', value: first.studentName || NO_DATA },
-                            { field: 'Campus', value: this.campusName(first.campusCode) },
-                            { field: 'Grade', value: first.gradeCode || NO_DATA },
-                            { field: 'Classroom', value: first.teacherName || NO_DATA },
-                        ];
-                        const results: ReportRow[] = own.map((r) => ({
-                            subject: r.subjectCode || NO_DATA,
-                            component: this.value(r.cs),
-                            growth: this.value(r.growth),
-                            app: this.value(r.app),
-                            meet: this.value(r.meets),
-                            master: this.value(r.masters),
-                            staar: this.value(r.staar),
-                            quarterScore: this.value(r.quarterScore),
-                        }));
-                        const data = this.build(id, [
-                            {
-                                title: 'Student details',
-                                columns: this.columns(['field', 'Field'], ['value', 'Value']),
-                                rows: details,
-                            },
-                            {
-                                title: 'Assessment results',
-                                columns: this.columns(
-                                    ['subject', 'Subject'],
-                                    ['component', 'Component'],
-                                    ['growth', 'Growth'],
-                                    ['app', 'APP'],
-                                    ['meet', 'MEET'],
-                                    ['master', 'MASTER'],
-                                    ['staar', 'STAAR'],
-                                    ['quarterScore', 'Quarter score'],
-                                ),
-                                rows: results,
-                            },
-                        ]);
-                        data.studentOptions = studentOptions;
+                        const data = this.build(id, []);
+                        data.studentOptions = this.studentOptions(records);
+                        data.emptyMessage = data.studentOptions.length
+                            ? 'Choose a student, then open the full report card.'
+                            : NO_REPORT_DATA;
                         return data;
                     }),
                 ),
@@ -562,6 +515,7 @@ export class ReportsService {
                             const r = records.find((row) => this.studentRecordKey(row) === student.key)!;
                             return {
                                 student: student.label,
+                                studentKey: student.key,
                                 campus: this.campusName(r.campusCode),
                                 grade: r.gradeCode || NO_DATA,
                                 classroom: r.teacherName || NO_DATA,
