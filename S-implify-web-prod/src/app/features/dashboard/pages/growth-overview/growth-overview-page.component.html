@@ -1,4 +1,8 @@
-<div class="-mb-2 dashboard-page" [class.aurora-level-page]="isCampusCategoryView">
+<div
+    class="-mb-2 dashboard-page"
+    [class.aurora-level-page]="isCampusCategoryView"
+    [class.aurora-profile-page]="isSingleCampusView"
+>
     @if (isDistrictAdminOverview) {
     <section class="dov-page" aria-label="District overview">
         <div class="dov-header">
@@ -884,6 +888,704 @@
                 </div>
             </section>
             }
+
+            <!-- ============================================================
+                 Aurora v2 — CAMPUSES BY SCHOOL LEVEL (sections 2–5)
+                 Every figure below comes from the current level, year and
+                 window selection. Empty data renders an honest empty state.
+                 ============================================================ -->
+            @if (isCampusCategoryView) {
+            <section class="aurora-level-sections" aria-label="School level analytics">
+                @if (campusLevelDistrictLoading || kpiMetricsLoading || campusChartLoading) {
+                <p class="aurora-loading">Loading {{ campusLevelTitle }} data…</p>
+                }
+                @if (overallMetricsError || campusMetricsError) {
+                <p class="aurora-error">{{ overallMetricsError || campusMetricsError }}</p>
+                }
+
+                <!-- SECTION 2 — STAAR + growth gauge cards -->
+                <div class="aurora-grid-2">
+                    <article class="aurora-panel aurora-gauge-card">
+                        <div class="aurora-gauge-figure">
+                            <svg
+                                class="aurora-gauge-svg"
+                                viewBox="0 0 180 100"
+                                role="img"
+                                [attr.aria-label]="'STAAR score ' + campusLevelStaarGauge.scoreText + ' of 100, district ' + campusLevelStaarGauge.districtText"
+                            >
+                                <path class="aurora-gauge-track" d="M16 88 A74 74 0 0 1 164 88" />
+                                <path
+                                    class="aurora-gauge-fill"
+                                    d="M16 88 A74 74 0 0 1 164 88"
+                                    [style.stroke-dasharray]="campusLevelStaarGauge.dash"
+                                />
+                                @if (campusLevelStaarGauge.tick) {
+                                <line
+                                    class="aurora-gauge-tick"
+                                    [attr.x1]="campusLevelStaarGauge.tick.x1"
+                                    [attr.y1]="campusLevelStaarGauge.tick.y1"
+                                    [attr.x2]="campusLevelStaarGauge.tick.x2"
+                                    [attr.y2]="campusLevelStaarGauge.tick.y2"
+                                />
+                                }
+                            </svg>
+                            <div class="aurora-gauge-center">
+                                <strong>{{ campusLevelStaarGauge.scoreText }}</strong>
+                                @if (campusLevelStaarGauge.district != null) {
+                                <small>▲ district {{ campusLevelStaarGauge.districtText }}</small>
+                                }
+                            </div>
+                        </div>
+                        <div class="aurora-gauge-copy">
+                            <div class="aurora-gauge-heading">
+                                <span
+                                    class="aurora-grade-chip"
+                                    [ngClass]="'aurora-grade-' + (campusLevelStaarGauge.grade ? campusLevelStaarGauge.grade!.toLowerCase() : 'none')"
+                                >{{ campusLevelStaarGauge.grade || '—' }}</span>
+                                <h3>STAAR score</h3>
+                            </div>
+                            <span
+                                class="aurora-diff-pill"
+                                [class.is-negative]="(campusLevelStaarGauge.diff ?? 0) < 0"
+                            >{{ campusLevelStaarGauge.diffText }}</span>
+                            <p class="aurora-gauge-caption">Domain 1 – student achievement on STAAR.</p>
+                        </div>
+                    </article>
+
+                    <article class="aurora-panel aurora-gauge-card">
+                        <div class="aurora-gauge-figure">
+                            <svg
+                                class="aurora-gauge-svg"
+                                viewBox="0 0 180 100"
+                                role="img"
+                                [attr.aria-label]="'Growth score ' + campusLevelGrowthGauge.scoreText + ' of 100, district ' + campusLevelGrowthGauge.districtText"
+                            >
+                                <path class="aurora-gauge-track" d="M16 88 A74 74 0 0 1 164 88" />
+                                <path
+                                    class="aurora-gauge-fill"
+                                    d="M16 88 A74 74 0 0 1 164 88"
+                                    [style.stroke-dasharray]="campusLevelGrowthGauge.dash"
+                                />
+                                @if (campusLevelGrowthGauge.tick) {
+                                <line
+                                    class="aurora-gauge-tick"
+                                    [attr.x1]="campusLevelGrowthGauge.tick.x1"
+                                    [attr.y1]="campusLevelGrowthGauge.tick.y1"
+                                    [attr.x2]="campusLevelGrowthGauge.tick.x2"
+                                    [attr.y2]="campusLevelGrowthGauge.tick.y2"
+                                />
+                                }
+                            </svg>
+                            <div class="aurora-gauge-center">
+                                <strong>{{ campusLevelGrowthGauge.scoreText }}</strong>
+                                @if (campusLevelGrowthGauge.district != null) {
+                                <small>▲ district {{ campusLevelGrowthGauge.districtText }}</small>
+                                }
+                            </div>
+                        </div>
+                        <div class="aurora-gauge-copy">
+                            <div class="aurora-gauge-heading">
+                                <span
+                                    class="aurora-grade-chip"
+                                    [ngClass]="'aurora-grade-' + (campusLevelGrowthGauge.grade ? campusLevelGrowthGauge.grade!.toLowerCase() : 'none')"
+                                >{{ campusLevelGrowthGauge.grade || '—' }}</span>
+                                <h3>Growth score</h3>
+                            </div>
+                            <span
+                                class="aurora-diff-pill"
+                                [class.is-negative]="(campusLevelGrowthGauge.diff ?? 0) < 0"
+                            >{{ campusLevelGrowthGauge.diffText }}</span>
+                            <p class="aurora-gauge-caption">
+                                Share of students meeting or exceeding expected growth.
+                            </p>
+                        </div>
+                    </article>
+                </div>
+
+                <!-- SECTION 3 — performance levels + achievement/growth gap -->
+                <div class="aurora-grid-2">
+                    <article class="aurora-panel">
+                        <header class="aurora-panel-head">
+                            <div>
+                                <h3>Performance levels</h3>
+                                <p>{{ campusLevelChipLabel }} vs district · % of tested students</p>
+                            </div>
+                            <div class="aurora-legend">
+                                <span><i class="aurora-legend-level"></i>{{ campusLevelShortName }}</span>
+                                <span><i class="aurora-legend-district"></i>District</span>
+                            </div>
+                        </header>
+                        <div class="aurora-bars">
+                            <div class="aurora-bars-axis">
+                                <span>100</span><span>75</span><span>50</span><span>25</span><span>0</span>
+                            </div>
+                            <div class="aurora-bars-plot">
+                                <div class="aurora-bars-grid"><i></i><i></i><i></i><i></i><i></i></div>
+                                @for (band of campusLevelBands; track band.label) {
+                                <div class="aurora-bars-group">
+                                    <div class="aurora-bars-pair">
+                                        <div class="aurora-bar-col">
+                                            <span class="aurora-bar-value">{{ band.levelText }}</span>
+                                            <span
+                                                class="aurora-bar aurora-bar-level"
+                                                [style.height.%]="band.level ?? 0"
+                                            ></span>
+                                        </div>
+                                        <div class="aurora-bar-col">
+                                            <span class="aurora-bar-value">{{ band.districtText }}</span>
+                                            <span
+                                                class="aurora-bar aurora-bar-district"
+                                                [style.height.%]="band.district ?? 0"
+                                            ></span>
+                                        </div>
+                                    </div>
+                                    <span class="aurora-bars-label">{{ band.label }}</span>
+                                </div>
+                                }
+                            </div>
+                        </div>
+                    </article>
+
+                    <article class="aurora-panel">
+                        <header class="aurora-panel-head">
+                            <div>
+                                <h3>Achievement ↔ growth gap</h3>
+                                <p>Distance between each campus's STAAR and growth score</p>
+                            </div>
+                        </header>
+                        @if (campusLevelGapRows.length) {
+                        <div class="aurora-gap">
+                            @for (row of campusLevelGapRows; track row.campusId ?? row.campusName) {
+                            <a class="aurora-gap-row" [routerLink]="['/dashboard/campus', row.slug]">
+                                <span class="aurora-gap-name">{{ row.campusName }}</span>
+                                <span class="aurora-gap-track">
+                                    <span class="aurora-gap-scale">
+                                        <i>0</i><i>25</i><i>50</i><i>75</i><i>100</i>
+                                    </span>
+                                    @if (row.showLine) {
+                                    <span
+                                        class="aurora-gap-line"
+                                        [style.left.%]="row.lineLeftPct"
+                                        [style.width.%]="row.lineWidthPct"
+                                    ></span>
+                                    }
+                                    @if (row.showStaar) {
+                                    <span class="aurora-gap-dot aurora-gap-dot-staar" [style.left.%]="row.staarPct">
+                                        <b>{{ row.staarText }}</b>
+                                    </span>
+                                    }
+                                    @if (row.showGrowth) {
+                                    <span class="aurora-gap-dot aurora-gap-dot-growth" [style.left.%]="row.growthPct">
+                                        <b>{{ row.growthText }}</b>
+                                    </span>
+                                    }
+                                    @if (!row.hasScores) {
+                                    <span class="aurora-gap-none">No STAAR-tested grades</span>
+                                    }
+                                </span>
+                            </a>
+                            }
+                            <div class="aurora-legend aurora-gap-legend">
+                                <span><i class="aurora-legend-staar"></i>STAAR</span>
+                                <span><i class="aurora-legend-growth"></i>Growth</span>
+                            </div>
+                        </div>
+                        } @else {
+                        <div class="aurora-empty">No campuses with scores for this selection.</div>
+                        }
+                    </article>
+                </div>
+
+                <!-- SECTION 4 — rule-derived insight cards -->
+                @if (campusLevelInsights.length) {
+                <div class="aurora-insight-grid">
+                    @for (insight of campusLevelInsights; track insight.kind) {
+                    <article class="aurora-insight" [ngClass]="'aurora-insight-' + insight.kind.toLowerCase()">
+                        <span class="aurora-insight-label">{{ insight.kind }}</span>
+                        <h4>{{ insight.headline }}</h4>
+                        <p>{{ insight.detail }}</p>
+                    </article>
+                    }
+                </div>
+                }
+
+                <!-- SECTION 5 — top 5 teachers + top 5 classrooms -->
+                <div class="aurora-grid-2">
+                    <article class="aurora-panel">
+                        <header class="aurora-panel-head">
+                            <h3>Top 5 teachers</h3>
+                        </header>
+                        @if (categoryTeachersLoading) {
+                        <p class="aurora-loading">Loading teacher rankings…</p>
+                        } @else if (campusLevelTopTeachers.length) {
+                        <div class="aurora-top-list">
+                            @for (teacher of campusLevelTopTeachers; track $index) {
+                            <button
+                                type="button"
+                                class="aurora-top-row"
+                                [class.is-clickable]="teacher.teacherId != null"
+                                [disabled]="teacher.teacherId == null"
+                                (click)="openCampusLevelTeacher(teacher.teacherId, teacher.name)"
+                            >
+                                <span class="aurora-avatar">{{ teacher.initial }}</span>
+                                <span class="aurora-top-main">
+                                    <strong>{{ teacher.name }}</strong>
+                                    <small>{{ teacher.subjectLabel }} · {{ teacher.campusLabel }}</small>
+                                    <span class="aurora-top-bar">
+                                        <i [style.width.%]="teacher.score ?? 0"></i>
+                                    </span>
+                                </span>
+                                <span class="aurora-top-score">{{ teacher.score != null ? teacher.score.toFixed(1) : '—' }}</span>
+                            </button>
+                            }
+                        </div>
+                        } @else {
+                        <div class="aurora-empty">No teacher scores are available for this level.</div>
+                        }
+                    </article>
+
+                    <article class="aurora-panel">
+                        <header class="aurora-panel-head">
+                            <h3>Top 5 classrooms</h3>
+                        </header>
+                        @if (categoryTeachersLoading) {
+                        <p class="aurora-loading">Loading classroom rankings…</p>
+                        } @else if (campusLevelTopClassrooms.length) {
+                        <div class="aurora-top-list">
+                            @for (room of campusLevelTopClassrooms; track $index) {
+                            <button
+                                type="button"
+                                class="aurora-top-row is-violet"
+                                [class.is-clickable]="room.teacherId != null"
+                                [disabled]="room.teacherId == null"
+                                (click)="openCampusLevelTeacher(room.teacherId, room.name)"
+                            >
+                                <span class="aurora-avatar aurora-avatar-violet">{{ room.initial }}</span>
+                                <span class="aurora-top-main">
+                                    <strong>{{ room.name }}</strong>
+                                    <small>{{ room.periodLabel }} · {{ room.subjectLabel }}</small>
+                                    <span class="aurora-top-bar">
+                                        <i [style.width.%]="room.score ?? 0"></i>
+                                    </span>
+                                </span>
+                                <span class="aurora-top-score">{{ room.score != null ? room.score.toFixed(1) : '—' }}</span>
+                            </button>
+                            }
+                        </div>
+                        } @else {
+                        <div class="aurora-empty">No classroom scores are available for this level.</div>
+                        }
+                    </article>
+                </div>
+            </section>
+            }
+
+            <!-- ============================================================
+                 Aurora v2 — CAMPUS PROFILE (sections 1–5)
+                 One campus, inside the signed-in user's district. All values
+                 come from the current campus/year/window payloads.
+                 ============================================================ -->
+            @if (isSingleCampusView) {
+            <section class="aurora-profile-header" aria-label="Campus profile header">
+                @if (campusProfileSearchOpen || campusProfileAlertsOpen || campusProfileSavedOpen) {
+                <div class="aurora-backdrop" (click)="closeCampusProfilePopovers()"></div>
+                }
+
+                <!-- Breadcrumb -->
+                <nav class="aurora-crumbs" aria-label="Breadcrumb">
+                    <a routerLink="/dashboard" class="aurora-crumb-link">{{ campusLevelDistrictName }}</a>
+                    <span class="aurora-crumb-sep" aria-hidden="true">›</span>
+                    <span class="aurora-crumb-link">{{ campusProfileLevelName }}</span>
+                    <span class="aurora-crumb-sep" aria-hidden="true">›</span>
+                    <span class="aurora-crumb-current" aria-current="page">{{ campusName }}</span>
+                </nav>
+
+                <!-- Title row + actions + search / alerts / help -->
+                <div class="aurora-title-row">
+                    <h1 class="aurora-title">{{ campusName }}</h1>
+                    <div class="aurora-profile-actions">
+                        <button
+                            type="button"
+                            class="aurora-standard-btn"
+                            (click)="openCampusStandards()"
+                            title="Open the Standards & CCMR view"
+                        >Standards</button>
+                        <button
+                            type="button"
+                            class="aurora-slice-btn"
+                            (click)="sliceCampus()"
+                            title="Break this campus down by grade and subject"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M7 12h10M10 18h4" />
+                            </svg>
+                            Slice this campus
+                        </button>
+                    </div>
+
+                    <div class="aurora-header-tools">
+                        <div class="aurora-search">
+                            <div class="aurora-search-box">
+                                <svg class="h-4 w-4 flex-none text-[#8A90AB]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                                </svg>
+                                <input
+                                    type="search"
+                                    [(ngModel)]="campusProfileSearchQuery"
+                                    (input)="onCampusProfileSearchInput()"
+                                    (focus)="onCampusProfileSearchInput()"
+                                    (keydown.escape)="clearCampusProfileSearch()"
+                                    placeholder="Search campuses or students"
+                                    aria-label="Search district campuses and students"
+                                />
+                                @if (campusProfileSearchQuery) {
+                                <button type="button" class="aurora-search-clear" (click)="clearCampusProfileSearch()" aria-label="Clear search">×</button>
+                                }
+                            </div>
+                            @if (campusProfileSearchOpen) {
+                            <div class="aurora-pop">
+                                <div class="aurora-pop-head">
+                                    <span class="aurora-pop-title">District search</span>
+                                    <span class="aurora-pop-sub">{{ campusProfileSearchResultCount }} found</span>
+                                </div>
+                                <div class="aurora-pop-body">
+                                    @if (campusProfileCampusResults.length) {
+                                    <p class="aurora-pop-group">Campuses</p>
+                                    @for (campus of campusProfileCampusResults; track campus.campusId) {
+                                    <button type="button" class="aurora-pop-row" (click)="openCampusProfileCampus(campus)">
+                                        <span class="aurora-pop-row-main">{{ campus.campusName }}</span>
+                                        <span class="aurora-pop-row-meta">{{ campus.campusCode }}</span>
+                                    </button>
+                                    }
+                                    }
+                                    @if (campusProfileStudentResults.length) {
+                                    <p class="aurora-pop-group">Students</p>
+                                    @for (student of campusProfileStudentResults; track student.key) {
+                                    <button type="button" class="aurora-pop-row" (click)="openCampusProfileStudent()">
+                                        <span class="aurora-pop-row-main">{{ student.name }}</span>
+                                        <span class="aurora-pop-row-meta">{{ student.grade }} · {{ student.campus }}</span>
+                                    </button>
+                                    }
+                                    }
+                                    @if (!campusProfileSearchResultCount) {
+                                    <p class="aurora-pop-empty">No campuses or students match “{{ campusProfileSearchQuery }}”.</p>
+                                    }
+                                </div>
+                            </div>
+                            }
+                        </div>
+
+                        <div class="aurora-search">
+                            <button
+                                type="button"
+                                class="aurora-icon-btn"
+                                (click)="toggleCampusProfileAlerts()"
+                                [attr.aria-expanded]="campusProfileAlertsOpen"
+                                aria-label="Alerts"
+                                title="Alerts"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                                </svg>
+                                @if (campusProfileUnreadAlertCount > 0) {
+                                <span class="aurora-badge">{{ campusProfileUnreadAlertCount }}</span>
+                                }
+                            </button>
+                            @if (campusProfileAlertsOpen) {
+                            <div class="aurora-pop">
+                                <div class="aurora-pop-head">
+                                    <span class="aurora-pop-title">Alerts</span>
+                                    <span class="aurora-pop-sub">{{ campusProfileAlerts.length }} for this view</span>
+                                </div>
+                                <div class="aurora-pop-body">
+                                    @if (campusProfileAlerts.length) {
+                                    @for (alert of campusProfileAlerts; track alert.id) {
+                                    <div class="aurora-alert-row">
+                                        <span class="min-w-0">
+                                            <span class="aurora-alert-name">{{ alert.title }}</span>
+                                            <span class="aurora-alert-detail">{{ alert.detail }}</span>
+                                        </span>
+                                    </div>
+                                    }
+                                    } @else {
+                                    <p class="aurora-pop-empty">No alerts for this view.</p>
+                                    }
+                                </div>
+                            </div>
+                            }
+                        </div>
+
+                        <button
+                            type="button"
+                            class="aurora-icon-btn"
+                            (click)="openCampusProfileHelp()"
+                            title="Help with this page"
+                            aria-label="Help with this page"
+                        >
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Data as of -->
+                <div class="aurora-data-line">
+                    <span class="aurora-dot" aria-hidden="true"></span>
+                    <span>Data as of {{ campusLevelWindowLabel }} · {{ campusLevelYearLabel }}</span>
+                    <button
+                        type="button"
+                        class="aurora-refresh"
+                        (click)="refreshCampusProfileData()"
+                        [disabled]="kpiMetricsLoading || campusChartLoading"
+                        title="Refresh page data"
+                        aria-label="Refresh page data"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m-1.174 4.992a8.25 8.25 0 1 0 1.174 5.652" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- VIEWING bar -->
+                <div class="aurora-viewing">
+                    <span class="aurora-viewing-label">VIEWING</span>
+                    <span class="aurora-chip">{{ campusLevelYearLabel }}</span>
+                    <span class="aurora-chip">{{ campusLevelWindowLabel }}</span>
+                    <span class="aurora-chip">{{ campusName }}</span>
+                    @for (chip of districtContext.growthFilterChips(); track chip.id) {
+                    <button
+                        type="button"
+                        class="aurora-chip aurora-chip-filter"
+                        (click)="districtContext.clearGrowthFilterChip(chip.id)"
+                        [attr.aria-label]="'Remove filter: ' + chip.label"
+                    >
+                        <span>{{ chip.label }}</span>
+                        <span class="aurora-chip-x" aria-hidden="true">×</span>
+                    </button>
+                    }
+                    <button
+                        type="button"
+                        class="aurora-add-filter"
+                        (click)="districtContext.requestFilterPanel()"
+                        title="Open the page's filter options"
+                    >+ Add filter</button>
+                    <div class="aurora-save-wrap">
+                        <button
+                            type="button"
+                            class="aurora-save-btn"
+                            [class.is-saved]="campusProfileSavedFlash"
+                            (click)="saveCampusProfileView()"
+                            [attr.aria-expanded]="campusProfileSavedOpen"
+                            title="Save the current year, window, campus and filters"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
+                            </svg>
+                            {{ campusProfileSavedFlash ? 'Saved' : 'Save this view' }}
+                        </button>
+                        @if (campusProfileSavedOpen) {
+                        <div class="aurora-pop">
+                            <div class="aurora-pop-head">
+                                <span class="aurora-pop-title">Saved views</span>
+                                <span class="aurora-pop-sub">{{ savedCampusProfileViews.length }} saved</span>
+                            </div>
+                            <div class="aurora-pop-body">
+                                @if (savedCampusProfileViews.length) {
+                                @for (view of savedCampusProfileViews; track view.id) {
+                                <div class="aurora-saved-row">
+                                    <button type="button" class="aurora-saved-open" (click)="applyCampusProfileSavedView(view)" title="Reopen this saved view">
+                                        <span class="aurora-saved-label">{{ campusProfileSavedViewLabel(view) }}</span>
+                                        <span class="aurora-saved-meta">
+                                            @if (campusProfileSavedViewFilterCount(view)) {
+                                            {{ campusProfileSavedViewFilterCount(view) }} filter{{ campusProfileSavedViewFilterCount(view) === 1 ? '' : 's' }}
+                                            } @else { No extra filters }
+                                        </span>
+                                    </button>
+                                    <button type="button" class="aurora-saved-delete" (click)="deleteCampusProfileSavedView($event, view)" aria-label="Delete saved view" title="Delete this saved view">
+                                        ×
+                                    </button>
+                                </div>
+                                }
+                                } @else {
+                                <p class="aurora-pop-empty">No saved views for this campus yet. Use “Save this view”.</p>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </section>
+
+            <section class="aurora-profile-sections" aria-label="Campus profile analytics">
+                <!-- SECTION 2 — hero banner -->
+                <section class="aurora-hero" aria-label="Campus performance banner">
+                    <div class="aurora-hero-grid">
+                        <div class="aurora-rings-panel">
+                            <svg class="aurora-rings" viewBox="0 0 110 110" role="img" aria-label="Performance levels">
+                                @for (ring of campusProfileRings; track ring.label) {
+                                <circle
+                                    class="aurora-ring-base"
+                                    cx="55"
+                                    cy="55"
+                                    [attr.r]="ring.radius"
+                                    [attr.stroke]="ring.color"
+                                />
+                                <circle
+                                    class="aurora-ring-fill"
+                                    cx="55"
+                                    cy="55"
+                                    [attr.r]="ring.radius"
+                                    [attr.stroke]="ring.color"
+                                    [style.stroke-dasharray]="ring.dash"
+                                />
+                                }
+                            </svg>
+                            <div class="aurora-ring-legend">
+                                <span class="aurora-ring-legend-title">PERFORMANCE RINGS</span>
+                                @for (ring of campusProfileRings; track ring.label) {
+                                <div class="aurora-ring-legend-row">
+                                    <span><i [style.background]="ring.color"></i>{{ ring.label }}</span>
+                                    <strong>{{ ring.text }}</strong>
+                                </div>
+                                }
+                            </div>
+                        </div>
+
+                        <article class="aurora-hero-score">
+                            <span class="aurora-hero-score-label">STAAR score</span>
+                            @if (campusProfileStaarGrade) {
+                            <span class="aurora-grade-chip" [ngClass]="'aurora-grade-' + campusProfileStaarGrade!.toLowerCase()">{{ campusProfileStaarGrade }}</span>
+                            }
+                            <strong class="aurora-hero-score-value">{{ campusProfileStaarScore != null ? campusProfileStaarScore.toFixed(1) : '—' }}</strong>
+                            <span class="aurora-hero-delta" [class.is-negative]="campusProfileStaarDelta.negative">{{ campusProfileStaarDelta.text }}</span>
+                        </article>
+
+                        <article class="aurora-hero-score">
+                            <span class="aurora-hero-score-label">Growth score</span>
+                            @if (campusProfileGrowthGrade) {
+                            <span class="aurora-grade-chip" [ngClass]="'aurora-grade-' + campusProfileGrowthGrade!.toLowerCase()">{{ campusProfileGrowthGrade }}</span>
+                            }
+                            <strong class="aurora-hero-score-value">{{ campusProfileGrowthScore != null ? campusProfileGrowthScore.toFixed(1) : '—' }}</strong>
+                            <span class="aurora-hero-delta" [class.is-negative]="campusProfileGrowthDelta.negative">{{ campusProfileGrowthDelta.text }}</span>
+                        </article>
+                    </div>
+                    <div class="aurora-hero-strip">
+                        @if (campusProfileStudentCount != null) {
+                        <span>{{ campusProfileStudentCount | number }} students</span>
+                        }
+                        @if (campusProfileGradeRange) {
+                        <span>{{ campusProfileGradeRange }}</span>
+                        }
+                        @if (campusProfileAdaPct != null) {
+                        <span>{{ campusProfileAdaPct.toFixed(1) }}% ADA</span>
+                        }
+                    </div>
+                </section>
+
+                <!-- SECTION 3 — how this campus compares -->
+                <article class="aurora-panel aurora-compare-card">
+                    <div class="aurora-panel-head">
+                        <div>
+                            <h3>How {{ campusName }} compares</h3>
+                            <p>Bullet charts · bar = campus, ticks = {{ campusProfileLevelName }} level and district, bands = grade cut ranges</p>
+                        </div>
+                    </div>
+                    @for (bullet of campusProfileBullets; track bullet.label) {
+                    <div class="aurora-bullet-row">
+                        <span class="aurora-bullet-label">{{ bullet.label }}</span>
+                        <div class="aurora-bullet-track">
+                            <span class="aurora-bullet-fill" [style.width.%]="bullet.scorePct"></span>
+                            @if (bullet.levelValue != null) {
+                            <span class="aurora-bullet-tick aurora-bullet-tick-level" [style.left.%]="bullet.levelPct"></span>
+                            }
+                            @if (bullet.districtValue != null) {
+                            <span class="aurora-bullet-tick aurora-bullet-tick-district" [style.left.%]="bullet.districtPct"></span>
+                            }
+                        </div>
+                        <strong class="aurora-bullet-score">{{ bullet.scoreText }}</strong>
+                        <div class="aurora-bullet-ticks">
+                            @if (bullet.levelValue != null) {
+                            <span><i class="aurora-tick-level"></i>{{ bullet.levelLabel }} {{ bullet.levelText }}</span>
+                            }
+                            @if (bullet.districtValue != null) {
+                            <span><i class="aurora-tick-district"></i>District {{ bullet.districtText }}</span>
+                            }
+                        </div>
+                    </div>
+                    }
+                    <div class="aurora-compare-legend">
+                        <span><i class="aurora-tick-level"></i>{{ campusProfileLevelName }} level</span>
+                        <span><i class="aurora-tick-district"></i>District</span>
+                        <span>{{ campusProfileBandsText }}</span>
+                    </div>
+                </article>
+
+                <!-- SECTION 4 — classroom heat map -->
+                <article class="aurora-panel aurora-heat-card">
+                    <div class="aurora-panel-head">
+                        <div>
+                            <h3>Classroom heat map</h3>
+                            <p>Every classroom on one screen · darker = stronger</p>
+                        </div>
+                        <div class="aurora-heat-scale" aria-hidden="true">
+                            <span>0</span><i></i><span>100</span>
+                        </div>
+                    </div>
+                    @if (campusChartLoading) {
+                    <p class="aurora-loading">Loading classroom scores…</p>
+                    } @else if (campusProfileClassrooms.length) {
+                    <div class="aurora-heat-table">
+                        <div class="aurora-heat-head">
+                            <span>Teacher · subject</span>
+                            <span>STAAR</span>
+                            <span>Growth</span>
+                        </div>
+                        @for (room of campusProfileClassrooms; track $index) {
+                        <button
+                            type="button"
+                            class="aurora-heat-row"
+                            [class.is-clickable]="room.teacherId != null"
+                            [disabled]="room.teacherId == null"
+                            (click)="openCampusLevelTeacher(room.teacherId, room.name)"
+                        >
+                            <span class="aurora-heat-teacher">
+                                <i class="aurora-avatar">{{ room.initial }}</i>
+                                <span class="min-w-0">
+                                    <strong>{{ room.name }}</strong>
+                                    <small>{{ room.subjectLabel }} · {{ room.gradeLabel }}</small>
+                                </span>
+                            </span>
+                            <span class="aurora-heat-cell" [class.is-deep]="room.staarDeep" [style.background]="room.staarColor">{{ room.staarText }}</span>
+                            <span class="aurora-heat-cell" [class.is-deep]="room.growthDeep" [style.background]="room.growthColor">{{ room.growthText }}</span>
+                        </button>
+                        }
+                    </div>
+                    } @else {
+                    <div class="aurora-empty">No classroom scores are available for this campus.</div>
+                    }
+                </article>
+
+                <!-- SECTION 5 — rule-derived insight cards -->
+                @if (campusProfileInsights.length) {
+                <div class="aurora-profile-insights">
+                    @for (insight of campusProfileInsights; track insight.kind) {
+                    <article class="aurora-panel aurora-profile-insight">
+                        <span class="aurora-profile-insight-icon" [ngClass]="'aurora-icon-' + insight.kind">
+                            @switch (insight.kind) {
+                            @case ('compare') { ↗ }
+                            @case ('dropoff') { ! }
+                            @case ('masters') { ★ }
+                            }
+                        </span>
+                        <h4>{{ insight.headline }}</h4>
+                        <p>{{ insight.detail }}</p>
+                    </article>
+                    }
+                </div>
+                }
+            </section>
+            }
             <div *ngIf="districtRouteId != null" class="-mt-1 mb-1">
                 <a routerLink="/dashboard" class="text-sm font-semibold text-dark hover:underline dark:text-sky-400">
                     ← Back to all districts
@@ -1339,7 +2041,8 @@
             </div>
             }
 
-            <!-- CAMPUSES OVERVIEW -->
+            <!-- CAMPUSES OVERVIEW — hidden on the school-level and campus-profile pages -->
+            @if (!isCampusCategoryView && !isSingleCampusView) {
             <div class="anim-fade-up anim-delay-3 grid xl:grid-cols-1">
                 <div
                     class="panel h-full overflow-x-hidden overflow-y-visible rounded-2xl border border-slate-200/90 bg-white shadow-[0_4px_24px_-14px_rgba(15,23,42,0.12)] dark:border-slate-700 dark:bg-[#0e1726] dark:shadow-none">
@@ -1417,6 +2120,7 @@
                     </div>
                 </div>
             </div>
+            }
 
             <!-- ROW 3 — summary strip (main dashboard only) -->
             <div *ngIf="isDistrictHomeDashboard" class="grid gap-4 xl:grid-cols-3">
@@ -1702,8 +2406,8 @@
             </div>
             }
 
-            <!-- ROW 1 — KPI cards (non district-home scopes keep the previous layout) -->
-            @if (!isDistrictHomeDashboard) {
+            <!-- ROW 1 — KPI cards (non district-home scopes keep the previous layout; the school-level page uses its own gauge cards) -->
+            @if (!isDistrictHomeDashboard && !isCampusCategoryView && !isSingleCampusView) {
             <div class="anim-fade-up anim-delay-2 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 <!-- STAAR COMPONENT SCORE -->
                 <div class="kpi-metric-card flex flex-col">
@@ -1852,86 +2556,6 @@
             </div>
             }
 
-            <!-- ROW 5 — Top teachers / growth leaders (campus-category: merged campus-teacher-metrics) -->
-            <div *ngIf="isCampusCategoryView" class="grid gap-4 xl:grid-cols-2">
-                <p *ngIf="categoryTeacherMetricsError" class="col-span-full text-xs text-danger">
-                    {{ categoryTeacherMetricsError }}
-                </p>
-                <p
-                    *ngIf="categoryTeachersLoading"
-                    class="col-span-full text-sm text-slate-500 dark:text-slate-400"
-                >
-                    Loading teacher metrics…
-                </p>
-                <!-- Top 5 teachers (component score) -->
-                <div class="panel h-full w-full">
-                    <div class="mb-3 flex items-center justify-between">
-                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Teachers</h5>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="w-full text-left text-sm text-gray-500">
-                            <thead class="bg-gray-50 text-gray-700">
-                                <tr>
-                                    <th class="p-3">Name</th>
-                                    <th class="p-3">Subject</th>
-                                    <th class="p-3">Score</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr *ngFor="let t of categoryTopTeachers" class="border-b last:border-0 hover:bg-gray-50">
-                                    <td class="flex items-center gap-2 p-3">{{ t.name }}</td>
-                                    <td class="p-3">{{ t.subjectLabel }}</td>
-                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(t.componentScore) }}</td>
-                                </tr>
-                                <tr
-                                    *ngIf="
-                                        !categoryTeachersLoading &&
-                                        !categoryTopTeachers.length &&
-                                        districtContext.bootstrapLoaded
-                                    "
-                                >
-                                    <td colspan="3" class="p-4 text-center text-gray-400">No teacher data for this category.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Top 5 classrooms (growth by classroom proxy) -->
-                <div class="panel h-full w-full">
-                    <div class="mb-3 flex items-center justify-between">
-                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Classrooms</h5>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="w-full text-left text-sm text-gray-500">
-                            <thead class="bg-gray-50 text-gray-700">
-                                <tr>
-                                    <th class="p-3">Instructor</th>
-                                    <th class="p-3">Grade</th>
-                                    <th class="p-3">Growth</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr *ngFor="let r of categoryTopGrowthLeaders" class="border-b last:border-0 hover:bg-gray-50">
-                                    <td class="flex items-center gap-2 p-3">{{ r.instructorName }}</td>
-                                    <td class="p-3">{{ r.gradeLabel || '—' }}</td>
-                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(r.growth) }}</td>
-                                </tr>
-                                <tr
-                                    *ngIf="
-                                        !categoryTeachersLoading &&
-                                        !categoryTopGrowthLeaders.length &&
-                                        districtContext.bootstrapLoaded
-                                    "
-                                >
-                                    <td colspan="3" class="p-4 text-center text-gray-400">No classroom growth data for this category.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
             <!-- ROW 5 — teacher classroom: Top students (chart from campus-teacher-student-metrics) -->
             <div *ngIf="isTeacherDrillDownView" class="grid gap-4 xl:grid-cols-2">
                 <p *ngIf="campusMetricsError" class="col-span-full text-xs text-danger">
@@ -2002,104 +2626,6 @@
                                     "
                                 >
                                     <td colspan="2" class="p-4 text-center text-gray-400">No growth data for this classroom.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- ROW 5 — single campus: Top classrooms / students -->
-            <div *ngIf="isSingleCampusView" class="grid gap-4 xl:grid-cols-2">
-                <p *ngIf="campusMetricsError" class="col-span-full text-xs text-danger">
-                    {{ campusMetricsError }}
-                </p>
-                <p *ngIf="campusStudentsError" class="col-span-full text-xs text-danger">
-                    {{ campusStudentsError }}
-                </p>
-                <p
-                    *ngIf="campusChartLoading || campusStudentsLoading"
-                    class="col-span-full text-sm text-slate-500 dark:text-slate-400"
-                >
-                    Loading campus leaderboards…
-                </p>
-
-                <!-- Top 5 Classrooms -->
-                <div class="panel h-full w-full">
-                    <div class="mb-3 flex items-center justify-between">
-                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Classrooms</h5>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="w-full text-left text-sm text-gray-500">
-                            <thead class="bg-gray-50 text-gray-700">
-                                <tr>
-                                    <th class="p-3">Instructor</th>
-                                    <th class="p-3">Grade</th>
-                                    <th class="p-3">Growth</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr *ngFor="let r of campusTopClassrooms" class="border-b last:border-0 hover:bg-gray-50">
-                                    <td class="flex items-center gap-2 p-3">
-                                        <div
-                                            class="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-gray-200"
-                                        >
-                                            <icon-home class="h-4 w-4 text-primary" />
-                                        </div>
-                                        {{ r.instructorName }}
-                                    </td>
-                                    <td class="p-3">{{ r.gradeLabel }}</td>
-                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(r.growth) }}</td>
-                                </tr>
-                                <tr
-                                    *ngIf="
-                                        !campusChartLoading &&
-                                        !campusTopClassrooms.length &&
-                                        districtContext.bootstrapLoaded
-                                    "
-                                >
-                                    <td colspan="3" class="p-4 text-center text-gray-400">No classroom growth data for this campus.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-
-                <!-- Top 5 Students -->
-                <div class="panel h-full w-full">
-                    <div class="mb-3 flex items-center justify-between">
-                        <h5 class="text-sm font-semibold text-gray-800 dark:text-white">Top 5 Students</h5>
-                    </div>
-                    <div class="table-responsive">
-                        <table class="w-full text-left text-sm text-gray-500">
-                            <thead class="bg-gray-50 text-gray-700">
-                                <tr>
-                                    <th class="p-3">Name</th>
-                                    <th class="p-3">Component score</th>
-                                    <th class="p-3">Growth</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr *ngFor="let s of campusTopStudents" class="border-b last:border-0 hover:bg-gray-50">
-                                    <td class="flex items-center gap-2 p-3">
-                                        <div
-                                            class="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-gray-200"
-                                        >
-                                            <icon-user class="h-4 w-4 text-primary" />
-                                        </div>
-                                        {{ s.studentName }}
-                                    </td>
-                                    <td class="p-3">{{ formatNullablePct(s.componentScore) }}</td>
-                                    <td class="p-3 font-semibold text-success">{{ formatNullablePct(s.growth) }}</td>
-                                </tr>
-                                <tr
-                                    *ngIf="
-                                        !campusStudentsLoading &&
-                                        !campusTopStudents.length &&
-                                        districtContext.bootstrapLoaded
-                                    "
-                                >
-                                    <td colspan="3" class="p-4 text-center text-gray-400">No student scores for this campus.</td>
                                 </tr>
                             </tbody>
                         </table>
