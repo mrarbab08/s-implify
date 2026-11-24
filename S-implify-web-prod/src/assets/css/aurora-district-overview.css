@@ -2547,3 +2547,17 @@ body.dark .app-header-bar.dov-single-nav .top-menu-panel {
         display: none;
     }
 }
+
+/* Clickable Students tested KPI card and its student list popup. */
+.dov-kpi-clickable {
+    cursor: pointer;
+}
+
+.dov-kpi-clickable:focus-visible {
+    outline: 2px solid #5b3df5;
+    outline-offset: 2px;
+}
+
+.modal.dov-students-modal {
+    z-index: 2000 !important;
+}

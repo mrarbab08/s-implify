@@ -322,11 +322,19 @@
         </section>
 
         <section class="dov-kpis" aria-label="District KPIs">
-            <article class="dov-kpi">
+            <article
+                class="dov-kpi dov-kpi-clickable"
+                tabindex="0"
+                role="button"
+                aria-label="Open students tested list"
+                title="View the students counted in this card"
+                (click)="openDistrictAdminStudentsModal()"
+                (keydown.enter)="openDistrictAdminStudentsModal()"
+            >
                 <div class="dov-kpi-label">Students tested <span class="dov-info" title="Unique students with growth records in the selected window.">i</span></div>
                 <div class="dov-kpi-value">{{ districtOverviewStudentsTestedText }}</div>
                 <div class="dov-kpi-sub">{{ districtOverviewStudentsTestedSub }}</div>
-                <a class="dov-kpi-link" routerLink="/students">Students →</a>
+                <a class="dov-kpi-link" routerLink="/students" (click)="$event.stopPropagation()">Students →</a>
             </article>
             <article class="dov-kpi">
                 <div class="dov-kpi-label">Attendance ADA <span class="dov-info" title="Average daily attendance from the campus attendance data.">i</span></div>
@@ -2801,7 +2809,7 @@
 </ngx-custom-modal>
 
 <!-- District Admin students popup — campus dropdown, count follows the filter. -->
-<ngx-custom-modal #districtAdminStudentsModal customClass="modal-top records-modal" class="no-footer">
+<ngx-custom-modal #districtAdminStudentsModal customClass="modal-top records-modal dov-students-modal" class="no-footer">
     <ng-template #modalHeader>
         <div class="flex items-center gap-3">
             <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#10B981]/10 text-[#10B981] dark:bg-[#10B981]/20">
