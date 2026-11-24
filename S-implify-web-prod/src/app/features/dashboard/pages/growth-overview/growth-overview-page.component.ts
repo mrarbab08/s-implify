@@ -1826,6 +1826,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     districtOverviewSearchOpen = false;
     districtOverviewSavedViewsOpen = false;
     districtOverviewYearMenuOpen = false;
+    districtOverviewCampusMenuOpen = false;
     districtOverviewHighlightedQuadrant: string | null = null;
     districtOverviewSavedFlash = false;
     districtOverviewRefreshing = false;
@@ -1846,6 +1847,15 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
 
     /** Full campus-metrics rows behind the ranking (id/code kept for joins). */
     private districtOverviewCampusMetricRows: Array<{
+        campusId: number | null;
+        campusCode: string;
+        campusName: string;
+        cs: number | null;
+        growth: number | null;
+    }> = [];
+
+    /** Unfiltered campus metrics kept for the map so other dots stay visible but dimmed. */
+    private districtOverviewAllCampusMetricRows: Array<{
         campusId: number | null;
         campusCode: string;
         campusName: string;
@@ -1949,7 +1959,8 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         return (
             this.districtOverviewSearchOpen ||
             this.districtOverviewSavedViewsOpen ||
-            this.districtOverviewYearMenuOpen
+            this.districtOverviewYearMenuOpen ||
+            this.districtOverviewCampusMenuOpen
         );
     }
 
@@ -1957,12 +1968,45 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         this.districtOverviewSearchOpen = false;
         this.districtOverviewSavedViewsOpen = false;
         this.districtOverviewYearMenuOpen = false;
+        this.districtOverviewCampusMenuOpen = false;
+    }
+
+    toggleDistrictOverviewCampusMenu(): void {
+        this.districtOverviewCampusMenuOpen = !this.districtOverviewCampusMenuOpen;
+        this.districtOverviewSearchOpen = false;
+        this.districtOverviewSavedViewsOpen = false;
+        this.districtOverviewYearMenuOpen = false;
+    }
+
+    /** Whole-page campus scope, persisted through the portal's existing growth filter. */
+    get districtOverviewSelectedCampus(): Campus | undefined {
+        return this.districtContext.filterCampus();
+    }
+
+    get districtOverviewCampusLabel(): string {
+        return this.districtOverviewSelectedCampus?.campusName || 'All campuses';
+    }
+
+    get districtOverviewSelectedCampusSlug(): string | null {
+        const campus = this.districtOverviewSelectedCampus;
+        return campus ? this.districtContext.campusRouteSlug(campus) : null;
+    }
+
+    selectDistrictOverviewCampus(campusId: number | null): void {
+        this.districtOverviewCampusMenuOpen = false;
+        this.districtOverviewHighlightedQuadrant = null;
+        this.districtContext.setGrowthFilters({
+            ...this.districtContext.growthFilters,
+            campusId,
+        });
+        this.cdr.markForCheck();
     }
 
     toggleDistrictOverviewYearMenu(): void {
         this.districtOverviewYearMenuOpen = !this.districtOverviewYearMenuOpen;
         this.districtOverviewSearchOpen = false;
         this.districtOverviewSavedViewsOpen = false;
+        this.districtOverviewCampusMenuOpen = false;
     }
 
     selectDistrictOverviewYear(academicYearId: number | null): void {
@@ -2051,11 +2095,15 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
 
     // ----- Campus rows joined from the page's existing campus-metrics payload -----
 
-    get districtOverviewCampusRows(): DistrictOverviewCampusVm[] {
-        const metrics = this.districtOverviewCampusMetricRows;
-        if (!metrics.length) {
-            return [];
-        }
+    private districtOverviewRowsFromMetrics(
+        metrics: Array<{
+            campusId: number | null;
+            campusCode: string;
+            campusName: string;
+            cs: number | null;
+            growth: number | null;
+        }>,
+    ): DistrictOverviewCampusVm[] {
         const byId = new Map<number, (typeof metrics)[number]>();
         const byCode = new Map<string, (typeof metrics)[number]>();
         const byName = new Map<string, (typeof metrics)[number]>();
@@ -2100,6 +2148,18 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
             .sort((a, b) => a.campusName.localeCompare(b.campusName));
     }
 
+    get districtOverviewCampusRows(): DistrictOverviewCampusVm[] {
+        return this.districtOverviewRowsFromMetrics(this.districtOverviewCampusMetricRows);
+    }
+
+    /** All campuses' scores for the map, even when the page is scoped to one campus. */
+    get districtOverviewAllCampusRows(): DistrictOverviewCampusVm[] {
+        const all = this.districtOverviewRowsFromMetrics(
+            this.districtOverviewAllCampusMetricRows,
+        );
+        return all.length ? all : this.districtOverviewCampusRows;
+    }
+
     get districtOverviewLevels(): DistrictOverviewLevelVm[] {
         const categories = this.districtContext.campusCategories;
         const campuses = this.districtContext.campuses;
@@ -2110,9 +2170,14 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
                 const gradeRow = gradeRows.find(
                     (r) => (r.categoryCode || '').trim().toUpperCase() === code,
                 );
-                const campusCount = campuses.filter(
-                    (c) => c.campusCategoryId === category.campusCategoryId,
-                ).length;
+                const selectedCampus = this.districtOverviewSelectedCampus;
+                const campusCount = selectedCampus
+                    ? selectedCampus.campusCategoryId === category.campusCategoryId
+                        ? 1
+                        : 0
+                    : campuses.filter(
+                          (c) => c.campusCategoryId === category.campusCategoryId,
+                        ).length;
                 return {
                     campusCategoryId: category.campusCategoryId,
                     code,
@@ -2125,7 +2190,13 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
                     link: `/dashboard/campus-category/${category.campusCategoryId}`,
                 };
             })
-            .filter((row) => row.campusCount > 0)
+            .filter(
+                (row) =>
+                    row.campusCount > 0 &&
+                    (!this.districtOverviewSelectedCampus ||
+                        row.campusCategoryId ===
+                            this.districtOverviewSelectedCampus.campusCategoryId),
+            )
             .sort((a, b) => this.districtOverviewLevelRank(a.code) - this.districtOverviewLevelRank(b.code));
     }
 
@@ -2227,7 +2298,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         if (this.districtAdminStudentsLoading) {
             return null;
         }
-        return this.districtAdminStudentsCount;
+        return this.districtOverviewStudentsTestedCount;
     }
 
     get districtOverviewCampusCount(): number {
@@ -2236,11 +2307,15 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
 
     get districtOverviewHeroLine(): string {
         const students = this.districtOverviewStudentsAcross;
-        const campuses = this.districtOverviewCampusCount;
+        const campus = this.districtOverviewSelectedCampus;
         if (students == null) {
             return 'Loading student counts…';
         }
-        return `${students.toLocaleString('en-US')} students across ${campuses} campus${campuses === 1 ? '' : 'es'}.`;
+        if (campus) {
+            return `${students.toLocaleString('en-US')} students at ${campus.campusName || campus.campusCode}.`;
+        }
+        const campusCount = this.districtOverviewCampusCount;
+        return `${students.toLocaleString('en-US')} students across ${campusCount} campus${campusCount === 1 ? '' : 'es'}.`;
     }
 
     get districtOverviewComparisonSentence(): string {
@@ -2535,11 +2610,22 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
 
     // ----- Section 4: KPI strip -----
 
+    /** District-wide or campus-scoped count of the students already loaded for the card. */
+    get districtOverviewStudentsTestedCount(): number {
+        const campus = this.districtOverviewSelectedCampus;
+        if (!campus) {
+            return this.districtAdminStudentsCount;
+        }
+        return this.districtAdminAllStudents.filter(
+            (row) => row.campusCode === campus.campusCode,
+        ).length;
+    }
+
     get districtOverviewStudentsTestedText(): string {
         if (this.districtAdminStudentsLoading) {
             return '—';
         }
-        return this.districtAdminStudentsCount.toLocaleString('en-US');
+        return this.districtOverviewStudentsTestedCount.toLocaleString('en-US');
     }
 
     get districtOverviewStudentsTestedSub(): string {
@@ -2564,6 +2650,9 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     }
 
     get districtOverviewCcmrText(): string {
+        if (this.districtOverviewSelectedCampus) {
+            return '—';
+        }
         return this.ccmrRatePct != null ? `${this.ccmrRatePct.toFixed(1)}%` : '—';
     }
 
@@ -2599,6 +2688,9 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     }
 
     get districtOverviewCcmrSubline(): string {
+        if (this.districtOverviewSelectedCampus) {
+            return 'Campus-level CCMR data unavailable';
+        }
         const quarters = [...this.districtContext.districtQuarters].sort(
             (a, b) =>
                 (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
@@ -2677,6 +2769,9 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     }
 
     get districtOverviewGradText(): string {
+        if (this.districtOverviewSelectedCampus) {
+            return '—';
+        }
         return this.gradRatePct != null ? `${this.gradRatePct.toFixed(1)}%` : '—';
     }
 
@@ -2685,6 +2780,9 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     }
 
     get districtOverviewGradClassLabel(): string {
+        if (this.districtOverviewSelectedCampus) {
+            return 'Campus-level graduation data unavailable';
+        }
         const label = this.districtOverviewYearLabel;
         const end = label.includes('-') ? label.split('-')[1]?.trim() : label;
         return `Class of ${end || '—'} projection`;
@@ -2786,7 +2884,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         avgYLine: number | null;
         hasData: boolean;
     } {
-        const rows = this.districtOverviewCampusRows;
+        const rows = this.districtOverviewAllCampusRows;
         const allX = rows.map((r) => r.cs).filter((v): v is number => v != null);
         const allY = rows.map((r) => r.growth).filter((v): v is number => v != null);
         const xDomain = this.districtOverviewDomain(allX);
@@ -2805,7 +2903,8 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         const avgX = allX.length ? allX.reduce((a, b) => a + b, 0) / allX.length : null;
         const avgY = allY.length ? allY.reduce((a, b) => a + b, 0) / allY.length : null;
 
-        const points: DistrictOverviewScatterPointVm[] = this.districtOverviewLevelFilteredRows
+        const points: DistrictOverviewScatterPointVm[] = rows
+            .filter((r) => !this.districtOverviewLevelFilter || r.levelCode === this.districtOverviewLevelFilter)
             .filter((r) => r.cs != null && r.growth != null)
             .map((r) => ({
                 key: `${r.campusId ?? r.campusCode}-${r.campusName}`,
@@ -3664,6 +3763,8 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
             this.resetCcmrSummary();
             this.resetCcmrAcademyRanking();
             this.districtCampusGrowthRanking = [];
+            this.districtOverviewCampusMetricRows = [];
+            this.districtOverviewAllCampusMetricRows = [];
             return;
         }
 
@@ -3889,6 +3990,30 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
                         this.applyProgressingCampusStats(scopedCampus);
                     }
                     this.applyDistrictCampusGrowthRanking(scopedCampus);
+                    if (this.isDistrictAdminOverview && isDistrictHome && this.districtContext.filterCampus()) {
+                        this.districtOverviewAllCampusMetricRows = [];
+                        this.growthAnalytics
+                            .getCampusGrowthMetrics({ ...body, campusCode: null } as any)
+                            .pipe(
+                                takeUntil(until$),
+                                catchError(() => of<CampusGrowthMetricsResponse[]>([])),
+                            )
+                            .subscribe((rows) => {
+                                this.districtOverviewAllCampusMetricRows = (rows ?? []).map(
+                                    (r) => ({
+                                        campusId: r.campusId ?? null,
+                                        campusCode: (r.campusCode || '').trim(),
+                                        campusName: (r.campusName || r.campusCode || '').trim(),
+                                        cs: r.componentScore ?? null,
+                                        growth: r.growth ?? null,
+                                    }),
+                                );
+                                this.cdr.markForCheck();
+                            });
+                    } else {
+                        this.districtOverviewAllCampusMetricRows =
+                            this.districtOverviewCampusMetricRows;
+                    }
                     this.applyCampusGrowthRanking(scopedCampus);
                     this.applyCampusMetricPairsRanking(scopedCampus);
                     if (this.isCampusCategoryView) {
@@ -4185,6 +4310,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         if (!this.isDistrictHomeDashboard || !campus?.length) {
             this.districtCampusGrowthRanking = [];
             this.districtOverviewCampusMetricRows = [];
+            this.districtOverviewAllCampusMetricRows = [];
             return;
         }
         this.districtOverviewCampusMetricRows = campus.map((r) => ({

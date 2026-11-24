@@ -596,6 +596,21 @@
     top: calc(100% + 8px);
 }
 
+.dov-campus-wrap {
+    position: relative;
+}
+
+.dov-campus-menu {
+    top: calc(100% + 8px);
+    left: 0;
+    right: auto;
+    width: 250px;
+}
+
+.dov-campus-menu .dov-pop-row.is-selected {
+    background: #f1efff;
+}
+
 .dov-saved-row {
     display: flex;
     align-items: center;

@@ -158,12 +158,49 @@
                 <span class="dov-viewing-label">VIEWING</span>
                 <span class="dov-chip">{{ districtOverviewYearLabel }}</span>
                 <span class="dov-chip" [title]="districtOverviewWindowLabel">{{ districtOverviewQuarterShortLabel }}</span>
-                <button type="button" class="dov-chip dov-chip-action" (click)="districtContext.requestFilterPanel()">
-                    {{ districtContext.filterCampus()?.campusName || 'All campuses' }}
-                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
-                    </svg>
-                </button>
+                <div class="dov-campus-wrap">
+                    <button
+                        type="button"
+                        class="dov-chip dov-chip-action"
+                        [attr.aria-expanded]="districtOverviewCampusMenuOpen"
+                        (click)="toggleDistrictOverviewCampusMenu()"
+                    >
+                        {{ districtOverviewCampusLabel }}
+                        <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                        </svg>
+                    </button>
+                    @if (districtOverviewCampusMenuOpen) {
+                    <div class="dov-pop dov-campus-menu">
+                        <div class="dov-pop-head">
+                            <span class="dov-pop-title">Campus scope</span>
+                            <span class="dov-pop-sub">Whole page</span>
+                        </div>
+                        <div class="dov-pop-body">
+                            <button
+                                type="button"
+                                class="dov-pop-row"
+                                [class.is-selected]="!districtOverviewSelectedCampus"
+                                (click)="selectDistrictOverviewCampus(null)"
+                            >
+                                <span class="dov-pop-row-main">All campuses</span>
+                                @if (!districtOverviewSelectedCampus) { <span class="dov-pop-row-meta">✓</span> }
+                            </button>
+                            @for (campus of districtContext.filterCampusesForActiveRole(districtContext.campuses); track campus.campusId) {
+                            <button
+                                type="button"
+                                class="dov-pop-row"
+                                [class.is-selected]="districtOverviewSelectedCampus?.campusId === campus.campusId"
+                                (click)="selectDistrictOverviewCampus(campus.campusId)"
+                            >
+                                <span class="dov-pop-row-main">{{ campus.campusName || campus.campusCode }}</span>
+                                @if (districtOverviewSelectedCampus?.campusId === campus.campusId) { <span class="dov-pop-row-meta">✓</span> }
+                            </button>
+                            }
+                        </div>
+                    </div>
+                    }
+                </div>
                 @for (chip of districtContext.growthFilterChips(); track chip.id) {
                     @if (chip.id !== 'campus') {
                     <span class="dov-chip">
@@ -415,7 +452,8 @@
                         <g
                             class="dov-point"
                             [class.is-highlighted]="districtOverviewHighlightedQuadrant === point.quadrantKey"
-                            [class.is-dimmed]="districtOverviewHighlightedQuadrant && districtOverviewHighlightedQuadrant !== point.quadrantKey"
+                            [class.is-dimmed]="(districtOverviewSelectedCampusSlug && point.slug !== districtOverviewSelectedCampusSlug) || (districtOverviewHighlightedQuadrant && districtOverviewHighlightedQuadrant !== point.quadrantKey)"
+                            [class.is-highlighted]="districtOverviewSelectedCampusSlug === point.slug || districtOverviewHighlightedQuadrant === point.quadrantKey"
                             tabindex="0"
                             role="link"
                             [attr.aria-label]="point.name + ': STAAR ' + point.cs.toFixed(1) + ', growth ' + point.growth.toFixed(1)"
