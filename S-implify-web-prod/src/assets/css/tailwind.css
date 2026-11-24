@@ -49,6 +49,11 @@
 /* modal popup */
 @import 'modal.css';
 
+/* Aurora v2 - campus level page header */
+@import 'aurora-campus-level.css';
+/* Aurora v2 - District Admin overview */
+@import 'aurora-district-overview.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

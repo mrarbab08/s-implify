@@ -36,13 +36,18 @@ import { AttendanceAnalyticsService } from '../../../../core/services/attendance
 import { CcmrAnalyticsService } from '../../../../core/services/ccmr-analytics.service';
 import { DashboardAnalyticsService } from '../../../../core/services/dashboard-analytics.service';
 import type {
+    Campus,
+    CampusCategory,
     CampusCategoryGrowthMetricsResponse,
     CampusGrowthMetricsRequest,
     CampusGrowthMetricsResponse,
     CcmrAcademyStatsItemDto,
+    CcmrDistrictMonthRateDto,
     DistrictAttendanceSummaryDto,
+    MonthlyAttendanceStatDto,
     DistrictOverallPercentagesResponse,
     DistrictQuarter,
+    GrowthFilters,
     GrowthOverallMetricsRequest,
     GrowthOverallMetricsResponse,
     GrowthOverallGradeByCategory,
@@ -161,6 +166,94 @@ interface DistrictAdminStudentRow {
     campus: string;
     grade: string;
     classroom: string;
+}
+
+/** One school-level tab in the Aurora v2 campus-level header. */
+export interface CampusLevelTabVm {
+    campusCategoryId: number;
+    label: string;
+    count: number;
+}
+
+/** One real data-quality alert shown by the campus-level header bell. */
+export interface CampusLevelAlertVm {
+    id: string;
+    title: string;
+    detail: string;
+    slug: string | null;
+}
+
+/** A user's saved campus-level view (year + window + level + filters). */
+export interface SavedCampusLevelView {
+    id: string;
+    districtId: number;
+    academicYearId: number | null;
+    quarterCode: string | null;
+    campusCategoryId: number;
+    filters: GrowthFilters;
+    savedAt: string;
+}
+
+/** Aurora v2 District Overview — one campus joined from campus-metrics + reference data. */
+export interface DistrictOverviewCampusVm {
+    campusId: number | null;
+    campusCode: string;
+    campusName: string;
+    shortCode: string;
+    slug: string;
+    levelCode: string;
+    levelLabel: string;
+    cs: number | null;
+    growth: number | null;
+}
+
+/** Aurora v2 District Overview — one level card (real category + overall-metrics grades). */
+export interface DistrictOverviewLevelVm {
+    campusCategoryId: number;
+    code: string;
+    label: string;
+    campusCount: number;
+    cs: number | null;
+    csGrade: string | null;
+    growth: number | null;
+    growthGrade: string | null;
+    link: string;
+}
+
+/** Aurora v2 District Overview — one rule-derived "Needs your attention" card. */
+export interface DistrictOverviewAlertVm {
+    id: string;
+    category: string;
+    title: string;
+    detail: string;
+    metrics: string[];
+    actionLabel: string;
+    actionLink: string;
+}
+
+/** Aurora v2 District Overview — saved view (year + window + search filters). */
+export interface DistrictOverviewSavedView {
+    id: string;
+    districtId: number;
+    academicYearId: number | null;
+    quarterCode: string | null;
+    filters: GrowthFilters;
+    savedAt: string;
+}
+
+/** Aurora v2 District Overview — scatter point in the campus performance map. */
+export interface DistrictOverviewScatterPointVm {
+    key: string;
+    label: string;
+    name: string;
+    levelCode: string;
+    cs: number;
+    growth: number;
+    x: number;
+    y: number;
+    color: string;
+    slug: string;
+    quadrantKey: string;
 }
 
 /** District home — academy row sorted by CCMR (POST /ccmr/academy-stats). */
@@ -377,6 +470,418 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
 
     get isCampusCategoryView(): boolean {
         return this.campusCategoryRouteId != null;
+    }
+
+    // ==================================================================
+    // Aurora v2 — CAMPUSES BY SCHOOL LEVEL page header
+    // Everything below is presentation-only and reads the existing
+    // district context / campus-metrics data. No new data source.
+    // ==================================================================
+
+    private static readonly SAVED_VIEWS_KEY_PREFIX = 'simplify_campus_level_views';
+    private static readonly READ_ALERTS_KEY_PREFIX = 'simplify_campus_level_read_alerts';
+
+    campusSearchQuery = '';
+    campusSearchOpen = false;
+    campusAlertsOpen = false;
+    savedViewsOpen = false;
+    campusViewSavedFlash = false;
+    campusLevelRefreshing = false;
+    savedCampusLevelViews: SavedCampusLevelView[] = [];
+
+    private savedViewsLoadedKey = '';
+    private readAlertsLoadedKey = '';
+    private readAlertsByScope: Record<string, string[]> = {};
+
+    /** Category behind the current `/dashboard/campus-category/:id` route (real reference data). */
+    get campusLevelCategory(): CampusCategory | undefined {
+        const id = this.campusCategoryRouteId;
+        if (id == null) {
+            return undefined;
+        }
+        return this.districtContext.campusCategories.find((c) => c.campusCategoryId === id);
+    }
+
+    /** District name for the breadcrumb, from the current selection. */
+    get campusLevelDistrictName(): string {
+        const id = this.districtContext.selection.districtId;
+        return (
+            this.districtContext.districts.find((d) => d.districtId === id)?.districtName ??
+            'District'
+        );
+    }
+
+    /** "HIGH SCHOOL" → "High" (data stores level names in caps). */
+    private campusLevelBaseName(raw: string): string {
+        const title = (raw || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .toLowerCase()
+            .replace(/\b[a-z]/g, (c) => c.toUpperCase());
+        return title.replace(/\s+schools?$/i, '').trim();
+    }
+
+    /** Short level name used in the breadcrumb and tabs (e.g. "High"). */
+    get campusLevelShortName(): string {
+        const raw = (this.campusLevelCategory?.categoryName ?? this.campusName ?? '').trim();
+        const base = this.campusLevelBaseName(raw);
+        return base && base !== 'Campus Category' ? base : 'Campuses';
+    }
+
+    /** Large page title (e.g. "High Schools"). */
+    get campusLevelTitle(): string {
+        const base = this.campusLevelShortName;
+        return base === 'Campuses' ? 'Campuses' : `${base} Schools`;
+    }
+
+    /** Level label used in the VIEWING bar (e.g. "High schools"). */
+    get campusLevelChipLabel(): string {
+        const base = this.campusLevelShortName;
+        return base === 'Campuses' ? 'Campuses' : `${base} schools`;
+    }
+
+    get campusLevelYearLabel(): string {
+        const id = this.districtContext.selection.academicYearId;
+        return (
+            this.districtContext.academicYears.find((y) => y.academicYearId === id)?.yearLabel ??
+            '—'
+        );
+    }
+
+    get campusLevelWindowLabel(): string {
+        const code = this.districtContext.selection.quarterCode;
+        const quarter = this.districtContext.districtQuarters.find((q) => q.quarterCode === code);
+        return quarter ? this.districtContext.quarterDisplayLabel(quarter) : code || '—';
+    }
+
+    /** Active campuses of the level currently being viewed. */
+    get campusLevelCampuses(): Campus[] {
+        const id = this.campusCategoryRouteId;
+        if (id == null) {
+            return [];
+        }
+        return this.districtContext.campuses.filter((c) => c.campusCategoryId === id);
+    }
+
+    /**
+     * One tab per level that actually has campuses in the selected district.
+     * Counts come from the same district campus list the rest of the portal uses,
+     * so a level with no campuses can never appear and a count is never invented.
+     */
+    get campusLevelTabs(): CampusLevelTabVm[] {
+        const campuses = this.districtContext.campuses;
+        return this.districtContext.campusCategories
+            .map((cat) => ({
+                campusCategoryId: cat.campusCategoryId,
+                label:
+                    this.campusLevelBaseName(cat.categoryName || '') ||
+                    cat.categoryCode ||
+                    'Level',
+                count: campuses.filter((c) => c.campusCategoryId === cat.campusCategoryId).length,
+            }))
+            .filter((tab) => tab.count > 0);
+    }
+
+    /** Campus search results — restricted to the level currently being viewed. */
+    get campusSearchResults(): Campus[] {
+        const q = this.campusSearchQuery.trim().toLowerCase();
+        if (!q) {
+            return [];
+        }
+        return this.campusLevelCampuses
+            .filter((c) => `${c.campusName} ${c.campusCode}`.toLowerCase().includes(q))
+            .sort((a, b) => (a.campusName || '').localeCompare(b.campusName || ''))
+            .slice(0, 8);
+    }
+
+    onCampusSearchInput(): void {
+        this.campusSearchOpen = !!this.campusSearchQuery.trim();
+        this.campusAlertsOpen = false;
+        this.savedViewsOpen = false;
+    }
+
+    clearCampusSearch(): void {
+        this.campusSearchQuery = '';
+        this.campusSearchOpen = false;
+    }
+
+    openFirstCampusSearchResult(event?: Event): void {
+        if (event) {
+            event.preventDefault();
+        }
+        const first = this.campusSearchResults[0];
+        if (!first) {
+            return;
+        }
+        this.campusSearchOpen = false;
+        this.campusSearchQuery = '';
+        this.router.navigate(['/dashboard/campus', this.districtContext.campusRouteSlug(first)]);
+    }
+
+    /**
+     * Live, data-backed alerts for the current level/window. Only real conditions
+     * are reported: campuses without a STAAR component score or growth value.
+     */
+    get campusLevelAlerts(): CampusLevelAlertVm[] {
+        if (this.campusChartLoading) {
+            return [];
+        }
+        const levelNames = new Set(this.campusLevelCampuses.map((c) => c.campusName));
+        const rows = this.campusMetricPairsRanking.filter((r) => levelNames.has(r.campusName));
+        if (!rows.length) {
+            return [
+                {
+                    id: 'no-metrics',
+                    title: 'No campus metrics for this level',
+                    detail: `No STAAR component score or growth data for ${this.campusLevelShortName} in ${this.campusLevelWindowLabel}.`,
+                    slug: null,
+                },
+            ];
+        }
+        return rows
+            .filter((r) => r.componentScore == null || r.growth == null)
+            .map((r) => ({
+                id: `missing-${this.campusSlugFromName(r.campusName)}`,
+                title: r.campusName || 'Campus',
+                detail: 'Missing STAAR component score or growth for this window.',
+                slug: this.campusSlugFromName(r.campusName),
+            }));
+    }
+
+    get campusUnreadAlertCount(): number {
+        this.ensureReadAlertsLoaded();
+        const read = this.readAlertsByScope[this.campusAlertScopeKey()] ?? [];
+        return this.campusLevelAlerts.filter((a) => !read.includes(a.id)).length;
+    }
+
+    toggleCampusAlerts(): void {
+        this.campusAlertsOpen = !this.campusAlertsOpen;
+        this.savedViewsOpen = false;
+        if (this.campusAlertsOpen) {
+            this.markCampusAlertsRead();
+        }
+    }
+
+    private campusAlertScopeKey(): string {
+        const s = this.districtContext.selection;
+        return [
+            s.districtId ?? '',
+            s.academicYearId ?? '',
+            s.quarterCode ?? '',
+            this.campusCategoryRouteId ?? '',
+        ].join('|');
+    }
+
+    private markCampusAlertsRead(): void {
+        this.ensureReadAlertsLoaded();
+        this.readAlertsByScope[this.campusAlertScopeKey()] = this.campusLevelAlerts.map((a) => a.id);
+        try {
+            localStorage.setItem(
+                this.readAlertsStorageKey(),
+                JSON.stringify(this.readAlertsByScope),
+            );
+        } catch {
+            /* storage unavailable — read state stays in memory for this session */
+        }
+    }
+
+    private ensureReadAlertsLoaded(): void {
+        const key = this.readAlertsStorageKey();
+        if (this.readAlertsLoadedKey === key) {
+            return;
+        }
+        this.readAlertsLoadedKey = key;
+        try {
+            const raw = localStorage.getItem(key);
+            const parsed = raw ? JSON.parse(raw) : {};
+            this.readAlertsByScope =
+                parsed && typeof parsed === 'object' ? (parsed as Record<string, string[]>) : {};
+        } catch {
+            this.readAlertsByScope = {};
+        }
+    }
+
+    private readAlertsStorageKey(): string {
+        const userId = this.auth.getCurrentUser()?.userId ?? 'anonymous';
+        return `${GrowthOverviewPageComponent.READ_ALERTS_KEY_PREFIX}:${userId}`;
+    }
+
+    /** Switch level tabs without losing the current year/window (stored in district context). */
+    openCampusLevelTab(tab: CampusLevelTabVm): void {
+        if (tab.campusCategoryId === this.campusCategoryRouteId) {
+            return;
+        }
+        this.closeCampusHeaderPopovers();
+        this.router.navigate(['/dashboard/campus-category', tab.campusCategoryId]);
+    }
+
+    /** Reload the page's own data with the current selectors. */
+    refreshCampusLevelData(): void {
+        if (this.campusLevelRefreshing) {
+            return;
+        }
+        this.campusLevelRefreshing = true;
+        this.metricsLoadReset$.next();
+        this.loadDashboardMetrics(this.route.snapshot.paramMap);
+        setTimeout(() => {
+            this.campusLevelRefreshing = false;
+            this.cdr.markForCheck();
+        }, 900);
+    }
+
+    /** Help icon — hands off to the portal's existing AI assistant. */
+    openCampusLevelHelp(): void {
+        window.dispatchEvent(
+            new CustomEvent('simplify-ai-prompt', {
+                detail: { prompt: `Help me understand the ${this.campusLevelTitle} page` },
+            }),
+        );
+    }
+
+    closeCampusHeaderPopovers(): void {
+        this.campusSearchOpen = false;
+        this.campusAlertsOpen = false;
+        this.savedViewsOpen = false;
+    }
+
+    // ----- Saved views (per signed-in user, per district) -----
+
+    toggleSavedViews(): void {
+        this.ensureSavedViewsLoaded();
+        this.savedViewsOpen = !this.savedViewsOpen;
+        this.campusAlertsOpen = false;
+        this.campusSearchOpen = false;
+    }
+
+    saveCurrentCampusLevelView(): void {
+        const s = this.districtContext.selection;
+        const categoryId = this.campusCategoryRouteId;
+        if (s.districtId == null || categoryId == null) {
+            return;
+        }
+        this.ensureSavedViewsLoaded();
+        const view: SavedCampusLevelView = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            districtId: s.districtId,
+            academicYearId: s.academicYearId,
+            quarterCode: s.quarterCode,
+            campusCategoryId: categoryId,
+            filters: structuredClone(this.districtContext.growthFilters),
+            savedAt: new Date().toISOString(),
+        };
+        const signature = this.campusViewSignature(view);
+        const existing = this.savedCampusLevelViews.find(
+            (v) => this.campusViewSignature(v) === signature,
+        );
+        this.savedCampusLevelViews = existing
+            ? [existing, ...this.savedCampusLevelViews.filter((v) => v.id !== existing.id)]
+            : [view, ...this.savedCampusLevelViews].slice(0, 12);
+        this.persistSavedViews();
+        this.savedViewsOpen = true;
+        this.campusAlertsOpen = false;
+        this.campusSearchOpen = false;
+        this.campusViewSavedFlash = true;
+        setTimeout(() => {
+            this.campusViewSavedFlash = false;
+            this.cdr.markForCheck();
+        }, 1800);
+        this.cdr.markForCheck();
+    }
+
+    applySavedCampusLevelView(view: SavedCampusLevelView): void {
+        this.savedViewsOpen = false;
+        const s = this.districtContext.selection;
+        if (s.districtId !== view.districtId) {
+            this.districtContext.setDistrictId(view.districtId);
+        }
+        this.districtContext.setAcademicYearId(view.academicYearId);
+        this.districtContext.setQuarterCode(view.quarterCode);
+        this.districtContext.setGrowthFilters(structuredClone(view.filters));
+        if (view.campusCategoryId !== this.campusCategoryRouteId) {
+            this.router.navigate(['/dashboard/campus-category', view.campusCategoryId]);
+        }
+        this.cdr.markForCheck();
+    }
+
+    deleteSavedCampusLevelView(event: Event, view: SavedCampusLevelView): void {
+        event.stopPropagation();
+        this.savedCampusLevelViews = this.savedCampusLevelViews.filter((v) => v.id !== view.id);
+        this.persistSavedViews();
+    }
+
+    savedViewLabel(view: SavedCampusLevelView): string {
+        const year =
+            this.districtContext.academicYears.find((y) => y.academicYearId === view.academicYearId)
+                ?.yearLabel ?? '—';
+        const quarter = this.districtContext.districtQuarters.find(
+            (q) => q.quarterCode === view.quarterCode,
+        );
+        const windowLabel = quarter
+            ? this.districtContext.quarterDisplayLabel(quarter)
+            : view.quarterCode || '—';
+        const rawCategory =
+            this.districtContext.campusCategories.find(
+                (c) => c.campusCategoryId === view.campusCategoryId,
+            )?.categoryName ?? '';
+        const category = this.campusLevelBaseName(rawCategory) || 'Level';
+        return `${category} · ${year} · ${windowLabel}`;
+    }
+
+    savedViewFilterCount(view: SavedCampusLevelView): number {
+        const f = view.filters;
+        return (
+            (f.campusId != null ? 1 : 0) +
+            (f.grades?.length ?? 0) +
+            (f.subjects?.length ?? 0) +
+            (f.specialEducation != null ? 1 : 0) +
+            (f.economicDisadvantage != null ? 1 : 0) +
+            (f.emergentBilingual != null ? 1 : 0) +
+            (f.ethnicity != null ? 1 : 0) +
+            (f.testLanguage != null ? 1 : 0)
+        );
+    }
+
+    private campusViewSignature(view: SavedCampusLevelView): string {
+        return JSON.stringify([
+            view.academicYearId,
+            view.quarterCode,
+            view.campusCategoryId,
+            view.filters,
+        ]);
+    }
+
+    private ensureSavedViewsLoaded(): void {
+        const key = this.savedViewsStorageKey();
+        if (this.savedViewsLoadedKey === key) {
+            return;
+        }
+        this.savedViewsLoadedKey = key;
+        try {
+            const raw = localStorage.getItem(key);
+            const parsed = raw ? JSON.parse(raw) : [];
+            this.savedCampusLevelViews = Array.isArray(parsed)
+                ? (parsed as SavedCampusLevelView[])
+                : [];
+        } catch {
+            this.savedCampusLevelViews = [];
+        }
+    }
+
+    private persistSavedViews(): void {
+        try {
+            localStorage.setItem(
+                this.savedViewsStorageKey(),
+                JSON.stringify(this.savedCampusLevelViews),
+            );
+        } catch {
+            /* storage unavailable — keep the in-memory list */
+        }
+    }
+
+    private savedViewsStorageKey(): string {
+        const userId = this.auth.getCurrentUser()?.userId ?? 'anonymous';
+        const districtId = this.districtContext.selection.districtId ?? 'none';
+        return `${GrowthOverviewPageComponent.SAVED_VIEWS_KEY_PREFIX}:${userId}:${districtId}`;
     }
 
     /** Main district dashboard (`/dashboard`); not campus or campus-category drill-down. */
@@ -1304,6 +1809,1338 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         });
     }
 
+    // ==================================================================
+    // Aurora v2 — DISTRICT OVERVIEW (District Admin, own district only)
+    // Presentation + joins over data this page already loads: overall
+    // metrics, campus metrics, attendance, CCMR and student counts.
+    // ==================================================================
+
+    private static readonly DISTRICT_OVERVIEW_VIEWS_KEY_PREFIX = 'simplify_district_overview_views';
+    private static readonly DISTRICT_OVERVIEW_DISMISSED_KEY_PREFIX =
+        'simplify_district_overview_dismissed';
+
+    /** Same goal the Attendance page shows ("District Goal 95%"). */
+    readonly districtOverviewAttendanceGoal = 95;
+
+    districtOverviewSearchQuery = '';
+    districtOverviewSearchOpen = false;
+    districtOverviewSavedViewsOpen = false;
+    districtOverviewYearMenuOpen = false;
+    districtOverviewHighlightedQuadrant: string | null = null;
+    districtOverviewSavedFlash = false;
+    districtOverviewRefreshing = false;
+    districtOverviewLevelFilter: string | null = null;
+    districtOverviewBoardLevelFilter: string | null = null;
+    districtOverviewLeaderSort: 'staar' | 'growth' = 'staar';
+
+    /** Monthly attendance + CCMR rates for the District Admin extras. */
+    districtOverviewMonthlyStats: MonthlyAttendanceStatDto[] = [];
+    districtOverviewCcmrMonthlyRates: CcmrDistrictMonthRateDto[] = [];
+    districtOverviewExtrasLoading = false;
+    districtOverviewFundingAtRiskYtd: number | null = null;
+
+    savedDistrictOverviewViews: DistrictOverviewSavedView[] = [];
+    private districtOverviewSavedViewsLoadedKey = '';
+    private districtOverviewDismissedLoadedKey = '';
+    private districtOverviewDismissedByScope: Record<string, string[]> = {};
+
+    /** Full campus-metrics rows behind the ranking (id/code kept for joins). */
+    private districtOverviewCampusMetricRows: Array<{
+        campusId: number | null;
+        campusCode: string;
+        campusName: string;
+        cs: number | null;
+        growth: number | null;
+    }> = [];
+
+    /** True only on the plain district dashboard for a District Admin session. */
+    get isDistrictAdminOverview(): boolean {
+        return this.isDistrictAdminRole() && this.isDistrictHomeDashboard && this.isOnPlainDashboardPath();
+    }
+
+    get districtOverviewDistrictName(): string {
+        const id = this.districtContext.selection.districtId;
+        return (
+            this.districtContext.districts.find((d) => d.districtId === id)?.districtName ??
+            'District'
+        );
+    }
+
+    get districtOverviewYearLabel(): string {
+        return this.campusLevelYearLabel;
+    }
+
+    get districtOverviewWindowLabel(): string {
+        return this.campusLevelWindowLabel;
+    }
+
+    get districtOverviewWindowYearPill(): string {
+        return `${this.districtOverviewWindowLabel} · ${this.districtOverviewYearLabel}`;
+    }
+
+    /** Q1–Q4 buttons over the district's active assessment periods. */
+    get districtOverviewQuarterOptions(): Array<{
+        code: string;
+        label: string;
+        windowLabel: string;
+    }> {
+        return [...this.districtContext.districtQuarters]
+            .sort(
+                (a, b) =>
+                    (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
+                    (a.startDate || '').localeCompare(b.startDate || ''),
+            )
+            .map((quarter, index) => ({
+                code: quarter.quarterCode,
+                label: `Q${index + 1}`,
+                windowLabel: this.districtContext.quarterDisplayLabel(quarter),
+            }));
+    }
+
+    get districtOverviewSelectedQuarterCode(): string | null {
+        return this.districtContext.selection.quarterCode;
+    }
+
+    /** Short period label used inside the hero pill. */
+    get districtOverviewQuarterShortLabel(): string {
+        const code = this.districtOverviewSelectedQuarterCode;
+        return (
+            this.districtOverviewQuarterOptions.find((option) => option.code === code)?.label ??
+            this.districtOverviewWindowLabel
+        );
+    }
+
+    selectDistrictOverviewQuarter(code: string): void {
+        this.districtOverviewYearMenuOpen = false;
+        if (code !== this.districtOverviewSelectedQuarterCode) {
+            this.districtContext.setQuarterCode(code);
+        }
+    }
+
+    get districtOverviewUserName(): string {
+        const user = this.auth.getCurrentUser();
+        if (!user) {
+            return 'User';
+        }
+        const name = user.displayName?.trim();
+        if (name) {
+            return name;
+        }
+        const local = user.email?.split('@')[0]?.trim();
+        return local || 'User';
+    }
+
+    get districtOverviewUserInitial(): string {
+        return (this.districtOverviewUserName.trim().charAt(0) || 'U').toUpperCase();
+    }
+
+    get districtOverviewThemeIsDark(): boolean {
+        return this.store?.theme === 'dark';
+    }
+
+    toggleDistrictOverviewTheme(): void {
+        this.storeData.dispatch({
+            type: 'toggleTheme',
+            payload: this.districtOverviewThemeIsDark ? 'light' : 'dark',
+        });
+    }
+
+    get districtOverviewPopoversOpen(): boolean {
+        return (
+            this.districtOverviewSearchOpen ||
+            this.districtOverviewSavedViewsOpen ||
+            this.districtOverviewYearMenuOpen
+        );
+    }
+
+    closeDistrictOverviewPopovers(): void {
+        this.districtOverviewSearchOpen = false;
+        this.districtOverviewSavedViewsOpen = false;
+        this.districtOverviewYearMenuOpen = false;
+    }
+
+    toggleDistrictOverviewYearMenu(): void {
+        this.districtOverviewYearMenuOpen = !this.districtOverviewYearMenuOpen;
+        this.districtOverviewSearchOpen = false;
+        this.districtOverviewSavedViewsOpen = false;
+    }
+
+    selectDistrictOverviewYear(academicYearId: number | null): void {
+        this.districtOverviewYearMenuOpen = false;
+        if (academicYearId !== this.districtContext.selection.academicYearId) {
+            this.districtContext.setAcademicYearId(academicYearId);
+        }
+    }
+
+    refreshDistrictOverview(): void {
+        if (this.districtOverviewRefreshing) {
+            return;
+        }
+        this.districtOverviewRefreshing = true;
+        this.metricsLoadReset$.next();
+        this.loadDashboardMetrics(this.route.snapshot.paramMap);
+        setTimeout(() => {
+            this.districtOverviewRefreshing = false;
+            this.cdr.markForCheck();
+        }, 900);
+    }
+
+    scrollToDistrictAttention(): void {
+        const el = document.getElementById('dov-attention');
+        el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ----- Header search (district campuses + loaded student rows) -----
+
+    onDistrictOverviewSearchInput(): void {
+        this.districtOverviewSearchOpen = !!this.districtOverviewSearchQuery.trim();
+        this.districtOverviewSavedViewsOpen = false;
+    }
+
+    clearDistrictOverviewSearch(): void {
+        this.districtOverviewSearchQuery = '';
+        this.districtOverviewSearchOpen = false;
+    }
+
+    get districtOverviewCampusResults(): Campus[] {
+        const q = this.districtOverviewSearchQuery.trim().toLowerCase();
+        if (!q) {
+            return [];
+        }
+        return this.districtContext.campuses
+            .filter((c) => `${c.campusName} ${c.campusCode}`.toLowerCase().includes(q))
+            .sort((a, b) => (a.campusName || '').localeCompare(b.campusName || ''))
+            .slice(0, 6);
+    }
+
+    get districtOverviewStudentResults(): DistrictAdminStudentRow[] {
+        const q = this.districtOverviewSearchQuery.trim().toLowerCase();
+        if (!q) {
+            return [];
+        }
+        return this.districtAdminAllStudents
+            .filter((s) =>
+                `${s.name} ${s.campus} ${s.grade}`.toLowerCase().includes(q),
+            )
+            .slice(0, 6);
+    }
+
+    get districtOverviewSearchResultCount(): number {
+        return this.districtOverviewCampusResults.length + this.districtOverviewStudentResults.length;
+    }
+
+    openDistrictOverviewCampus(campus: Campus): void {
+        this.closeDistrictOverviewPopovers();
+        this.districtOverviewSearchQuery = '';
+        this.router.navigate(['/dashboard/campus', this.districtContext.campusRouteSlug(campus)]);
+    }
+
+    openDistrictOverviewCampusBySlug(slug: string): void {
+        this.closeDistrictOverviewPopovers();
+        if (!slug) {
+            return;
+        }
+        this.router.navigate(['/dashboard/campus', slug]);
+    }
+
+    openDistrictOverviewStudent(): void {
+        this.closeDistrictOverviewPopovers();
+        this.districtOverviewSearchQuery = '';
+        this.router.navigate(['/students']);
+    }
+
+    // ----- Campus rows joined from the page's existing campus-metrics payload -----
+
+    get districtOverviewCampusRows(): DistrictOverviewCampusVm[] {
+        const metrics = this.districtOverviewCampusMetricRows;
+        if (!metrics.length) {
+            return [];
+        }
+        const byId = new Map<number, (typeof metrics)[number]>();
+        const byCode = new Map<string, (typeof metrics)[number]>();
+        const byName = new Map<string, (typeof metrics)[number]>();
+        for (const row of metrics) {
+            if (row.campusId != null) {
+                byId.set(row.campusId, row);
+            }
+            if (row.campusCode) {
+                byCode.set(row.campusCode.toUpperCase(), row);
+            }
+            if (row.campusName) {
+                byName.set(row.campusName.trim().toLowerCase(), row);
+            }
+        }
+        const categories = this.districtContext.campusCategories;
+        return this.districtContext
+            .filterCampusesForActiveRole(this.districtContext.campuses)
+            .map((campus) => {
+                const metric =
+                    byId.get(campus.campusId) ??
+                    byCode.get((campus.campusCode || '').toUpperCase()) ??
+                    byName.get((campus.campusName || '').trim().toLowerCase());
+                const category = categories.find(
+                    (c) => c.campusCategoryId === campus.campusCategoryId,
+                );
+                const levelCode = (category?.categoryCode || '—').toUpperCase();
+                return {
+                    campusId: campus.campusId,
+                    campusCode: campus.campusCode || '',
+                    campusName: campus.campusName || campus.campusCode || 'Campus',
+                    shortCode: (campus.campusCode || campus.campusName || '—')
+                        .trim()
+                        .slice(0, 4)
+                        .toUpperCase(),
+                    slug: this.districtContext.campusRouteSlug(campus),
+                    levelCode,
+                    levelLabel: this.campusLevelBaseName(category?.categoryName || '') || levelCode,
+                    cs: metric?.cs ?? null,
+                    growth: metric?.growth ?? null,
+                };
+            })
+            .sort((a, b) => a.campusName.localeCompare(b.campusName));
+    }
+
+    get districtOverviewLevels(): DistrictOverviewLevelVm[] {
+        const categories = this.districtContext.campusCategories;
+        const campuses = this.districtContext.campuses;
+        const gradeRows = this.gradesByCategory ?? [];
+        return categories
+            .map((category) => {
+                const code = (category.categoryCode || '').toUpperCase();
+                const gradeRow = gradeRows.find(
+                    (r) => (r.categoryCode || '').trim().toUpperCase() === code,
+                );
+                const campusCount = campuses.filter(
+                    (c) => c.campusCategoryId === category.campusCategoryId,
+                ).length;
+                return {
+                    campusCategoryId: category.campusCategoryId,
+                    code,
+                    label: this.campusLevelBaseName(category.categoryName || '') || code,
+                    campusCount,
+                    cs: this.districtOverviewNumber(gradeRow?.cs),
+                    csGrade: this.districtOverviewGrade(gradeRow?.csGrade),
+                    growth: this.districtOverviewNumber(gradeRow?.growth),
+                    growthGrade: this.districtOverviewGrade(gradeRow?.growthGrade),
+                    link: `/dashboard/campus-category/${category.campusCategoryId}`,
+                };
+            })
+            .filter((row) => row.campusCount > 0)
+            .sort((a, b) => this.districtOverviewLevelRank(a.code) - this.districtOverviewLevelRank(b.code));
+    }
+
+    private districtOverviewLevelRank(code: string): number {
+        const order = ['ES', 'MS', 'HS'];
+        const idx = order.indexOf(code);
+        return idx < 0 ? 99 : idx;
+    }
+
+    private districtOverviewLevelColor(code: string): string {
+        if (code === 'ES') {
+            return '#A5B4FC';
+        }
+        if (code === 'MS') {
+            return '#5B3DF5';
+        }
+        if (code === 'HS') {
+            return '#11143A';
+        }
+        return '#5A6080';
+    }
+
+    private districtOverviewNumber(value: unknown): number | null {
+        if (value == null || value === '') {
+            return null;
+        }
+        const n = Number(value);
+        return Number.isFinite(n) ? n : null;
+    }
+
+    private districtOverviewGrade(value: unknown): string | null {
+        const text = typeof value === 'string' ? value.trim().toUpperCase() : '';
+        return text || null;
+    }
+
+    districtOverviewGradeArticle(grade: string | null | undefined): string {
+        const g = (grade ?? '').trim().toUpperCase();
+        return /^[AEIOUFLMNSX]$/.test(g) ? 'an' : 'a';
+    }
+
+    districtOverviewGradeClass(grade: string | null | undefined): string {
+        const g = (grade ?? '').trim().toUpperCase();
+        if (g === 'A') {
+            return 'dov-grade-a';
+        }
+        if (g === 'B') {
+            return 'dov-grade-b';
+        }
+        if (g === 'C') {
+            return 'dov-grade-c';
+        }
+        if (g === 'D') {
+            return 'dov-grade-d';
+        }
+        if (g === 'F') {
+            return 'dov-grade-f';
+        }
+        return 'dov-grade-none';
+    }
+
+    // ----- Section 2: navy hero -----
+
+    get districtOverviewCsScore(): number | null {
+        return this.gaugeNumber(this.mockComponentScore);
+    }
+
+    get districtOverviewGrowthScore(): number | null {
+        return this.gaugeNumber(this.mockGrowth);
+    }
+
+    get districtOverviewHeroScoreText(): string {
+        const score = this.districtOverviewCsScore;
+        return score == null ? '—' : String(Math.round(score));
+    }
+
+    get districtOverviewHeroGrowthText(): string {
+        const score = this.districtOverviewGrowthScore;
+        return score == null ? '—' : String(Math.round(score));
+    }
+
+    districtOverviewRingBackground(score: number | null): string {
+        const pct = score == null ? 0 : Math.min(100, Math.max(0, score));
+        return `conic-gradient(#A5B4FC ${pct}%, rgba(255, 255, 255, 0.12) ${pct}% 100%)`;
+    }
+
+    districtOverviewLevelGrades(measure: 'cs' | 'growth'): Array<{ label: string; grade: string | null }> {
+        return (this.gradesByCategory ?? [])
+            .map((row) => ({
+                label: (row.categoryCode || '').trim().toUpperCase(),
+                grade: this.districtOverviewGrade(
+                    measure === 'cs' ? row.csGrade : row.growthGrade,
+                ),
+            }))
+            .filter((row) => !!row.label);
+    }
+
+    get districtOverviewStudentsAcross(): number | null {
+        // The hero reports tested students (same count as the KPI card), not enrollment.
+        if (this.districtAdminStudentsLoading) {
+            return null;
+        }
+        return this.districtAdminStudentsCount;
+    }
+
+    get districtOverviewCampusCount(): number {
+        return this.districtContext.campuses.length;
+    }
+
+    get districtOverviewHeroLine(): string {
+        const students = this.districtOverviewStudentsAcross;
+        const campuses = this.districtOverviewCampusCount;
+        if (students == null) {
+            return 'Loading student counts…';
+        }
+        return `${students.toLocaleString('en-US')} students across ${campuses} campus${campuses === 1 ? '' : 'es'}.`;
+    }
+
+    get districtOverviewComparisonSentence(): string {
+        const cs = this.districtOverviewCsScore;
+        const growth = this.districtOverviewGrowthScore;
+        if (cs == null || growth == null) {
+            return '';
+        }
+        if (Math.abs(growth - cs) < 0.05) {
+            return 'Growth and achievement are level.';
+        }
+        return growth > cs
+            ? 'Growth is outpacing achievement.'
+            : 'Achievement is ahead of growth.';
+    }
+
+    get districtOverviewComparisonSubline(): string {
+        const levels = this.districtOverviewLevels.filter(
+            (l) => l.cs != null || l.growth != null,
+        );
+        if (!levels.length) {
+            return '';
+        }
+        const withCs = levels.filter((l) => l.cs != null);
+        const withGrowth = levels.filter((l) => l.growth != null);
+        const csLeader = withCs.length
+            ? withCs.reduce((best, row) => ((row.cs ?? -1) > (best.cs ?? -1) ? row : best))
+            : null;
+        const growthLeader = withGrowth.length
+            ? withGrowth.reduce((best, row) =>
+                  (row.growth ?? -1) > (best.growth ?? -1) ? row : best,
+              )
+            : null;
+        const gapLeader = levels
+            .filter((l) => l.cs != null && l.growth != null && (l.growth as number) < (l.cs as number))
+            .map((l) => ({ level: l, gap: (l.cs as number) - (l.growth as number) }))
+            .sort((a, b) => b.gap - a.gap)[0];
+
+        const lead =
+            csLeader && growthLeader && csLeader.code === growthLeader.code
+                ? `${csLeader.label} schools lead on both measures.`
+                : '';
+        const lever = gapLeader
+            ? `${gapLeader.level.label} growth is the district's biggest lever in the ${this.districtOverviewWindowLabel} window.`
+            : '';
+        return [lead, lever].filter(Boolean).join(' ');
+    }
+
+    // ----- Section 3: "Needs your attention" -----
+
+    get districtOverviewAlerts(): DistrictOverviewAlertVm[] {
+        if (!this.districtContext.bootstrapLoaded || this.campusChartLoading) {
+            return [];
+        }
+        const alerts: DistrictOverviewAlertVm[] = [];
+        const rows = this.districtOverviewCampusRows;
+        const csAvg = this.districtOverviewMean(rows, 'cs');
+        const growthAvg = this.districtOverviewMean(rows, 'growth');
+        const goal = this.districtOverviewAttendanceGoal;
+
+        const ada = this.attendanceGaugeValue;
+        if (ada != null && ada < goal && !this.attendanceSummaryLoading) {
+            const gap = goal - ada;
+            const funding =
+                this.districtOverviewFundingAtRiskYtd != null
+                    ? this.districtOverviewUsdCompact(this.districtOverviewFundingAtRiskYtd)
+                    : null;
+            alerts.push({
+                id: 'attendance-funding',
+                category: 'FUNDING RISK',
+                title: `Attendance is ${gap.toFixed(1)} pt below goal`,
+                detail: `District ADA is ${ada.toFixed(1)}% against a ${goal}% goal.${funding ? ` About ${funding} in funding is at risk this year.` : ''}`,
+                metrics: [
+                    `${ada.toFixed(1)}% ADA`,
+                    `Goal ${goal}%`,
+                    funding ? `${funding} at risk` : 'Funding impact unavailable',
+                ],
+                actionLabel: 'Review attendance',
+                actionLink: '/attendance',
+            });
+        }
+
+        const levels = this.districtOverviewLevels.filter((l) => l.growth != null);
+        if (levels.length > 1) {
+            const lowest = levels.reduce((best, row) =>
+                (row.growth ?? 999) < (best.growth ?? 999) ? row : best,
+            );
+            const growthValue = lowest.growth as number;
+            const grade = lowest.growthGrade;
+            const gradePhrase = grade ? `${this.districtOverviewGradeArticle(grade)} ${grade}` : null;
+            const contrast =
+                lowest.csGrade != null
+                    ? `even though their STAAR score is ${this.districtOverviewGradeArticle(lowest.csGrade)} ${lowest.csGrade}.`
+                    : lowest.cs != null
+                      ? `with a STAAR score of ${lowest.cs.toFixed(1)}.`
+                      : '';
+            const detailBase = `${lowest.label} schools score ${growthValue.toFixed(1)} in growth, the lowest of any level`;
+            const detail = contrast ? `${detailBase}, ${contrast}` : `${detailBase}.`;
+            alerts.push({
+                id: `level-growth-${lowest.code}`,
+                category: 'GROWTH',
+                title: gradePhrase
+                    ? `${lowest.label} school growth is ${gradePhrase}`
+                    : `${lowest.label} schools have the lowest growth`,
+                detail: `${detailBase}, ${contrast}`,
+                metrics: [
+                    `${growthValue.toFixed(1)} growth`,
+                    lowest.csGrade ? `STAAR ${lowest.csGrade}` : 'STAAR unavailable',
+                ],
+                actionLabel: `Open ${lowest.label} schools`,
+                actionLink: lowest.link,
+            });
+        }
+
+        const scoredCampuses = rows.filter((r) => r.cs != null);
+        if (scoredCampuses.length) {
+            const lowestCampus = scoredCampuses.reduce((best, row) =>
+                (row.cs ?? 999) < (best.cs ?? 999) ? row : best,
+            );
+            const cs = lowestCampus.cs as number;
+            const diff =
+                csAvg != null ? (csAvg - cs) : null;
+            const growthContrast =
+                lowestCampus.growth != null && growthAvg != null
+                    ? Math.abs(lowestCampus.growth - growthAvg) <= 5
+                        ? `, though its growth (${lowestCampus.growth.toFixed(1)}) is close to average`
+                        : `, with growth of ${lowestCampus.growth.toFixed(1)}`
+                    : '';
+            alerts.push({
+                id: `campus-staar-${lowestCampus.campusCode || lowestCampus.slug}`,
+                category: 'ACHIEVEMENT',
+                title: `${lowestCampus.campusName} has the lowest STAAR score`,
+                detail:
+                    diff != null && diff > 0
+                        ? `At ${cs.toFixed(1)}, it is ${diff.toFixed(1)} pts below the district average of ${(csAvg as number).toFixed(1)}${growthContrast}.`
+                        : `Its STAAR score is ${cs.toFixed(1)} for this window${growthContrast}.`,
+                metrics: [
+                    `STAAR ${cs.toFixed(1)}`,
+                    diff != null && diff > 0 ? `${diff.toFixed(1)} pts below avg` : 'District average unavailable',
+                ],
+                actionLabel: 'Open campus',
+                actionLink: `/dashboard/campus/${lowestCampus.slug}`,
+            });
+        }
+
+        if (csAvg != null && growthAvg != null) {
+            const belowAverage = rows
+                .filter(
+                    (r) =>
+                        r.cs != null &&
+                        r.growth != null &&
+                        (r.cs as number) >= csAvg &&
+                        (r.growth as number) < growthAvg,
+                )
+                .map((r) => ({
+                    row: r,
+                    gap: (r.cs as number) - (r.growth as number),
+                }))
+                .sort((a, b) => b.gap - a.gap)[0];
+            const globalLowestGrowth = rows
+                .filter((r) => r.growth != null)
+                .reduce<number | null>(
+                    (min, r) => (min == null || (r.growth as number) < min ? (r.growth as number) : min),
+                    null,
+                );
+            if (belowAverage) {
+                const row = belowAverage.row;
+                const growth = row.growth as number;
+                const scope =
+                    globalLowestGrowth != null && Math.abs(growth - globalLowestGrowth) < 0.05
+                        ? 'the lowest growth of any campus'
+                        : 'the lowest growth among campuses at or above the district STAAR average';
+                alerts.push({
+                    id: `campus-stalling-${row.campusCode || row.slug}`,
+                    category: 'GROWTH',
+                    title: `${row.campusName} is stalling`,
+                    detail: `High STAAR score (${(row.cs as number).toFixed(1)}) but ${scope} (${growth.toFixed(1)}).`,
+                    metrics: [
+                        `STAAR ${(row.cs as number).toFixed(1)}`,
+                        `Growth ${growth.toFixed(1)}`,
+                    ],
+                    actionLabel: 'Open campus',
+                    actionLink: `/dashboard/campus/${row.slug}`,
+                });
+            }
+        }
+
+        return alerts.slice(0, 4);
+    }
+
+    get districtOverviewVisibleAlerts(): DistrictOverviewAlertVm[] {
+        const dismissed = this.districtOverviewDismissedIds();
+        return this.districtOverviewAlerts.filter((a) => !dismissed.includes(a.id));
+    }
+
+    get districtOverviewOpenAlertCount(): number {
+        return this.districtOverviewVisibleAlerts.length;
+    }
+
+    dismissDistrictOverviewAlert(event: Event, alert: DistrictOverviewAlertVm): void {
+        event.stopPropagation();
+        this.ensureDistrictOverviewDismissedLoaded();
+        const scope = this.districtOverviewScopeKey();
+        const current = this.districtOverviewDismissedByScope[scope] ?? [];
+        if (!current.includes(alert.id)) {
+            this.districtOverviewDismissedByScope[scope] = [...current, alert.id];
+            try {
+                localStorage.setItem(
+                    this.districtOverviewDismissedStorageKey(),
+                    JSON.stringify(this.districtOverviewDismissedByScope),
+                );
+            } catch {
+                /* storage unavailable — dismissal stays for this session */
+            }
+        }
+        this.cdr.markForCheck();
+    }
+
+    private districtOverviewScopeKey(): string {
+        const s = this.districtContext.selection;
+        return [s.districtId ?? '', s.academicYearId ?? '', s.quarterCode ?? ''].join('|');
+    }
+
+    private districtOverviewDismissedIds(): string[] {
+        this.ensureDistrictOverviewDismissedLoaded();
+        return this.districtOverviewDismissedByScope[this.districtOverviewScopeKey()] ?? [];
+    }
+
+    private ensureDistrictOverviewDismissedLoaded(): void {
+        const key = this.districtOverviewDismissedStorageKey();
+        if (this.districtOverviewDismissedLoadedKey === key) {
+            return;
+        }
+        this.districtOverviewDismissedLoadedKey = key;
+        try {
+            const raw = localStorage.getItem(key);
+            const parsed = raw ? JSON.parse(raw) : {};
+            this.districtOverviewDismissedByScope =
+                parsed && typeof parsed === 'object'
+                    ? (parsed as Record<string, string[]>)
+                    : {};
+        } catch {
+            this.districtOverviewDismissedByScope = {};
+        }
+    }
+
+    private districtOverviewDismissedStorageKey(): string {
+        const userId = this.auth.getCurrentUser()?.userId ?? 'anonymous';
+        return `${GrowthOverviewPageComponent.DISTRICT_OVERVIEW_DISMISSED_KEY_PREFIX}:${userId}`;
+    }
+
+    private districtOverviewMean(
+        rows: DistrictOverviewCampusVm[],
+        key: 'cs' | 'growth',
+    ): number | null {
+        const values = rows
+            .map((r) => r[key])
+            .filter((v): v is number => v != null && Number.isFinite(v));
+        return values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
+    }
+
+    private districtOverviewUsd(value: number): string {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            maximumFractionDigits: 0,
+        }).format(value);
+    }
+
+    private districtOverviewUsdCompact(value: number): string {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: 'USD',
+            notation: 'compact',
+            maximumFractionDigits: 2,
+        }).format(value);
+    }
+
+    districtOverviewAlertTagClass(category: string): string {
+        const key = (category || '').trim().toUpperCase();
+        if (key.includes('FUNDING')) {
+            return 'dov-cat-red';
+        }
+        if (key.includes('ACHIEVEMENT')) {
+            return 'dov-cat-amber';
+        }
+        if (key.includes('GROWTH')) {
+            return 'dov-cat-violet';
+        }
+        return 'dov-cat-navy';
+    }
+
+    // ----- Section 4: KPI strip -----
+
+    get districtOverviewStudentsTestedText(): string {
+        if (this.districtAdminStudentsLoading) {
+            return '—';
+        }
+        return this.districtAdminStudentsCount.toLocaleString('en-US');
+    }
+
+    get districtOverviewStudentsTestedSub(): string {
+        const campuses = this.districtOverviewCampusRows.filter((r) => r.cs != null).length;
+        const levels = this.districtOverviewLevels.filter(
+            (l) => l.cs != null || l.growth != null,
+        ).length;
+        if (!campuses) {
+            return 'No tested campuses for this window';
+        }
+        return `${campuses} campuses · ${levels} level${levels === 1 ? '' : 's'}`;
+    }
+
+    get districtOverviewAttendanceText(): string {
+        return this.mockAttendancePct === '—' ? '—' : `${this.mockAttendancePct}%`;
+    }
+
+    get districtOverviewFundingAtRiskText(): string {
+        return this.districtOverviewFundingAtRiskYtd != null
+            ? `${this.districtOverviewUsdCompact(this.districtOverviewFundingAtRiskYtd)} funding at risk YTD`
+            : 'Funding impact unavailable';
+    }
+
+    get districtOverviewCcmrText(): string {
+        return this.ccmrRatePct != null ? `${this.ccmrRatePct.toFixed(1)}%` : '—';
+    }
+
+    get districtOverviewCcmrDelta(): number | null {
+        const quarters = [...this.districtContext.districtQuarters].sort(
+            (a, b) =>
+                (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
+                (a.startDate || '').localeCompare(b.startDate || ''),
+        );
+        const code = this.districtContext.selection.quarterCode;
+        if (!code || !quarters.length || !this.districtOverviewCcmrMonthlyRates.length) {
+            return null;
+        }
+        const index = quarters.findIndex((q) => q.quarterCode === code);
+        if (index <= 0) {
+            return null;
+        }
+        const current = this.districtOverviewCcmrWindowRate(quarters[index]);
+        const previous = this.districtOverviewCcmrWindowRate(quarters[index - 1]);
+        if (current == null || previous == null) {
+            return null;
+        }
+        return current - previous;
+    }
+
+    get districtOverviewCcmrDeltaText(): string {
+        const delta = this.districtOverviewCcmrDelta;
+        if (delta == null) {
+            return 'No prior window data';
+        }
+        const sign = delta > 0 ? '+' : '';
+        return `${sign}${delta.toFixed(1)} pts vs prior window`;
+    }
+
+    get districtOverviewCcmrSubline(): string {
+        const quarters = [...this.districtContext.districtQuarters].sort(
+            (a, b) =>
+                (a.sortOrder ?? 0) - (b.sortOrder ?? 0) ||
+                (a.startDate || '').localeCompare(b.startDate || ''),
+        );
+        const code = this.districtContext.selection.quarterCode;
+        const index = quarters.findIndex((q) => q.quarterCode === code);
+        if (index <= 0) {
+            return this.districtOverviewWindowLabel;
+        }
+        const current = this.districtContext.quarterDisplayLabel(quarters[index]);
+        const previous = this.districtContext.quarterDisplayLabel(quarters[index - 1]);
+        return `${current} vs ${previous}`;
+    }
+
+    private districtOverviewCcmrWindowRate(quarter: DistrictQuarter): number | null {
+        const months = this.districtOverviewMonthsInQuarter(quarter);
+        if (!months.length) {
+            return null;
+        }
+        const values = this.districtOverviewCcmrMonthlyRates
+            .filter((row) =>
+                months.includes((row.month || '').trim()),
+            )
+            .map((row) => this.districtOverviewNumber(row.ccmrRate))
+            .filter((v): v is number => v != null);
+        if (!values.length) {
+            return null;
+        }
+        return values.reduce((sum, v) => sum + v, 0) / values.length;
+    }
+
+    /** Month names whose 15th falls inside the quarter (monthly rates are per calendar month). */
+    private districtOverviewMonthsInQuarter(quarter: DistrictQuarter): string[] {
+        if (!quarter.startDate || !quarter.endDate) {
+            return [];
+        }
+        const names = [
+            'January',
+            'February',
+            'March',
+            'April',
+            'May',
+            'June',
+            'July',
+            'August',
+            'September',
+            'October',
+            'November',
+            'December',
+        ];
+        const parse = (value: string): number[] | null => {
+            const parts = value.slice(0, 10).split('-').map((p) => Number(p));
+            return parts.length === 3 && parts.every((p) => Number.isFinite(p)) ? parts : null;
+        };
+        const start = parse(quarter.startDate);
+        const end = parse(quarter.endDate);
+        if (!start || !end) {
+            return [];
+        }
+        const startUtc = Date.UTC(start[0], start[1] - 1, 1);
+        const endUtc = Date.UTC(end[0], end[1] - 1, 1);
+        const out: string[] = [];
+        for (let cursor = startUtc; cursor <= endUtc; ) {
+            const d = new Date(cursor);
+            const year = d.getUTCFullYear();
+            const month = d.getUTCMonth();
+            const mid = Date.UTC(year, month, 15);
+            if (mid >= Date.UTC(start[0], start[1] - 1, start[2]) &&
+                mid <= Date.UTC(end[0], end[1] - 1, end[2])) {
+                out.push(names[month]);
+            }
+            cursor = Date.UTC(year, month + 1, 1);
+        }
+        return out;
+    }
+
+    get districtOverviewGradText(): string {
+        return this.gradRatePct != null ? `${this.gradRatePct.toFixed(1)}%` : '—';
+    }
+
+    get districtOverviewGradDeltaText(): string {
+        return 'No prior window data';
+    }
+
+    get districtOverviewGradClassLabel(): string {
+        const label = this.districtOverviewYearLabel;
+        const end = label.includes('-') ? label.split('-')[1]?.trim() : label;
+        return `Class of ${end || '—'} projection`;
+    }
+
+    // ----- Section 5: campus map + performance levels -----
+
+    get districtOverviewLevelFilters(): Array<{ code: string; label: string; count: number }> {
+        return this.districtOverviewLevels.map((l) => ({
+            code: l.code,
+            label: l.label,
+            count: l.campusCount,
+        }));
+    }
+
+    setDistrictOverviewLevelFilter(code: string | null): void {
+        this.districtOverviewLevelFilter = code;
+        this.cdr.markForCheck();
+    }
+
+    setDistrictOverviewBoardLevelFilter(code: string | null): void {
+        this.districtOverviewBoardLevelFilter = code;
+        this.cdr.markForCheck();
+    }
+
+    isDistrictOverviewBoardLevelActive(code: string): boolean {
+        return this.districtOverviewBoardLevelFilter === code;
+    }
+
+    get districtOverviewBoardLevelLabel(): string {
+        const code = this.districtOverviewBoardLevelFilter;
+        if (!code) {
+            return 'All levels';
+        }
+        const level = this.districtOverviewLevels.find((l) => l.code === code);
+        return level ? `${level.label} schools` : 'All levels';
+    }
+
+    get districtOverviewBoardRows(): DistrictOverviewCampusVm[] {
+        const code = this.districtOverviewBoardLevelFilter;
+        return code
+            ? this.districtOverviewCampusRows.filter((r) => r.levelCode === code)
+            : this.districtOverviewCampusRows;
+    }
+
+    isDistrictOverviewLevelActive(code: string): boolean {
+        return this.districtOverviewLevelFilter === code;
+    }
+
+    get districtOverviewLevelFilteredRows(): DistrictOverviewCampusVm[] {
+        const code = this.districtOverviewLevelFilter;
+        return code
+            ? this.districtOverviewCampusRows.filter((r) => r.levelCode === code)
+            : this.districtOverviewCampusRows;
+    }
+
+    get districtOverviewPerformanceBands(): Array<{
+        label: string;
+        value: number | null;
+        text: string;
+    }> {
+        return [
+            { label: 'Approaches', value: this.gaugeNumber(this.mockApp) },
+            { label: 'Meets', value: this.gaugeNumber(this.mockMeet) },
+            { label: 'Masters', value: this.gaugeNumber(this.mockMaster) },
+        ].map((band) => ({
+            ...band,
+            text: band.value == null ? '—' : `${band.value.toFixed(1)}%`,
+        }));
+    }
+
+    /** Compact APP / MEET / MASTER columns shown in the hero's third panel. */
+    get districtOverviewHeroBands(): Array<{
+        label: string;
+        text: string;
+        value: number | null;
+    }> {
+        const short: Record<string, string> = {
+            Approaches: 'APP',
+            Meets: 'MEET',
+            Masters: 'MASTER',
+        };
+        return this.districtOverviewPerformanceBands.map((band) => ({
+            label: short[band.label] ?? band.label.toUpperCase().slice(0, 4),
+            text: band.text,
+            value: band.value,
+        }));
+    }
+
+    get districtOverviewHighSchoolLink(): string {
+        return '/academies/ccmr';
+    }
+
+    get districtOverviewScatter(): {
+        points: DistrictOverviewScatterPointVm[];
+        avgX: number | null;
+        avgY: number | null;
+        avgXLine: number | null;
+        avgYLine: number | null;
+        hasData: boolean;
+    } {
+        const rows = this.districtOverviewCampusRows;
+        const allX = rows.map((r) => r.cs).filter((v): v is number => v != null);
+        const allY = rows.map((r) => r.growth).filter((v): v is number => v != null);
+        const xDomain = this.districtOverviewDomain(allX);
+        const yDomain = this.districtOverviewDomain(allY);
+        const left = 46;
+        const right = 648;
+        const top = 18;
+        const bottom = 292;
+        const plotW = right - left;
+        const plotH = bottom - top;
+        const xFor = (value: number): number =>
+            left + ((value - xDomain.min) / Math.max(0.001, xDomain.max - xDomain.min)) * plotW;
+        const yFor = (value: number): number =>
+            top + ((yDomain.max - value) / Math.max(0.001, yDomain.max - yDomain.min)) * plotH;
+
+        const avgX = allX.length ? allX.reduce((a, b) => a + b, 0) / allX.length : null;
+        const avgY = allY.length ? allY.reduce((a, b) => a + b, 0) / allY.length : null;
+
+        const points: DistrictOverviewScatterPointVm[] = this.districtOverviewLevelFilteredRows
+            .filter((r) => r.cs != null && r.growth != null)
+            .map((r) => ({
+                key: `${r.campusId ?? r.campusCode}-${r.campusName}`,
+                label: r.shortCode,
+                name: r.campusName,
+                levelCode: r.levelCode,
+                cs: r.cs as number,
+                growth: r.growth as number,
+                x: xFor(r.cs as number),
+                y: yFor(r.growth as number),
+                color: this.districtOverviewLevelColor(r.levelCode),
+                slug: r.slug,
+                quadrantKey:
+                    avgX != null && avgY != null
+                        ? this.districtOverviewQuadrantKey(
+                              r.cs as number,
+                              r.growth as number,
+                              avgX,
+                              avgY,
+                          )
+                        : '',
+            }));
+
+        return {
+            points,
+            avgX,
+            avgY,
+            avgXLine: avgX != null ? xFor(avgX) : null,
+            avgYLine: avgY != null ? yFor(avgY) : null,
+            hasData: points.length > 0,
+        };
+    }
+
+    private districtOverviewQuadrantDefs(): Array<{
+        key: string;
+        label: string;
+        color: string;
+        highCs: boolean;
+        highGrowth: boolean;
+    }> {
+        return [
+            { key: 'catching-up', label: 'CATCHING UP', color: '#a5b4fc', highCs: false, highGrowth: true },
+            { key: 'high-achieve', label: 'HIGH ACHIEVE · HIGH GROWTH', color: '#5b3df5', highCs: true, highGrowth: true },
+            { key: 'needs-support', label: 'NEEDS SUPPORT', color: '#8b93b5', highCs: false, highGrowth: false },
+            { key: 'stalling', label: 'STALLING', color: '#11143a', highCs: true, highGrowth: false },
+        ];
+    }
+
+    private districtOverviewQuadrantKey(
+        cs: number,
+        growth: number,
+        avgX: number,
+        avgY: number,
+    ): string {
+        const def = this.districtOverviewQuadrantDefs().find(
+            (item) => (cs >= avgX) === item.highCs && (growth >= avgY) === item.highGrowth,
+        );
+        return def?.key ?? '';
+    }
+
+    /** Quadrant counts + campus codes, derived from the same plotted points and district averages. */
+    get districtOverviewQuadrants(): Array<{
+        key: string;
+        label: string;
+        color: string;
+        count: number;
+        codes: string;
+    }> {
+        const scatter = this.districtOverviewScatter;
+        if (!scatter.hasData || scatter.avgX == null || scatter.avgY == null) {
+            return [];
+        }
+        return this.districtOverviewQuadrantDefs().map((def) => {
+            const points = scatter.points.filter((p) => p.quadrantKey === def.key);
+            return {
+                key: def.key,
+                label: def.label,
+                color: def.color,
+                count: points.length,
+                codes: points.map((p) => p.label).join(' · '),
+            };
+        });
+    }
+
+    toggleDistrictOverviewQuadrant(key: string): void {
+        this.districtOverviewHighlightedQuadrant =
+            this.districtOverviewHighlightedQuadrant === key ? null : key;
+        this.cdr.markForCheck();
+    }
+
+    get districtOverviewQuadrantAverageText(): string {
+        const scatter = this.districtOverviewScatter;
+        if (scatter.avgX == null || scatter.avgY == null) {
+            return 'District averages unavailable';
+        }
+        return `Avg STAAR ${(scatter.avgX as number).toFixed(1)} · Avg growth ${(scatter.avgY as number).toFixed(1)}`;
+    }
+
+    private districtOverviewDomain(values: number[]): { min: number; max: number } {
+        if (!values.length) {
+            return { min: 0, max: 100 };
+        }
+        let min = Math.min(...values);
+        let max = Math.max(...values);
+        if (max - min < 0.001) {
+            min = Math.max(0, min - 5);
+            max = Math.min(100, max + 5);
+            if (max - min < 1) {
+                return { min: 0, max: 100 };
+            }
+            return { min, max };
+        }
+        const pad = Math.max(2.5, (max - min) * 0.12);
+        return { min: Math.max(0, min - pad), max: Math.min(100, max + pad) };
+    }
+
+    // ----- Section 6: campus leaderboard -----
+
+    setDistrictOverviewLeaderSort(sort: 'staar' | 'growth'): void {
+        this.districtOverviewLeaderSort = sort;
+        this.cdr.markForCheck();
+    }
+
+    get districtOverviewLeaderboard(): Array<
+        DistrictOverviewCampusVm & {
+            rank: number;
+            staarPct: number;
+            growthPct: number;
+        }
+    > {
+        const rows = this.districtOverviewBoardRows.filter((r) => r.cs != null);
+        const sort = this.districtOverviewLeaderSort;
+        const sorted = [...rows].sort((a, b) => {
+            const av = (sort === 'staar' ? a.cs : a.growth) ?? -1;
+            const bv = (sort === 'staar' ? b.cs : b.growth) ?? -1;
+            return bv - av || a.campusName.localeCompare(b.campusName);
+        });
+        const scale = Math.max(
+            100,
+            ...rows.map((r) => Math.max(0, r.cs ?? 0) + Math.max(0, r.growth ?? 0)),
+        );
+        return sorted.map((row, index) => ({
+            ...row,
+            rank: index + 1,
+            staarPct: ((Math.max(0, row.cs ?? 0) / scale) * 100),
+            growthPct: ((Math.max(0, row.growth ?? 0) / scale) * 100),
+        }));
+    }
+
+    get districtOverviewLeaderboardHiddenCount(): number {
+        return this.districtOverviewBoardRows.filter((r) => r.cs == null).length;
+    }
+
+    // ----- Section 7: level cards -----
+
+    get districtOverviewLevelCards(): DistrictOverviewLevelVm[] {
+        return this.districtOverviewLevels;
+    }
+
+    // ----- Saved views (per signed-in user, per district) -----
+
+    toggleDistrictOverviewSavedViews(): void {
+        this.ensureDistrictOverviewSavedViewsLoaded();
+        this.districtOverviewSavedViewsOpen = !this.districtOverviewSavedViewsOpen;
+        this.districtOverviewSearchOpen = false;
+    }
+
+    saveDistrictOverviewView(): void {
+        const s = this.districtContext.selection;
+        if (s.districtId == null) {
+            return;
+        }
+        this.ensureDistrictOverviewSavedViewsLoaded();
+        const view: DistrictOverviewSavedView = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            districtId: s.districtId,
+            academicYearId: s.academicYearId,
+            quarterCode: s.quarterCode,
+            filters: structuredClone(this.districtContext.growthFilters),
+            savedAt: new Date().toISOString(),
+        };
+        const signature = this.districtOverviewViewSignature(view);
+        const existing = this.savedDistrictOverviewViews.find(
+            (v) => this.districtOverviewViewSignature(v) === signature,
+        );
+        this.savedDistrictOverviewViews = existing
+            ? [existing, ...this.savedDistrictOverviewViews.filter((v) => v.id !== existing.id)]
+            : [view, ...this.savedDistrictOverviewViews].slice(0, 12);
+        this.persistDistrictOverviewSavedViews();
+        this.districtOverviewSavedViewsOpen = true;
+        this.districtOverviewSearchOpen = false;
+        this.districtOverviewSavedFlash = true;
+        setTimeout(() => {
+            this.districtOverviewSavedFlash = false;
+            this.cdr.markForCheck();
+        }, 1800);
+        this.cdr.markForCheck();
+    }
+
+    applyDistrictOverviewSavedView(view: DistrictOverviewSavedView): void {
+        this.districtOverviewSavedViewsOpen = false;
+        const s = this.districtContext.selection;
+        if (s.districtId !== view.districtId) {
+            this.districtContext.setDistrictId(view.districtId);
+        }
+        this.districtContext.setAcademicYearId(view.academicYearId);
+        this.districtContext.setQuarterCode(view.quarterCode);
+        this.districtContext.setGrowthFilters(structuredClone(view.filters));
+        this.cdr.markForCheck();
+    }
+
+    deleteDistrictOverviewSavedView(event: Event, view: DistrictOverviewSavedView): void {
+        event.stopPropagation();
+        this.savedDistrictOverviewViews = this.savedDistrictOverviewViews.filter(
+            (v) => v.id !== view.id,
+        );
+        this.persistDistrictOverviewSavedViews();
+    }
+
+    districtOverviewSavedViewLabel(view: DistrictOverviewSavedView): string {
+        const year =
+            this.districtContext.academicYears.find((y) => y.academicYearId === view.academicYearId)
+                ?.yearLabel ?? '—';
+        const quarter = this.districtContext.districtQuarters.find(
+            (q) => q.quarterCode === view.quarterCode,
+        );
+        const windowLabel = quarter
+            ? this.districtContext.quarterDisplayLabel(quarter)
+            : view.quarterCode || '—';
+        return `${year} · ${windowLabel}`;
+    }
+
+    districtOverviewSavedViewFilterCount(view: DistrictOverviewSavedView): number {
+        const f = view.filters;
+        return (
+            (f.campusId != null ? 1 : 0) +
+            (f.grades?.length ?? 0) +
+            (f.subjects?.length ?? 0) +
+            (f.specialEducation != null ? 1 : 0) +
+            (f.economicDisadvantage != null ? 1 : 0) +
+            (f.emergentBilingual != null ? 1 : 0) +
+            (f.ethnicity != null ? 1 : 0) +
+            (f.testLanguage != null ? 1 : 0)
+        );
+    }
+
+    private districtOverviewViewSignature(view: DistrictOverviewSavedView): string {
+        return JSON.stringify([view.academicYearId, view.quarterCode, view.filters]);
+    }
+
+    private ensureDistrictOverviewSavedViewsLoaded(): void {
+        const key = this.districtOverviewSavedViewsStorageKey();
+        if (this.districtOverviewSavedViewsLoadedKey === key) {
+            return;
+        }
+        this.districtOverviewSavedViewsLoadedKey = key;
+        try {
+            const raw = localStorage.getItem(key);
+            const parsed = raw ? JSON.parse(raw) : [];
+            this.savedDistrictOverviewViews = Array.isArray(parsed)
+                ? (parsed as DistrictOverviewSavedView[])
+                : [];
+        } catch {
+            this.savedDistrictOverviewViews = [];
+        }
+    }
+
+    private persistDistrictOverviewSavedViews(): void {
+        try {
+            localStorage.setItem(
+                this.districtOverviewSavedViewsStorageKey(),
+                JSON.stringify(this.savedDistrictOverviewViews),
+            );
+        } catch {
+            /* storage unavailable — keep the in-memory list */
+        }
+    }
+
+    private districtOverviewSavedViewsStorageKey(): string {
+        const userId = this.auth.getCurrentUser()?.userId ?? 'anonymous';
+        const districtId = this.districtContext.selection.districtId ?? 'none';
+        return `${GrowthOverviewPageComponent.DISTRICT_OVERVIEW_VIEWS_KEY_PREFIX}:${userId}:${districtId}`;
+    }
+
+    // ----- Extra data used only by the District Overview KPI cards -----
+
+    private loadDistrictOverviewExtras(
+        attendanceBody: { districtId: number; academicYearId: number; campusId?: number },
+        until$: Observable<unknown>,
+    ): void {
+        this.districtOverviewExtrasLoading = true;
+        this.attendanceAnalytics
+            .postMonthlyStats(attendanceBody)
+            .pipe(
+                takeUntil(until$),
+                catchError(() => of([] as MonthlyAttendanceStatDto[])),
+                finalize(() => {
+                    this.districtOverviewExtrasLoading = false;
+                    this.cdr.markForCheck();
+                }),
+            )
+            .subscribe((rows) => {
+                this.districtOverviewMonthlyStats = rows ?? [];
+                const values = (rows ?? [])
+                    .map((m) => this.districtOverviewNumber(m.estimatedMissedFinance))
+                    .filter((v): v is number => v != null);
+                this.districtOverviewFundingAtRiskYtd = values.length
+                    ? values.reduce((sum, v) => sum + v, 0)
+                    : null;
+                this.cdr.markForCheck();
+            });
+
+        this.ccmrAnalytics
+            .postDistrictMonthlyRates({
+                districtId: attendanceBody.districtId,
+                academicYearId: attendanceBody.academicYearId,
+                notLikelyCredits: CCMR_DEFAULT_CREDIT_THRESHOLDS.notLikelyCredits,
+            })
+            .pipe(
+                takeUntil(until$),
+                catchError(() => of([] as CcmrDistrictMonthRateDto[])),
+            )
+            .subscribe((rows) => {
+                this.districtOverviewCcmrMonthlyRates = rows ?? [];
+                this.cdr.markForCheck();
+            });
+    }
+
+    private resetDistrictOverviewExtras(): void {
+        this.districtOverviewExtrasLoading = false;
+        this.districtOverviewMonthlyStats = [];
+        this.districtOverviewCcmrMonthlyRates = [];
+        this.districtOverviewFundingAtRiskYtd = null;
+    }
+
     constructor(
         public storeData: Store<any>,
         private route: ActivatedRoute,
@@ -2144,9 +3981,15 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
                     });
 
                 this.loadCcmrSummary(attendanceBody, until$);
+                if (this.isDistrictAdminRole()) {
+                    this.loadDistrictOverviewExtras(attendanceBody, until$);
+                } else {
+                    this.resetDistrictOverviewExtras();
+                }
             } else {
                 this.resetCcmrSummary();
                 this.resetCcmrAcademyRanking();
+                this.resetDistrictOverviewExtras();
             }
         } else {
             if (!isDistrictHome) {
@@ -2154,6 +3997,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
             }
             this.resetCcmrSummary();
             this.resetCcmrAcademyRanking();
+            this.resetDistrictOverviewExtras();
             this.districtCampusGrowthRanking = [];
             this.studentsSummaryLoading = false;
             this.studentsTotalCount = null;
@@ -2340,8 +4184,16 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     ): void {
         if (!this.isDistrictHomeDashboard || !campus?.length) {
             this.districtCampusGrowthRanking = [];
+            this.districtOverviewCampusMetricRows = [];
             return;
         }
+        this.districtOverviewCampusMetricRows = campus.map((r) => ({
+            campusId: r.campusId ?? null,
+            campusCode: (r.campusCode || '').trim(),
+            campusName: (r.campusName || r.campusCode || '').trim(),
+            cs: r.componentScore ?? null,
+            growth: r.growth ?? null,
+        }));
         this.districtCampusGrowthRanking = [...campus]
             .sort((a, b) => (b.growth ?? -999999) - (a.growth ?? -999999))
             .slice(0, 8)

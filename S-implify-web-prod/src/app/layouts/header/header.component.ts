@@ -14,7 +14,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { DashboardReportService } from '../../core/services/dashboard-report.service';
 import { DistrictContextService } from '../../core/services/district-context.service';
 import { LayoutSharedModule } from '../../shared/layout-shared.module';
-import { formatRoleLabel } from '../../core/constants/auth-roles';
+import { formatRoleLabel, roleIdFromName, ROLE_IDS } from '../../core/constants/auth-roles';
 import type { Campus, CampusCategory } from '../../core/models/simplify-api.model';
 import Swal from 'sweetalert2';
 
@@ -39,6 +39,9 @@ const MENU_PARENTS: Array<{ key: string; prefixes: string[] }> = [
     templateUrl: './header.component.html',
     standalone: true,
     imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LayoutSharedModule],
+    host: {
+        '[class.dov-nav-raised]': 'isDistrictOverviewPage',
+    },
 })
 export class HeaderComponent implements OnInit {
     store: any;
@@ -247,7 +250,9 @@ export class HeaderComponent implements OnInit {
 
     private updateQuarterSelectorVisibility(url: string): void {
         const path = url.split('?')[0].split('#')[0];
-        const visible = this.quarterSelectorRoutePatterns.some((pattern) => pattern.test(path));
+        const visible =
+            !this.isDistrictOverviewPage &&
+            this.quarterSelectorRoutePatterns.some((pattern) => pattern.test(path));
         this.showQuarterSelector = visible;
         this.loadQuartersIfNeeded();
         this.cdr.markForCheck();
@@ -364,7 +369,7 @@ export class HeaderComponent implements OnInit {
             .filter((g) => g.campuses.length > 0);
     }
 
-    /** Menu category order: Elementary first, then Early Childhood, High, Middle. */
+    /** Menu category order: Elementary, Middle, then High. */
     private categorySortRank(name?: string, code?: string): number {
         const label = `${name ?? ''} ${code ?? ''}`.toLowerCase();
         if (label.includes('elementary')) {
@@ -373,10 +378,10 @@ export class HeaderComponent implements OnInit {
         if (label.includes('early childhood')) {
             return 1;
         }
-        if (label.includes('high')) {
+        if (label.includes('middle')) {
             return 2;
         }
-        if (label.includes('middle')) {
+        if (label.includes('high')) {
             return 3;
         }
         return 99;
@@ -454,6 +459,19 @@ export class HeaderComponent implements OnInit {
 
     get showRoleSwitcher(): boolean {
         return this.authService.hasMultipleRoles();
+    }
+
+    /** District Overview replaces the two-row navbar with a single merged row. */
+    get isDistrictOverviewPage(): boolean {
+        const path = this.currentUrl();
+        if (path !== '/dashboard') {
+            return false;
+        }
+        const role = this.authService.getActiveRole();
+        if (!role) {
+            return false;
+        }
+        return (roleIdFromName(role.roleName) ?? role.roleId) === ROLE_IDS.DistrictAdmin;
     }
 
     goToRoleSelection(): void {

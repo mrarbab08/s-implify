@@ -1,4 +1,578 @@
-<div class="-mb-2 dashboard-page">
+<div class="-mb-2 dashboard-page" [class.aurora-level-page]="isCampusCategoryView">
+    @if (isDistrictAdminOverview) {
+    <section class="dov-page" aria-label="District overview">
+        <div class="dov-header">
+            @if (districtOverviewPopoversOpen) {
+            <div class="dov-backdrop" (click)="closeDistrictOverviewPopovers()"></div>
+            }
+
+            <nav class="dov-crumbs" aria-label="Breadcrumb">
+                <span class="dov-crumb-link">{{ districtOverviewDistrictName }}</span>
+                <span class="dov-crumb-sep" aria-hidden="true">›</span>
+                <span class="dov-crumb-current" aria-current="page">District</span>
+            </nav>
+
+            <div class="dov-title-row">
+                <h1 class="dov-title">District Overview</h1>
+                <div class="dov-selection-group">
+                    <div class="dov-year-wrap">
+                        <button
+                            type="button"
+                            class="dov-year-button"
+                            [attr.aria-expanded]="districtOverviewYearMenuOpen"
+                            (click)="toggleDistrictOverviewYearMenu()"
+                        >
+                            {{ districtOverviewYearLabel }}
+                            <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                            </svg>
+                        </button>
+                        @if (districtOverviewYearMenuOpen) {
+                        <div class="dov-pop dov-year-pop">
+                            <div class="dov-pop-head">
+                                <span class="dov-pop-title">Academic year</span>
+                            </div>
+                            <div class="dov-pop-body">
+                                @for (year of districtContext.academicYears; track year.academicYearId) {
+                                <button
+                                    type="button"
+                                    class="dov-pop-row"
+                                    [class.is-selected]="year.academicYearId === districtContext.selection.academicYearId"
+                                    (click)="selectDistrictOverviewYear(year.academicYearId)"
+                                >
+                                    <span class="dov-pop-row-main">{{ year.yearLabel }}</span>
+                                    @if (year.academicYearId === districtContext.selection.academicYearId) {
+                                    <span class="dov-pop-row-meta">✓</span>
+                                    }
+                                </button>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    <div class="dov-quarter-tabs" role="group" aria-label="Assessment period">
+                        @for (option of districtOverviewQuarterOptions; track option.code) {
+                        <button
+                            type="button"
+                            class="dov-quarter-tab"
+                            [class.is-active]="option.code === districtOverviewSelectedQuarterCode"
+                            [attr.title]="option.windowLabel"
+                            [attr.aria-pressed]="option.code === districtOverviewSelectedQuarterCode"
+                            (click)="selectDistrictOverviewQuarter(option.code)"
+                        >{{ option.label }}</button>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <div class="dov-subrow">
+                <div class="dov-data-line">
+                    <span class="dov-dot" aria-hidden="true"></span>
+                    <span [title]="districtOverviewWindowLabel">Data as of {{ districtOverviewQuarterShortLabel }} · {{ districtOverviewYearLabel }}</span>
+                    <button
+                        type="button"
+                        class="dov-refresh"
+                        [class.is-spinning]="districtOverviewRefreshing"
+                        (click)="refreshDistrictOverview()"
+                        title="Refresh district data"
+                        aria-label="Refresh district data"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M20 11a8 8 0 1 0-2.3 5.7M20 5v6h-6" />
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="dov-actions">
+                    <div class="dov-search">
+                        <div class="dov-search-box">
+                            <svg class="h-4 w-4 flex-none" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                            </svg>
+                            <input
+                                type="search"
+                                [(ngModel)]="districtOverviewSearchQuery"
+                                (input)="onDistrictOverviewSearchInput()"
+                                (focus)="onDistrictOverviewSearchInput()"
+                                (keydown.escape)="clearDistrictOverviewSearch()"
+                                placeholder="Search campuses or students"
+                                aria-label="Search district campuses or students"
+                            />
+                            @if (districtOverviewSearchQuery) {
+                            <button type="button" class="dov-search-clear" (click)="clearDistrictOverviewSearch()" aria-label="Clear search">×</button>
+                            }
+                        </div>
+                        @if (districtOverviewSearchOpen) {
+                        <div class="dov-pop dov-search-pop">
+                            <div class="dov-pop-head">
+                                <span class="dov-pop-title">District search</span>
+                                <span class="dov-pop-sub">{{ districtOverviewSearchResultCount }} found</span>
+                            </div>
+                            <div class="dov-pop-body">
+                                @if (districtOverviewCampusResults.length) {
+                                <p class="dov-pop-group">Campuses</p>
+                                @for (campus of districtOverviewCampusResults; track campus.campusId) {
+                                <button type="button" class="dov-pop-row" (click)="openDistrictOverviewCampus(campus)">
+                                    <span class="dov-pop-row-main">{{ campus.campusName }}</span>
+                                    <span class="dov-pop-row-meta">{{ campus.campusCode }}</span>
+                                </button>
+                                }
+                                }
+                                @if (districtAdminStudentsLoading) {
+                                <p class="dov-pop-note">Loading students…</p>
+                                }
+                                @if (districtOverviewStudentResults.length) {
+                                <p class="dov-pop-group">Students</p>
+                                @for (student of districtOverviewStudentResults; track student.key) {
+                                <button type="button" class="dov-pop-row" (click)="openDistrictOverviewStudent()">
+                                    <span class="dov-pop-row-main">{{ student.name }}</span>
+                                    <span class="dov-pop-row-meta">{{ student.grade }} · {{ student.campus }}</span>
+                                </button>
+                                }
+                                }
+                                @if (!districtOverviewSearchResultCount && !districtAdminStudentsLoading) {
+                                <p class="dov-pop-empty">No campuses or students match “{{ districtOverviewSearchQuery }}”.</p>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+                    <button
+                        type="button"
+                        class="dov-icon-btn"
+                        (click)="scrollToDistrictAttention()"
+                        [attr.title]="districtOverviewOpenAlertCount + ' open alerts'"
+                        aria-label="Open alerts"
+                    >
+                        <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M18 8a6 6 0 1 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4" />
+                        </svg>
+                        @if (districtOverviewOpenAlertCount) {
+                        <span class="dov-badge">{{ districtOverviewOpenAlertCount }}</span>
+                        }
+                    </button>
+                </div>
+            </div>
+
+            <div class="dov-viewing">
+                <span class="dov-viewing-label">VIEWING</span>
+                <span class="dov-chip">{{ districtOverviewYearLabel }}</span>
+                <span class="dov-chip" [title]="districtOverviewWindowLabel">{{ districtOverviewQuarterShortLabel }}</span>
+                <button type="button" class="dov-chip dov-chip-action" (click)="districtContext.requestFilterPanel()">
+                    {{ districtContext.filterCampus()?.campusName || 'All campuses' }}
+                    <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                    </svg>
+                </button>
+                @for (chip of districtContext.growthFilterChips(); track chip.id) {
+                    @if (chip.id !== 'campus') {
+                    <span class="dov-chip">
+                        {{ chip.label }}
+                        <button type="button" class="dov-chip-x" (click)="districtContext.clearGrowthFilterChip(chip.id)" aria-label="Remove filter">×</button>
+                    </span>
+                    }
+                }
+                <button type="button" class="dov-add-filter" (click)="districtContext.requestFilterPanel()">+ Add filter</button>
+                <div class="dov-save-wrap">
+                    <button type="button" class="dov-save-btn" (click)="saveDistrictOverviewView()">Save this view</button>
+                    @if (districtOverviewSavedFlash) {
+                    <span class="dov-saved-flash">Saved</span>
+                    }
+                    @if (savedDistrictOverviewViews.length) {
+                    <button type="button" class="dov-saved-toggle" (click)="toggleDistrictOverviewSavedViews()" aria-label="Open saved views">
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 4h12v17l-6-4-6 4V4Z" />
+                        </svg>
+                    </button>
+                    }
+                    @if (districtOverviewSavedViewsOpen) {
+                    <div class="dov-pop dov-saved-pop">
+                        <div class="dov-pop-head">
+                            <span class="dov-pop-title">Saved views</span>
+                            <span class="dov-pop-sub">{{ savedDistrictOverviewViews.length }}</span>
+                        </div>
+                        <div class="dov-pop-body">
+                            @for (view of savedDistrictOverviewViews; track view.id) {
+                            <div class="dov-saved-row" (click)="applyDistrictOverviewSavedView(view)">
+                                <div>
+                                    <span class="dov-pop-row-main">{{ districtOverviewSavedViewLabel(view) }}</span>
+                                    <span class="dov-pop-row-meta">
+                                        {{ districtOverviewSavedViewFilterCount(view) }} filter{{ districtOverviewSavedViewFilterCount(view) === 1 ? '' : 's' }}
+                                    </span>
+                                </div>
+                                <button type="button" class="dov-pop-x" (click)="deleteDistrictOverviewSavedView($event, view)" aria-label="Delete saved view">×</button>
+                            </div>
+                            }
+                        </div>
+                    </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <section class="dov-hero">
+            <div class="dov-hero-main">
+                <span class="dov-hero-pill">{{ districtOverviewQuarterShortLabel }} · {{ districtOverviewYearLabel }}</span>
+                <h2 class="dov-hero-line">{{ districtOverviewHeroLine }}</h2>
+                <p class="dov-hero-compare">{{ districtOverviewComparisonSentence }}</p>
+                @if (districtOverviewComparisonSubline) {
+                <p class="dov-hero-sub">{{ districtOverviewComparisonSubline }}</p>
+                }
+            </div>
+            <div class="dov-hero-rings">
+                <article class="dov-ring-card">
+                    <span class="dov-ring-label">STAAR score</span>
+                    <div
+                        class="dov-ring"
+                        [style.background]="districtOverviewRingBackground(districtOverviewCsScore)"
+                        role="img"
+                        [attr.aria-label]="'STAAR score ' + districtOverviewHeroScoreText + ' of 100'"
+                    >
+                        <div class="dov-ring-inner">
+                            <span class="dov-ring-value">{{ districtOverviewHeroScoreText }}</span>
+                            <span class="dov-ring-of">of 100</span>
+                        </div>
+                    </div>
+                    <div class="dov-ring-grades">
+                        @for (level of districtOverviewLevelGrades('cs'); track level.label) {
+                        <span class="dov-grade-chip" [ngClass]="districtOverviewGradeClass(level.grade)">{{ level.label }} <b>{{ level.grade || '—' }}</b></span>
+                        }
+                    </div>
+                </article>
+                <article class="dov-ring-card">
+                    <span class="dov-ring-label">Growth score</span>
+                    <div
+                        class="dov-ring dov-ring-growth"
+                        [style.background]="districtOverviewRingBackground(districtOverviewGrowthScore)"
+                        role="img"
+                        [attr.aria-label]="'Growth score ' + districtOverviewHeroGrowthText + ' of 100'"
+                    >
+                        <div class="dov-ring-inner">
+                            <span class="dov-ring-value">{{ districtOverviewHeroGrowthText }}</span>
+                            <span class="dov-ring-of">of 100</span>
+                        </div>
+                    </div>
+                    <div class="dov-ring-grades">
+                        @for (level of districtOverviewLevelGrades('growth'); track level.label) {
+                        <span class="dov-grade-chip" [ngClass]="districtOverviewGradeClass(level.grade)">{{ level.label }} <b>{{ level.grade || '—' }}</b></span>
+                        }
+                    </div>
+                </article>
+                <article class="dov-ring-card dov-hero-bands-panel">
+                    <span class="dov-ring-label">Performance levels</span>
+                    <div class="dov-hero-bands">
+                        @for (band of districtOverviewHeroBands; track band.label) {
+                        <div class="dov-hero-band">
+                            <div class="dov-hero-band-row">
+                                <span class="dov-hero-band-label">{{ band.label }}</span>
+                                <strong class="dov-hero-band-value">{{ band.text }}</strong>
+                            </div>
+                            <span class="dov-hero-band-track">
+                                <span class="dov-hero-band-fill" [style.width.%]="band.value ?? 0"></span>
+                            </span>
+                        </div>
+                        }
+                        <span class="dov-hero-bands-note">% of tested students</span>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="dov-section" id="dov-attention">
+            <div class="dov-section-head">
+                <div>
+                    <h3 class="dov-section-title">Needs your attention</h3>
+                    <p class="dov-section-sub">The biggest gaps this {{ districtOverviewWindowLabel }}, ranked by impact. Dismiss what you have handled.</p>
+                </div>
+                <span class="dov-count-pill">{{ districtOverviewOpenAlertCount }} open</span>
+            </div>
+
+            @if (districtOverviewVisibleAlerts.length) {
+            <div class="dov-alert-grid">
+                @for (alert of districtOverviewVisibleAlerts; track alert.id) {
+                <article class="dov-alert">
+                    <div class="dov-alert-top">
+                        <span class="dov-cat-tag" [ngClass]="districtOverviewAlertTagClass(alert.category)">{{ alert.category }}</span>
+                        <button type="button" class="dov-dismiss" (click)="dismissDistrictOverviewAlert($event, alert)" aria-label="Dismiss alert">×</button>
+                    </div>
+                    <h4 class="dov-alert-title">{{ alert.title }}</h4>
+                    <p class="dov-alert-detail">{{ alert.detail }}</p>
+                    <div class="dov-alert-metrics">
+                        @for (metric of alert.metrics; track metric) {
+                        <span class="dov-metric">{{ metric }}</span>
+                        }
+                    </div>
+                    <a class="dov-btn-navy" [routerLink]="alert.actionLink">{{ alert.actionLabel }}</a>
+                </article>
+                }
+            </div>
+            } @else {
+            <div class="dov-empty-card dov-empty-quiet">
+                <span class="dov-empty-icon">
+                    <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m5 12 5 5L20 7" />
+                    </svg>
+                </span>
+                <div>
+                    <p class="dov-empty-title">No alerts for this {{ districtOverviewWindowLabel }}.</p>
+                    <p class="dov-empty-text">Nothing needs your attention right now.</p>
+                </div>
+            </div>
+            }
+        </section>
+
+        <section class="dov-kpis" aria-label="District KPIs">
+            <article class="dov-kpi">
+                <div class="dov-kpi-label">Students tested <span class="dov-info" title="Unique students with growth records in the selected window.">i</span></div>
+                <div class="dov-kpi-value">{{ districtOverviewStudentsTestedText }}</div>
+                <div class="dov-kpi-sub">{{ districtOverviewStudentsTestedSub }}</div>
+                <a class="dov-kpi-link" routerLink="/students">Students →</a>
+            </article>
+            <article class="dov-kpi">
+                <div class="dov-kpi-label">Attendance ADA <span class="dov-info" title="Average daily attendance from the campus attendance data.">i</span></div>
+                <div class="dov-kpi-value-row">
+                    <span class="dov-kpi-value">{{ districtOverviewAttendanceText }}</span>
+                    <span class="dov-tag-soft">Goal {{ districtOverviewAttendanceGoal }}%</span>
+                </div>
+                <div class="dov-kpi-sub">{{ districtOverviewFundingAtRiskText }}</div>
+                <a class="dov-kpi-link" routerLink="/attendance">Attendance →</a>
+            </article>
+            <article class="dov-kpi">
+                <div class="dov-kpi-label">CCMR score <span class="dov-info" title="District CCMR rate for the selected academic year.">i</span></div>
+                <div class="dov-kpi-value-row">
+                    <span class="dov-kpi-value">{{ districtOverviewCcmrText }}</span>
+                    <span class="dov-delta" [class.is-negative]="(districtOverviewCcmrDelta ?? 0) < 0">{{ districtOverviewCcmrDeltaText }}</span>
+                </div>
+                <div class="dov-kpi-sub">{{ districtOverviewCcmrSubline }}</div>
+                <a class="dov-kpi-link" routerLink="/academies/ccmr">CCMR →</a>
+            </article>
+            <article class="dov-kpi">
+                <div class="dov-kpi-label">Graduation rate <span class="dov-info" title="District graduation rate from the dashboard metrics.">i</span></div>
+                <div class="dov-kpi-value-row">
+                    <span class="dov-kpi-value">{{ districtOverviewGradText }}</span>
+                    <span class="dov-delta is-muted">{{ districtOverviewGradDeltaText }}</span>
+                </div>
+                <div class="dov-kpi-sub">{{ districtOverviewGradClassLabel }}</div>
+                <a class="dov-kpi-link" [routerLink]="districtOverviewHighSchoolLink">Details →</a>
+            </article>
+        </section>
+
+        <section class="dov-section">
+            <div class="dov-section-head dov-section-head-wrap">
+                <div>
+                    <h3 class="dov-section-title">Achievement × growth map</h3>
+                    <p class="dov-section-sub">Each dot is a campus · click one to open its profile · lines are district averages</p>
+                </div>
+                <div class="dov-level-filters">
+                    <button type="button" class="dov-filter-chip" [class.is-active]="!districtOverviewLevelFilter" (click)="setDistrictOverviewLevelFilter(null)">All levels</button>
+                    @for (level of districtOverviewLevelFilters; track level.code) {
+                    <button
+                        type="button"
+                        class="dov-filter-chip"
+                        [class.is-active]="isDistrictOverviewLevelActive(level.code)"
+                        (click)="setDistrictOverviewLevelFilter(level.code)"
+                    >
+                        {{ level.label }}
+                    </button>
+                    }
+                </div>
+            </div>
+
+            <div class="dov-map-grid">
+                <div class="dov-panel dov-map-card">
+                    @if (districtOverviewScatter.hasData) {
+                    <svg class="dov-scatter" viewBox="0 0 660 330" role="img" aria-label="Campus STAAR and growth scatter plot">
+                        <line x1="46" y1="292" x2="648" y2="292" class="dov-axis" />
+                        <line x1="46" y1="18" x2="46" y2="292" class="dov-axis" />
+                        <line x1="46" y1="18" x2="46" y2="292" class="dov-grid-line" />
+                        <line x1="46" y1="18" x2="648" y2="18" class="dov-grid-line" />
+
+                        <text x="62" y="34" class="dov-quadrant">CATCHING UP</text>
+                        <text x="636" y="34" text-anchor="end" class="dov-quadrant">HIGH ACHIEVE · HIGH GROWTH</text>
+                        <text x="62" y="280" class="dov-quadrant">NEEDS SUPPORT</text>
+                        <text x="636" y="280" text-anchor="end" class="dov-quadrant">STALLING</text>
+
+                        @if (districtOverviewScatter.avgYLine != null) {
+                        <line x1="46" [attr.y1]="districtOverviewScatter.avgYLine" x2="648" [attr.y2]="districtOverviewScatter.avgYLine" class="dov-avg-line" />
+                        }
+                        @if (districtOverviewScatter.avgXLine != null) {
+                        <line [attr.x1]="districtOverviewScatter.avgXLine" y1="18" [attr.x2]="districtOverviewScatter.avgXLine" y2="292" class="dov-avg-line" />
+                        }
+
+                        <text x="52" y="318" class="dov-axis-label">← Lower STAAR</text>
+                        <text x="642" y="318" text-anchor="end" class="dov-axis-label">Higher STAAR →</text>
+                        <text x="16" y="156" text-anchor="middle" transform="rotate(-90 16 156)" class="dov-axis-label">Growth →</text>
+
+                        @for (point of districtOverviewScatter.points; track point.key) {
+                        <g
+                            class="dov-point"
+                            [class.is-highlighted]="districtOverviewHighlightedQuadrant === point.quadrantKey"
+                            [class.is-dimmed]="districtOverviewHighlightedQuadrant && districtOverviewHighlightedQuadrant !== point.quadrantKey"
+                            tabindex="0"
+                            role="link"
+                            [attr.aria-label]="point.name + ': STAAR ' + point.cs.toFixed(1) + ', growth ' + point.growth.toFixed(1)"
+                            (click)="openDistrictOverviewCampusBySlug(point.slug)"
+                            (keydown.enter)="openDistrictOverviewCampusBySlug(point.slug)"
+                        >
+                            <circle [attr.cx]="point.x" [attr.cy]="point.y" r="5.5" [attr.fill]="point.color" />
+                            <text
+                                [attr.x]="point.x > 600 ? point.x - 10 : point.x + 10"
+                                [attr.y]="point.y + 3.5"
+                                [attr.text-anchor]="point.x > 600 ? 'end' : 'start'"
+                                class="dov-point-label"
+                            >{{ point.label }}</text>
+                            <title>{{ point.name }} · STAAR {{ point.cs.toFixed(1) }} · Growth {{ point.growth.toFixed(1) }}</title>
+                        </g>
+                        }
+                    </svg>
+                    <div class="dov-map-legend">
+                        @for (level of districtOverviewLevelFilters; track level.code) {
+                        <span><i [style.background]="level.code === 'ES' ? '#A5B4FC' : level.code === 'MS' ? '#5B3DF5' : '#11143A'"></i>{{ level.label }}</span>
+                        }
+                        <span class="dov-legend-avg"><i></i> District average</span>
+                    </div>
+                    } @else {
+                    <div class="dov-empty-card dov-map-empty">
+                        <p class="dov-empty-title">No campus scores for this view.</p>
+                        <p class="dov-empty-text">No campus has both a STAAR score and growth for {{ districtOverviewWindowLabel }}.</p>
+                    </div>
+                    }
+                </div>
+
+                <aside class="dov-panel dov-quadrant-card">
+                    <div class="dov-quadrant-head">
+                        <h4>Quadrant summary</h4>
+                        <p>{{ districtOverviewQuadrantAverageText }}</p>
+                    </div>
+                    @if (districtOverviewQuadrants.length) {
+                    <div class="dov-quadrant-list">
+                        @for (quadrant of districtOverviewQuadrants; track quadrant.key) {
+                        <button
+                            type="button"
+                            class="dov-quadrant-row"
+                            [class.is-active]="districtOverviewHighlightedQuadrant === quadrant.key"
+                            [class.is-dimmed]="districtOverviewHighlightedQuadrant && districtOverviewHighlightedQuadrant !== quadrant.key"
+                            [attr.aria-pressed]="districtOverviewHighlightedQuadrant === quadrant.key"
+                            (click)="toggleDistrictOverviewQuadrant(quadrant.key)"
+                        >
+                            <div class="dov-quadrant-row-top">
+                                <span class="dov-quadrant-name">
+                                    <i [style.background]="quadrant.color"></i>{{ quadrant.label }}
+                                </span>
+                                <strong class="dov-quadrant-count">{{ quadrant.count }}</strong>
+                            </div>
+                            <span class="dov-quadrant-codes">{{ quadrant.codes || 'No campuses' }}</span>
+                        </button>
+                        }
+                    </div>
+                    } @else {
+                    <div class="dov-quadrant-empty">
+                        <p class="dov-empty-title">No quadrants for this view.</p>
+                        <p class="dov-empty-text">Campus scores are unavailable for {{ districtOverviewWindowLabel }}.</p>
+                    </div>
+                    }
+                </aside>
+            </div>
+        </section>
+
+        <section class="dov-section">
+            <div class="dov-section-head dov-section-head-wrap">
+                <div>
+                    <h3 class="dov-section-title">Campus leaderboard</h3>
+                    <p class="dov-section-sub">{{ districtOverviewBoardLevelLabel }} · {{ districtOverviewLeaderboard.length }} tested campuses · click a row to open its profile</p>
+                </div>
+                <div class="dov-board-controls">
+                    <div class="dov-level-filters">
+                        <button type="button" class="dov-filter-chip" [class.is-active]="!districtOverviewBoardLevelFilter" (click)="setDistrictOverviewBoardLevelFilter(null)">All</button>
+                        @for (level of districtOverviewLevelFilters; track level.code) {
+                        <button
+                            type="button"
+                            class="dov-filter-chip"
+                            [class.is-active]="isDistrictOverviewBoardLevelActive(level.code)"
+                            (click)="setDistrictOverviewBoardLevelFilter(level.code)"
+                        >{{ level.label }}</button>
+                        }
+                    </div>
+                    <span class="dov-sort-label">Sort</span>
+                    <div class="dov-sort-toggle" role="group" aria-label="Sort campus leaderboard">
+                        <button type="button" [class.is-active]="districtOverviewLeaderSort === 'staar'" (click)="setDistrictOverviewLeaderSort('staar')">STAAR</button>
+                        <button type="button" [class.is-active]="districtOverviewLeaderSort === 'growth'" (click)="setDistrictOverviewLeaderSort('growth')">Growth</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dov-panel dov-board">
+                @for (row of districtOverviewLeaderboard; track row.campusId ?? row.campusCode) {
+                <a class="dov-board-row" [routerLink]="['/dashboard/campus', row.slug]">
+                    <span class="dov-rank">{{ row.rank }}</span>
+                    <span class="dov-board-name">
+                        <span class="dov-board-name-text">{{ row.campusName }}</span>
+                        <span class="dov-level-pill">{{ row.levelLabel }}</span>
+                    </span>
+                    <span class="dov-bar-wrap">
+                        <span class="dov-bar">
+                            <span class="dov-bar-staar" [style.width.%]="row.staarPct"></span>
+                            <span class="dov-bar-growth" [style.width.%]="row.growthPct"></span>
+                        </span>
+                    </span>
+                    <span class="dov-board-values">
+                        <b>{{ row.cs != null ? row.cs.toFixed(1) : '—' }}</b>
+                        <em>{{ row.growth != null ? row.growth.toFixed(1) : '—' }}</em>
+                    </span>
+                    <svg class="dov-chevron" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 6 6 6-6 6" />
+                    </svg>
+                </a>
+                } @empty {
+                <div class="dov-empty-card">
+                    <p class="dov-empty-title">No campuses with STAAR data.</p>
+                    <p class="dov-empty-text">No campus has a STAAR score for {{ districtOverviewWindowLabel }}.</p>
+                </div>
+                }
+            </div>
+            @if (districtOverviewLeaderboardHiddenCount) {
+            <p class="dov-footnote">{{ districtOverviewLeaderboardHiddenCount }} campus{{ districtOverviewLeaderboardHiddenCount === 1 ? '' : 'es' }} have no STAAR-tested grades.</p>
+            }
+        </section>
+
+        <section class="dov-section" aria-label="Performance by level">
+            <div class="dov-level-grid">
+                @for (level of districtOverviewLevelCards; track level.campusCategoryId) {
+                <article class="dov-panel dov-level-card">
+                    <div class="dov-level-card-head">
+                        <div>
+                            <h4>{{ level.label }}</h4>
+                            <span>{{ level.campusCount }} campus{{ level.campusCount === 1 ? '' : 'es' }}</span>
+                        </div>
+                        <a [routerLink]="level.link">Open →</a>
+                    </div>
+                    <div class="dov-level-scores">
+                        <div class="dov-level-score">
+                            <span class="dov-level-score-label">STAAR</span>
+                            <div class="dov-level-score-value">
+                                <strong>{{ level.cs != null ? level.cs.toFixed(1) : '—' }}</strong>
+                                <span class="dov-grade-chip" [ngClass]="districtOverviewGradeClass(level.csGrade)">{{ level.csGrade || '—' }}</span>
+                            </div>
+                        </div>
+                        <div class="dov-level-score">
+                            <span class="dov-level-score-label">Growth</span>
+                            <div class="dov-level-score-value">
+                                <strong>{{ level.growth != null ? level.growth.toFixed(1) : '—' }}</strong>
+                                <span class="dov-grade-chip" [ngClass]="districtOverviewGradeClass(level.growthGrade)">{{ level.growthGrade || '—' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </article>
+                } @empty {
+                <div class="dov-panel dov-empty-card">
+                    <p class="dov-empty-title">No district levels available.</p>
+                    <p class="dov-empty-text">No campus categories are loaded for this district.</p>
+                </div>
+                }
+            </div>
+        </section>
+    </section>
+    } @else {
     <div class="pt-2 flex flex-col gap-4">
             <p *ngIf="overallMetricsError" class="mb-1 text-xs text-danger">{{ overallMetricsError }}</p>
             <p *ngIf="campusMetricsError" class="mb-2 text-xs text-danger">{{ campusMetricsError }}</p>
@@ -9,11 +583,261 @@
             >
                 Loading dashboard metrics…
             </p> -->
-            <div *ngIf="isCampusCategoryView" class="-mt-1 mb-1">
-                <a routerLink="/dashboard" class="text-sm font-semibold text-dark hover:underline dark:text-sky-400">
-                    ← Back to dashboard
-                </a>
-            </div>
+            <!-- ============================================================
+                 Aurora v2 page header — CAMPUSES BY SCHOOL LEVEL
+                 Everything is driven by the existing district context and the
+                 campus-metrics data already loaded for this page.
+                 ============================================================ -->
+            @if (isCampusCategoryView) {
+            <section class="aurora-level-header" aria-label="Campuses by school level header">
+                @if (campusSearchOpen || campusAlertsOpen || savedViewsOpen) {
+                <div class="aurora-backdrop" (click)="closeCampusHeaderPopovers()"></div>
+                }
+
+                <!-- 1. Breadcrumb -->
+                <nav class="aurora-crumbs" aria-label="Breadcrumb">
+                    <a routerLink="/dashboard" class="aurora-crumb-link">{{ campusLevelDistrictName }}</a>
+                    <span class="aurora-crumb-sep" aria-hidden="true">›</span>
+                    <a routerLink="/dashboard" class="aurora-crumb-link">Campuses</a>
+                    <span class="aurora-crumb-sep" aria-hidden="true">›</span>
+                    <span class="aurora-crumb-current" aria-current="page">{{ campusLevelShortName }}</span>
+                </nav>
+
+                <!-- 2. Title row: title · level tabs · search / alerts / help -->
+                <div class="aurora-title-row">
+                    <h1 class="aurora-title">{{ campusLevelTitle }}</h1>
+
+                    <div class="aurora-level-tabs" role="tablist" aria-label="School levels">
+                        @for (tab of campusLevelTabs; track tab.campusCategoryId) {
+                        <button
+                            type="button"
+                            role="tab"
+                            class="aurora-level-tab"
+                            [class.is-active]="tab.campusCategoryId === campusCategoryRouteId"
+                            [attr.aria-selected]="tab.campusCategoryId === campusCategoryRouteId"
+                            (click)="openCampusLevelTab(tab)"
+                            [title]="'View ' + tab.label + ' campuses'"
+                        >
+                            <span>{{ tab.label }}</span>
+                            <span class="aurora-level-count">{{ tab.count }}</span>
+                        </button>
+                        }
+                    </div>
+
+                    <div class="aurora-header-tools">
+                        <!-- Search within this level's campuses -->
+                        <div class="aurora-search">
+                            <div class="aurora-search-box">
+                                <svg class="h-4 w-4 flex-none text-[#8A90AB]" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-4.35-4.35M17 10.5a6.5 6.5 0 1 1-13 0 6.5 6.5 0 0 1 13 0Z" />
+                                </svg>
+                                <input
+                                    type="search"
+                                    [(ngModel)]="campusSearchQuery"
+                                    (input)="onCampusSearchInput()"
+                                    (focus)="onCampusSearchInput()"
+                                    (keydown.enter)="openFirstCampusSearchResult($event)"
+                                    (keydown.escape)="clearCampusSearch()"
+                                    placeholder="Search campuses"
+                                    aria-label="Search campuses in this level"
+                                />
+                                @if (campusSearchQuery) {
+                                <button type="button" class="aurora-search-clear" (click)="clearCampusSearch()" aria-label="Clear search">×</button>
+                                }
+                            </div>
+                            @if (campusSearchOpen) {
+                            <div class="aurora-pop">
+                                <div class="aurora-pop-head">
+                                    <span class="aurora-pop-title">Campuses in {{ campusLevelShortName }}</span>
+                                    <span class="aurora-pop-sub">{{ campusSearchResults.length }} found</span>
+                                </div>
+                                <div class="aurora-pop-body">
+                                    @if (campusSearchResults.length) {
+                                    @for (campus of campusSearchResults; track campus.campusId) {
+                                    <a
+                                        class="aurora-search-item"
+                                        [routerLink]="['/dashboard/campus', districtContext.campusRouteSlug(campus)]"
+                                        (click)="clearCampusSearch()"
+                                        [title]="campus.campusName"
+                                    >
+                                        <span class="aurora-search-name">{{ campus.campusName }}</span>
+                                        <span class="aurora-search-code">{{ campus.campusCode }}</span>
+                                    </a>
+                                    }
+                                    } @else {
+                                    <p class="aurora-pop-empty">No campuses match “{{ campusSearchQuery }}”.</p>
+                                    }
+                                </div>
+                            </div>
+                            }
+                        </div>
+
+                        <!-- Alerts bell with live unread badge -->
+                        <div class="aurora-search">
+                            <button
+                                type="button"
+                                class="aurora-icon-btn"
+                                (click)="toggleCampusAlerts()"
+                                [attr.aria-expanded]="campusAlertsOpen"
+                                aria-label="Alerts"
+                                title="Alerts"
+                            >
+                                <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0" />
+                                </svg>
+                                @if (campusUnreadAlertCount > 0) {
+                                <span class="aurora-badge">{{ campusUnreadAlertCount }}</span>
+                                }
+                            </button>
+                            @if (campusAlertsOpen) {
+                            <div class="aurora-pop">
+                                <div class="aurora-pop-head">
+                                    <span class="aurora-pop-title">Alerts</span>
+                                    <span class="aurora-pop-sub">{{ campusLevelAlerts.length }} for this view</span>
+                                </div>
+                                <div class="aurora-pop-body">
+                                    @if (campusLevelAlerts.length) {
+                                    @for (alert of campusLevelAlerts; track alert.id) {
+                                    @if (alert.slug) {
+                                    <a
+                                        class="aurora-alert-row"
+                                        [routerLink]="['/dashboard/campus', alert.slug]"
+                                        (click)="closeCampusHeaderPopovers()"
+                                    >
+                                        <span class="min-w-0">
+                                            <span class="aurora-alert-name">{{ alert.title }}</span>
+                                            <span class="aurora-alert-detail">{{ alert.detail }}</span>
+                                        </span>
+                                        <span class="aurora-search-code">Open</span>
+                                    </a>
+                                    } @else {
+                                    <div class="aurora-alert-row">
+                                        <span class="min-w-0">
+                                            <span class="aurora-alert-name">{{ alert.title }}</span>
+                                            <span class="aurora-alert-detail">{{ alert.detail }}</span>
+                                        </span>
+                                    </div>
+                                    }
+                                    }
+                                    } @else {
+                                    <p class="aurora-pop-empty">No alerts for this view.</p>
+                                    }
+                                </div>
+                            </div>
+                            }
+                        </div>
+
+                        <!-- Help (opens the existing AI assistant) -->
+                        <button
+                            type="button"
+                            class="aurora-icon-btn"
+                            (click)="openCampusLevelHelp()"
+                            title="Help with this page"
+                            aria-label="Help with this page"
+                        >
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3. Data as of -->
+                <div class="aurora-data-line">
+                    <span class="aurora-dot" aria-hidden="true"></span>
+                    <span>Data as of {{ campusLevelWindowLabel }} · {{ campusLevelYearLabel }}</span>
+                    <button
+                        type="button"
+                        class="aurora-refresh"
+                        [class.is-loading]="campusLevelRefreshing"
+                        (click)="refreshCampusLevelData()"
+                        [disabled]="campusLevelRefreshing"
+                        title="Refresh page data"
+                        aria-label="Refresh page data"
+                    >
+                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992V4.356m-1.174 4.992a8.25 8.25 0 1 0 1.174 5.652" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- 4. VIEWING bar -->
+                <div class="aurora-viewing">
+                    <span class="aurora-viewing-label">VIEWING</span>
+                    <span class="aurora-chip">{{ campusLevelYearLabel }}</span>
+                    <span class="aurora-chip">{{ campusLevelWindowLabel }}</span>
+                    <span class="aurora-chip">{{ campusLevelChipLabel }}</span>
+                    @for (chip of districtContext.growthFilterChips(); track chip.id) {
+                    <button
+                        type="button"
+                        class="aurora-chip aurora-chip-filter"
+                        (click)="districtContext.clearGrowthFilterChip(chip.id)"
+                        [attr.aria-label]="'Remove filter: ' + chip.label"
+                    >
+                        <span>{{ chip.label }}</span>
+                        <span class="aurora-chip-x" aria-hidden="true">×</span>
+                    </button>
+                    }
+                    <button
+                        type="button"
+                        class="aurora-add-filter"
+                        (click)="districtContext.requestFilterPanel()"
+                        title="Open the page's filter options"
+                    >
+                        + Add filter
+                    </button>
+
+                    <div class="aurora-save-wrap">
+                        <button
+                            type="button"
+                            class="aurora-save-btn"
+                            [class.is-saved]="campusViewSavedFlash"
+                            (click)="saveCurrentCampusLevelView()"
+                            [attr.aria-expanded]="savedViewsOpen"
+                            title="Save the current year, window, level and filters"
+                        >
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
+                            </svg>
+                            {{ campusViewSavedFlash ? 'Saved' : 'Save this view' }}
+                        </button>
+                        @if (savedViewsOpen) {
+                        <div class="aurora-pop">
+                            <div class="aurora-pop-head">
+                                <span class="aurora-pop-title">Saved views</span>
+                                <span class="aurora-pop-sub">{{ savedCampusLevelViews.length }} saved</span>
+                            </div>
+                            <div class="aurora-pop-body">
+                                @if (savedCampusLevelViews.length) {
+                                @for (view of savedCampusLevelViews; track view.id) {
+                                <div class="aurora-saved-row">
+                                    <button type="button" class="aurora-saved-open" (click)="applySavedCampusLevelView(view)" title="Reopen this saved view">
+                                        <span class="aurora-saved-label">{{ savedViewLabel(view) }}</span>
+                                        <span class="aurora-saved-meta">
+                                            @if (savedViewFilterCount(view)) {
+                                            {{ savedViewFilterCount(view) }} filter{{ savedViewFilterCount(view) === 1 ? '' : 's' }}
+                                            } @else {
+                                            No extra filters
+                                            }
+                                        </span>
+                                    </button>
+                                    <button type="button" class="aurora-saved-delete" (click)="deleteSavedCampusLevelView($event, view)" title="Delete this saved view" aria-label="Delete saved view">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                                        </svg>
+                                    </button>
+                                </div>
+                                }
+                                } @else {
+                                <p class="aurora-pop-empty">No saved views for this district yet. Use “Save this view”.</p>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+                </div>
+            </section>
+            }
             <div *ngIf="districtRouteId != null" class="-mt-1 mb-1">
                 <a routerLink="/dashboard" class="text-sm font-semibold text-dark hover:underline dark:text-sky-400">
                     ← Back to all districts
@@ -1317,6 +2141,7 @@
                 </div>
             </div>
     </div>
+    }
 </div>
 
 <ngx-custom-modal #teacherStudentOverviewModal customClass="modal-top records-modal" class="no-footer">
