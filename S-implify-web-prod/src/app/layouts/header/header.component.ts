@@ -40,7 +40,7 @@ const MENU_PARENTS: Array<{ key: string; prefixes: string[] }> = [
     standalone: true,
     imports: [CommonModule, FormsModule, RouterModule, TranslateModule, LayoutSharedModule],
     host: {
-        '[class.dov-nav-raised]': 'isDistrictOverviewPage',
+        '[class.dov-nav-raised]': 'isSingleRowNavPage',
     },
 })
 export class HeaderComponent implements OnInit {
@@ -472,6 +472,16 @@ export class HeaderComponent implements OnInit {
             return false;
         }
         return (roleIdFromName(role.roleName) ?? role.roleId) === ROLE_IDS.DistrictAdmin;
+    }
+
+    /** Campus Profile (`/dashboard/campus/:id`) uses the same single-row navbar. */
+    get isCampusProfilePage(): boolean {
+        return /^\/dashboard\/campus\/[^/]+\/?$/.test(this.currentUrl());
+    }
+
+    /** Pages that merge the navbar into one row and hide the year/window selectors. */
+    get isSingleRowNavPage(): boolean {
+        return this.isDistrictOverviewPage || this.isCampusProfilePage;
     }
 
     goToRoleSelection(): void {

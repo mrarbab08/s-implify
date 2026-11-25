@@ -614,6 +614,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     campusProfileSearchOpen = false;
     campusProfileAlertsOpen = false;
     campusProfileSavedOpen = false;
+    campusProfileYearMenuOpen = false;
     campusProfileSavedFlash = false;
     savedCampusProfileViews: SavedCampusProfileView[] = [];
 
@@ -1102,6 +1103,46 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         );
     }
 
+    // ----- Header year + assessment-period selection (same source as the
+    // portal's growth context, so the whole page and the VIEWING bar follow) -----
+
+    get campusProfileYearLabel(): string {
+        return this.campusLevelYearLabel;
+    }
+
+    get campusProfileQuarterOptions(): Array<{
+        code: string;
+        label: string;
+        windowLabel: string;
+    }> {
+        return this.districtOverviewQuarterOptions;
+    }
+
+    get campusProfileSelectedQuarterCode(): string | null {
+        return this.districtContext.selection.quarterCode;
+    }
+
+    toggleCampusProfileYearMenu(): void {
+        this.campusProfileYearMenuOpen = !this.campusProfileYearMenuOpen;
+        this.campusProfileSearchOpen = false;
+        this.campusProfileAlertsOpen = false;
+        this.campusProfileSavedOpen = false;
+    }
+
+    selectCampusProfileYear(academicYearId: number | null): void {
+        this.campusProfileYearMenuOpen = false;
+        if (academicYearId !== this.districtContext.selection.academicYearId) {
+            this.districtContext.setAcademicYearId(academicYearId);
+        }
+    }
+
+    selectCampusProfileQuarter(code: string): void {
+        this.campusProfileYearMenuOpen = false;
+        if (code !== this.campusProfileSelectedQuarterCode) {
+            this.districtContext.setQuarterCode(code);
+        }
+    }
+
     get campusProfileBandsText(): string {
         const parts = GrowthOverviewPageComponent.CAMPUS_PROFILE_BANDS.map(
             (b) => `${b.grade} ${b.from}–${b.to}`,
@@ -1408,6 +1449,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         this.campusProfileAlertsOpen = !this.campusProfileAlertsOpen;
         this.campusProfileSavedOpen = false;
         this.campusProfileSearchOpen = false;
+        this.campusProfileYearMenuOpen = false;
         if (this.campusProfileAlertsOpen) {
             this.ensureCampusProfileAlertsLoaded();
             this.campusProfileReadIds = this.campusProfileAlerts.map((a) => a.id);
@@ -1459,6 +1501,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         this.campusProfileSearchOpen = !!this.campusProfileSearchQuery.trim();
         this.campusProfileAlertsOpen = false;
         this.campusProfileSavedOpen = false;
+        this.campusProfileYearMenuOpen = false;
     }
 
     clearCampusProfileSearch(): void {
@@ -1480,6 +1523,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         this.campusProfileSearchOpen = false;
         this.campusProfileAlertsOpen = false;
         this.campusProfileSavedOpen = false;
+        this.campusProfileYearMenuOpen = false;
     }
 
     openCampusProfileHelp(): void {
@@ -1568,6 +1612,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         this.campusProfileSavedOpen = !this.campusProfileSavedOpen;
         this.campusProfileAlertsOpen = false;
         this.campusProfileSearchOpen = false;
+        this.campusProfileYearMenuOpen = false;
     }
 
     saveCampusProfileView(): void {

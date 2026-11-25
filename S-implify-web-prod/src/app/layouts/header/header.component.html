@@ -1,4 +1,4 @@
-<div class="app-header-bar fixed inset-x-0 top-0 z-40" [class.dov-single-nav]="isDistrictOverviewPage">
+<div class="app-header-bar fixed inset-x-0 top-0 z-40" [class.dov-single-nav]="isSingleRowNavPage">
   <!-- ROW 1 — logo + right-side context controls (selectors, notes, theme, avatar) -->
   <div class="header-row-context relative flex flex-wrap items-center gap-x-3 gap-y-2 bg-white px-4 py-2.5 dark:bg-[#0e1726]" [ngClass]="{ 'dark text-white-dark': store.semidark }">
     <!-- Mobile hamburger (opens the menu panel under the header) -->
@@ -45,7 +45,7 @@
 
     <!-- Right controls: notes, theme, avatar (year/window selectors only on other pages) -->
     <div class="header-context-controls ml-auto flex flex-wrap items-center justify-end gap-x-3 gap-y-2">
-      @if (!isDistrictOverviewPage) {
+      @if (!isSingleRowNavPage) {
       <div class="inline-flex flex-nowrap items-center gap-2">
         @if (contextToolbarLoading) {
           <span class="text-xs text-gray-400 dark:text-gray-500">Loading context…</span>

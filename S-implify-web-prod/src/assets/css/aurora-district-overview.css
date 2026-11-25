@@ -2576,3 +2576,8 @@ body.dark .app-header-bar.dov-single-nav .top-menu-panel {
 .modal.dov-students-modal {
     z-index: 2000 !important;
 }
+
+/* Keep dashboard modals above the raised single-row navbar (District Overview / Campus Profile). */
+.modal {
+    z-index: 2000 !important;
+}

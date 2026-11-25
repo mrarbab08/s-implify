@@ -1242,6 +1242,17 @@
     .aurora-alert-row:hover { background: transparent; }
     .aurora-saved-row:hover { background: transparent; }
     .aurora-saved-delete:hover { background: transparent; color: #8a90ab; }
+    .aurora-year-btn:hover { border-color: #e4e7f2; background: #ffffff; }
+    .aurora-quarter-pill:hover { background: #f3f5fb; color: #5a6080; }
+    .aurora-quarter-pill.is-active:hover { background: #5b3df5; color: #ffffff; }
+}
+
+@media (max-width: 1180px) {
+    .aurora-selection-group {
+        order: 3;
+        width: 100%;
+        margin-left: 0;
+    }
 }
 
 /* ===== Aurora v2 — CAMPUS PROFILE page ===== */
@@ -1268,7 +1279,99 @@
     display: inline-flex;
     align-items: center;
     gap: 8px;
+}
+
+/* --- Header year + assessment-period selection group --- */
+.aurora-selection-group {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
     margin-left: auto;
+}
+
+.aurora-year-wrap {
+    position: relative;
+}
+
+.aurora-year-btn {
+    display: inline-flex;
+    height: 38px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    border: 1px solid #e4e7f2;
+    border-radius: 9999px;
+    background: #ffffff;
+    color: #111536;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.aurora-year-btn:hover {
+    border-color: #a5b4fc;
+    background: #f7f6ff;
+}
+
+.aurora-year-pop {
+    right: auto;
+    left: 0;
+    width: 240px;
+}
+
+/* The title row owns the year popup; keep it above the data/VIEWING rows. */
+.aurora-profile-page .aurora-profile-header .aurora-title-row {
+    z-index: 55;
+}
+
+.aurora-quarter-tabs {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid #e4e7f2;
+    border-radius: 9999px;
+    background: #ffffff;
+    box-shadow: 0 8px 22px -18px rgba(17, 20, 58, 0.45);
+}
+
+.aurora-quarter-pill {
+    display: inline-flex;
+    min-width: 34px;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 9999px;
+    background: #f3f5fb;
+    color: #5a6080;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        color 0.2s ease;
+}
+
+.aurora-quarter-pill:hover {
+    background: #ece9ff;
+    color: #111536;
+}
+
+.aurora-quarter-pill.is-active {
+    background: #5b3df5;
+    color: #ffffff;
+}
+
+.aurora-pop-row.is-selected {
+    background: #f1edff;
 }
 
 .aurora-standard-btn,

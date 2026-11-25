@@ -1187,7 +1187,7 @@
                  ============================================================ -->
             @if (isSingleCampusView) {
             <section class="aurora-profile-header" aria-label="Campus profile header">
-                @if (campusProfileSearchOpen || campusProfileAlertsOpen || campusProfileSavedOpen) {
+                @if (campusProfileSearchOpen || campusProfileAlertsOpen || campusProfileSavedOpen || campusProfileYearMenuOpen) {
                 <div class="aurora-backdrop" (click)="closeCampusProfilePopovers()"></div>
                 }
 
@@ -1203,6 +1203,58 @@
                 <!-- Title row + actions + search / alerts / help -->
                 <div class="aurora-title-row">
                     <h1 class="aurora-title">{{ campusName }}</h1>
+
+                    <!-- Year + assessment period (drives the whole page and the VIEWING bar) -->
+                    <div class="aurora-selection-group">
+                        <div class="aurora-year-wrap">
+                            <button
+                                type="button"
+                                class="aurora-year-btn"
+                                [attr.aria-expanded]="campusProfileYearMenuOpen"
+                                (click)="toggleCampusProfileYearMenu()"
+                            >
+                                {{ campusProfileYearLabel }}
+                                <svg class="h-3.5 w-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6" />
+                                </svg>
+                            </button>
+                            @if (campusProfileYearMenuOpen) {
+                            <div class="aurora-pop aurora-year-pop">
+                                <div class="aurora-pop-head">
+                                    <span class="aurora-pop-title">Academic year</span>
+                                </div>
+                                <div class="aurora-pop-body">
+                                    @for (year of districtContext.academicYears; track year.academicYearId) {
+                                    <button
+                                        type="button"
+                                        class="aurora-pop-row"
+                                        [class.is-selected]="year.academicYearId === districtContext.selection.academicYearId"
+                                        (click)="selectCampusProfileYear(year.academicYearId)"
+                                    >
+                                        <span class="aurora-pop-row-main">{{ year.yearLabel }}</span>
+                                        @if (year.academicYearId === districtContext.selection.academicYearId) {
+                                        <span class="aurora-pop-row-meta">✓</span>
+                                        }
+                                    </button>
+                                    }
+                                </div>
+                            </div>
+                            }
+                        </div>
+                        <div class="aurora-quarter-tabs" role="group" aria-label="Assessment period">
+                            @for (option of campusProfileQuarterOptions; track option.code) {
+                            <button
+                                type="button"
+                                class="aurora-quarter-pill"
+                                [class.is-active]="option.code === campusProfileSelectedQuarterCode"
+                                [attr.title]="option.windowLabel"
+                                [attr.aria-pressed]="option.code === campusProfileSelectedQuarterCode"
+                                (click)="selectCampusProfileQuarter(option.code)"
+                            >{{ option.label }}</button>
+                            }
+                        </div>
+                    </div>
+
                     <div class="aurora-profile-actions">
                         <button
                             type="button"
