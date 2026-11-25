@@ -380,6 +380,10 @@ export class DistrictContextService {
         if (!scope) {
             return of(undefined);
         }
+        /** Only full-district roles may compare campuses — never carry a stale pair into a scoped role. */
+        if (!this.auth.isFullDistrictRole()) {
+            this.setCampusComparison(null);
+        }
         this.loadedDistrictBundleId = null;
         return this.applyActiveRoleScope(scope).pipe(
             switchMap(() => this.ensureDefaultDistrictIfNeeded()),

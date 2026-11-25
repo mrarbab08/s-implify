@@ -10,6 +10,7 @@ import { NgSelectModule } from '@ng-select/ng-select';
 
 import { DistrictContextService } from '../../core/services/district-context.service';
 import { AuthService } from '../../core/services/auth.service';
+import { TeachersService } from '../../core/services/teachers.service';
 import type { Campus, GrowthFilters } from '../../core/models/simplify-api.model';
 import { EMPTY_GROWTH_FILTERS } from '../../core/models/simplify-api.model';
 import { LayoutSharedModule } from '../../shared/layout-shared.module';
@@ -56,6 +57,53 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
     /** Campuses for the current district, restricted to the active role's scope. */
     get campusOptions(): Campus[] {
         return this.districtContext.filterCampusesForActiveRole(this.districtContext.campuses);
+    }
+
+    /** Super Admin / District Admin — the only roles that compare whole campuses. */
+    get canCompareCampuses(): boolean {
+        return this.auth.isFullDistrictRole();
+    }
+
+    /** Principal / Teacher — campus is pinned to the active role, shown as fixed text. */
+    get isCampusFixedForRole(): boolean {
+        return this.auth.isCampusScopedRole();
+    }
+
+    /** Teacher — grade + subject are pinned to the assigned classroom. */
+    get isTeacherFixedGradeSubject(): boolean {
+        return this.auth.isTeacherRole();
+    }
+
+    get scopedCampus(): Campus | undefined {
+        return this.districtContext.findCampusById(this.auth.scopedCampusId());
+    }
+
+    get scopedCampusLabel(): string {
+        const campus = this.scopedCampus;
+        if (campus) {
+            return campus.campusName?.trim() || campus.campusCode;
+        }
+        return this.isCampusFixedForRole ? 'Your campus' : 'All Campuses (District)';
+    }
+
+    /** Assigned grade/subject of the signed-in teacher (resolved from the campus roster). */
+    private teacherProfileLoading = false;
+    private teacherGrade: string | null = null;
+    private teacherSubject: string | null = null;
+    private loadedTeacherProfileFor: number | null = null;
+
+    get teacherGradeLabel(): string {
+        if (this.teacherGrade) {
+            return this.teacherGrade;
+        }
+        return this.teacherProfileLoading ? 'Loading…' : '—';
+    }
+
+    get teacherSubjectLabel(): string {
+        if (this.teacherSubject) {
+            return this.teacherSubject;
+        }
+        return this.teacherProfileLoading ? 'Loading…' : '—';
     }
 
     gradeOptions: { value: string; label: string }[] = [];
@@ -107,6 +155,7 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
         public router: Router,
         readonly districtContext: DistrictContextService,
         readonly auth: AuthService,
+        private teachersService: TeachersService,
         private cdr: ChangeDetectorRef,
     ) {
         this.initStore();
@@ -158,8 +207,69 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
             this.districtContext.ensureDistrictCampuses(),
         ]).subscribe(() => {
             this.refreshFilterOptions();
+            this.loadTeacherProfile();
             this.cdr.markForCheck();
         });
+    }
+
+    /** Resolve the active teacher's assigned grade + subject for the fixed filter fields. */
+    private loadTeacherProfile(): void {
+        if (!this.auth.isTeacherRole()) {
+            this.teacherGrade = null;
+            this.teacherSubject = null;
+            this.loadedTeacherProfileFor = null;
+            return;
+        }
+        const scope = this.auth.getActiveRoleScope();
+        if (scope?.districtId == null || scope.campusId == null || scope.teacherId == null) {
+            return;
+        }
+        if (this.loadedTeacherProfileFor === scope.teacherId) {
+            return;
+        }
+        const campus = this.districtContext.findCampusById(scope.campusId);
+        if (!campus) {
+            return; // campuses still loading — retried once reference data lands
+        }
+        this.loadedTeacherProfileFor = scope.teacherId;
+        this.teacherProfileLoading = true;
+        this.teachersService
+            .listTeachersByCampus(scope.districtId, campus.campusCode)
+            .pipe(
+                take(1),
+                finalize(() => {
+                    this.teacherProfileLoading = false;
+                    this.cdr.markForCheck();
+                }),
+            )
+            .subscribe({
+                next: (rows) => {
+                    const teacher = rows.find((row) => Number(row.teacherId) === scope.teacherId);
+                    this.teacherGrade = teacher?.grade?.trim() || null;
+                    this.teacherSubject = teacher?.subject?.trim() || null;
+                },
+                error: () => {
+                    this.loadedTeacherProfileFor = null;
+                    this.teacherGrade = null;
+                    this.teacherSubject = null;
+                },
+            });
+    }
+
+    /**
+     * Scoped roles cannot widen their scope: the campus stays pinned, and a teacher's
+     * fixed grade/subject never leak in from a previously saved admin filter.
+     */
+    private applyRoleScopeToDraft(): void {
+        if (!this.isCampusFixedForRole) {
+            return;
+        }
+        this.campusDraft = this.auth.scopedCampusId();
+        this.filtersDraft = { ...this.filtersDraft, campusId: null };
+        if (this.isTeacherFixedGradeSubject) {
+            this.filtersDraft.grades = [];
+            this.filtersDraft.subjects = [];
+        }
     }
 
     private syncFiltersDraft(f: GrowthFilters): void {
@@ -168,7 +278,9 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
             grades: [...f.grades],
             subjects: [...f.subjects],
         };
-    }    private refreshFilterOptions(): void {
+    }
+
+    private refreshFilterOptions(): void {
         this.gradeOptions = this.districtContext.grades.map((g) => ({
             value: g.gradeCode,
             label: g.gradeName || g.gradeCode,
@@ -213,6 +325,8 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
         this.syncFiltersDraft(this.districtContext.growthFilters);
         this.campusDraft =
             this.currentRouteCampusId() ?? this.filtersDraft.campusId ?? null;
+        this.applyRoleScopeToDraft();
+        this.loadTeacherProfile();
         this.refreshFilterOptions();
         this.showCustomizerOpen = true;
         this.filtersModal?.open();
@@ -227,10 +341,15 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
 
     /** "Campus Comparison" → reopen this same filters panel in comparison mode (extra campus-pair field). */
     openCampusComparison(): void {
+        if (!this.canCompareCampuses) {
+            return;
+        }
         this.comparisonMode = true;
         this.comparisonError = null;
         this.syncFiltersDraft(this.districtContext.growthFilters);
         this.campusDraft = this.currentRouteCampusId() ?? this.filtersDraft.campusId ?? null;
+        this.applyRoleScopeToDraft();
+        this.loadTeacherProfile();
         const current = this.districtContext.campusComparison;
         this.campusADraft = current?.[0] ?? null;
         this.campusBDraft = current?.[1] ?? null;
@@ -262,21 +381,23 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
 
     /** Push the local draft to the service so dashboards re-fetch with the new filters. */
     applyFilters(): void {
-        if (this.comparisonMode) {
+        if (this.comparisonMode && this.canCompareCampuses) {
             this.applyCampusComparison();
             return;
         }
         const onCampusRoute = this.currentRouteCampusId() != null;
+        const teacherScope = this.isTeacherFixedGradeSubject;
         this.districtContext.setGrowthFilters({
             ...this.filtersDraft,
             /**
              * On the district overview the campus choice filters the stats in place
              * (stored on the filters). On a campus drill-down the route already pins
-             * the campus, so picking another one navigates instead.
+             * the campus, so picking another one navigates instead. Scoped roles are
+             * always pinned by their role, never by the stored filter.
              */
-            campusId: onCampusRoute ? null : this.campusDraft,
-            grades: [...this.filtersDraft.grades],
-            subjects: [...this.filtersDraft.subjects],
+            campusId: this.isCampusFixedForRole || onCampusRoute ? null : this.campusDraft,
+            grades: teacherScope ? [] : [...this.filtersDraft.grades],
+            subjects: teacherScope ? [] : [...this.filtersDraft.subjects],
         });
         if (onCampusRoute) {
             this.applyCampusSelection();
@@ -323,6 +444,9 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
             this.campusBDraft = null;
             this.comparisonError = null;
         }
+        if (this.isCampusFixedForRole) {
+            this.campusDraft = this.auth.scopedCampusId();
+        }
         this.districtContext.resetGrowthFilters();
     }
 
@@ -332,6 +456,10 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
      * filters applied above already trigger a reload with the new stats.
      */
     private applyCampusSelection(): void {
+        /** A scoped role can never navigate to another campus. */
+        if (this.isCampusFixedForRole) {
+            return;
+        }
         if ((this.currentRouteCampusId() ?? null) === (this.campusDraft ?? null)) {
             return;
         }

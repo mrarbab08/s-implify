@@ -18,6 +18,7 @@
                 <p class="text-xs font-normal text-gray-500 dark:text-gray-400">
                     These are the search filters for dashboard.
                 </p>
+                @if (canCompareCampuses) {
                 <button
                     type="button"
                     (click)="openCampusComparison()"
@@ -26,6 +27,7 @@
                 >
                     Campus Comparison
                 </button>
+                }
             </div>
         </ng-template>
         <ng-template #modalBody>
@@ -79,7 +81,7 @@
                     <div class="flex flex-col gap-3">
                         <!-- Campuses row: comparison picks two, normal mode scopes one -->
                         <div class="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                            @if (comparisonMode) {
+                            @if (comparisonMode && canCompareCampuses) {
                             <div>
                                 <label class="mb-1 block text-sm font-semibold dark:text-white">Campus A</label>
                                 <select
@@ -109,6 +111,21 @@
                             @if (comparisonError) {
                             <p class="text-xs font-semibold text-danger sm:col-span-2">{{ comparisonError }}</p>
                             }
+                            } @else if (isCampusFixedForRole) {
+                            <div>
+                                <label class="mb-1 block text-sm font-semibold dark:text-white">Campus</label>
+                                <div
+                                    class="flex min-h-[38px] items-center gap-2 rounded-md border border-dashed border-[#cfd6e6] bg-[#f7f9fd] px-3 py-2 text-sm font-semibold text-gray-800 dark:border-[#1b2e4b] dark:bg-[#0f1b2d] dark:text-white-light"
+                                    title="Campus is fixed by your role"
+                                >
+                                    <span class="truncate">{{ scopedCampusLabel }}</span>
+                                    <span
+                                        class="ml-auto shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:bg-[#1b2e4b] dark:text-gray-400"
+                                    >
+                                        Fixed
+                                    </span>
+                                </div>
+                            </div>
                             } @else {
                             <div>
                                 <label class="mb-1 block text-sm font-semibold dark:text-white">Campus</label>
@@ -126,11 +143,34 @@
                             }
                         </div>
 
+                        @if (isCampusFixedForRole) {
+                        <p class="-mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                            @if (isTeacherFixedGradeSubject) {
+                            Campus, grade and subject are fixed by your role — these filters apply only to your students.
+                            } @else {
+                            Campus is fixed by your role — these filters apply only within this campus.
+                            }
+                        </p>
+                        }
+
                         <!-- Grade / Subject / Special Education share one row -->
                         <div class="grid gap-x-6 gap-y-3 sm:grid-cols-3">
                         <!-- Grade -->
                         <div>
                             <label class="mb-1 block text-sm font-semibold dark:text-white">Grade</label>
+                            @if (isTeacherFixedGradeSubject) {
+                            <div
+                                class="flex min-h-[38px] items-center gap-2 rounded-md border border-dashed border-[#cfd6e6] bg-[#f7f9fd] px-3 py-2 text-sm font-semibold text-gray-800 dark:border-[#1b2e4b] dark:bg-[#0f1b2d] dark:text-white-light"
+                                title="Grade is fixed by your role"
+                            >
+                                <span class="truncate">{{ teacherGradeLabel }}</span>
+                                <span
+                                    class="ml-auto shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:bg-[#1b2e4b] dark:text-gray-400"
+                                >
+                                    Fixed
+                                </span>
+                            </div>
+                            } @else {
                             <ng-select
                                 [items]="gradeOptions"
                                 bindLabel="label"
@@ -145,11 +185,25 @@
                                 class="custom-multiselect w-full"
                                 appendTo="body"
                             ></ng-select>
+                            }
                         </div>
 
                         <!-- Subject -->
                         <div>
                             <label class="mb-1 block text-sm font-semibold dark:text-white">Subject</label>
+                            @if (isTeacherFixedGradeSubject) {
+                            <div
+                                class="flex min-h-[38px] items-center gap-2 rounded-md border border-dashed border-[#cfd6e6] bg-[#f7f9fd] px-3 py-2 text-sm font-semibold text-gray-800 dark:border-[#1b2e4b] dark:bg-[#0f1b2d] dark:text-white-light"
+                                title="Subject is fixed by your role"
+                            >
+                                <span class="truncate">{{ teacherSubjectLabel }}</span>
+                                <span
+                                    class="ml-auto shrink-0 rounded bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400 dark:bg-[#1b2e4b] dark:text-gray-400"
+                                >
+                                    Fixed
+                                </span>
+                            </div>
+                            } @else {
                             <ng-select
                                 [items]="subjectOptions"
                                 bindLabel="label"
@@ -164,6 +218,7 @@
                                 class="custom-multiselect w-full"
                                 appendTo="body"
                             ></ng-select>
+                            }
                         </div>
 
                         <!-- Special Education -->

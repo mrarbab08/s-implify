@@ -127,6 +127,17 @@ export class AuthService {
         return (roleIdFromName(role.roleName) ?? role.roleId) === ROLE_IDS.Teacher;
     });
 
+    readonly isDistrictAdminRole = computed(() => {
+        const role = this.sessionSignal()?.activeRole;
+        if (!role) {
+            return false;
+        }
+        return (roleIdFromName(role.roleName) ?? role.roleId) === ROLE_IDS.DistrictAdmin;
+    });
+
+    /** Super Admin / District Admin — full district scope (all campuses, all filters). */
+    readonly isFullDistrictRole = computed(() => this.isSuperAdminRole() || this.isDistrictAdminRole());
+
     readonly isCampusScopedRole = computed(() => {
         const role = this.sessionSignal()?.activeRole;
         if (!role) {
