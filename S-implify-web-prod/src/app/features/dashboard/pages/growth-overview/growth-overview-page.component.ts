@@ -65,7 +65,11 @@ import type {
     TopTeacherItemDto,
     TopTeachersRequest,
 } from '../../../../core/models/simplify-api.model';
-import { areGrowthFiltersEqual, CCMR_DEFAULT_CREDIT_THRESHOLDS } from '../../../../core/models/simplify-api.model';
+import {
+    areGrowthFiltersEqual,
+    CCMR_DEFAULT_CREDIT_THRESHOLDS,
+    EMPTY_GROWTH_FILTERS,
+} from '../../../../core/models/simplify-api.model';
 import { StudentMobilityService } from '../../../../core/services/student-mobility.service';
 import { downloadCsv, printTable, type TableExportColumn } from '../../../../core/utils/table-export.util';
 import { scoreBandRowClass } from '../../../../core/utils/score-band-row-class.util';
@@ -74,6 +78,11 @@ import { STUDENT_BASE_COLUMNS } from '../../../students/data/student-table.mock'
 import type { StudentColumnDef, StudentRow } from '../../../students/models/student-table.model';
 import { mapStudentGrowthRecordToRow } from '../../../students/utils/student-growth-record.mapper';
 import { buildQuarterDiffColumnDefs } from '../../../students/utils/student-quarter-progression.util';
+
+/** Stable code-list comparison used to keep the inline filter draft's arrays in place. */
+function sameCodes(a: string[], b: string[]): boolean {
+    return a.length === b.length && a.every((code, i) => code === b[i]);
+}
 
 /** Top teachers on campus-category drill-down (merged campus-teacher-metrics). */
 export interface CategoryTeacherLeaderVm {
@@ -174,6 +183,8 @@ interface DistrictAdminStudentRow {
     campusCode: string;
     campus: string;
     grade: string;
+    /** Subject code from the same student-level record, used for campus filter options. */
+    subject: string;
     classroom: string;
 }
 
@@ -320,6 +331,18 @@ export interface CampusProfileClassroomVm {
     growthColor: string;
     staarDeep: boolean;
     growthDeep: boolean;
+    approaches: number | null;
+    meets: number | null;
+    masters: number | null;
+    approachesText: string;
+    meetsText: string;
+    mastersText: string;
+    approachesColor: string;
+    meetsColor: string;
+    mastersColor: string;
+    approachesDeep: boolean;
+    meetsDeep: boolean;
+    mastersDeep: boolean;
 }
 
 /** Aurora v2 campus profile — a rule-derived insight card. */
@@ -617,6 +640,55 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     campusProfileYearMenuOpen = false;
     campusProfileSavedFlash = false;
     savedCampusProfileViews: SavedCampusProfileView[] = [];
+
+    /** The VIEWING bar's "+ Add filter" toggles this inline panel (campus profile only). */
+    campusProfileFiltersOpen = false;
+    campusProfileGradeMenuOpen = false;
+    campusProfileSubjectMenuOpen = false;
+    /**
+     * Editable copy of the shared dashboard filters. It is synced from the service when
+     * the panel opens and every change is pushed straight back to the service (no
+     * separate popup draft that could silently diverge from what the page renders).
+     */
+    campusProfileFilterDraft: GrowthFilters = {
+        ...EMPTY_GROWTH_FILTERS,
+        grades: [],
+        subjects: [],
+    };
+    /** Cached campus-scoped option codes, rebuilt for the current campus/window. */
+    private campusProfileOptionsKey = '';
+    private campusProfileGradeCodes: string[] = [];
+    private campusProfileSubjectCodes: string[] = [];
+    private campusProfileRecordOptionsLoaded = false;
+    private campusProfileOptionCodesSub?: Subscription;
+
+    /** Same static filter option values used by the portal's Search Filters panel. */
+    readonly campusProfileBoolOptions = [
+        { value: true, label: 'Yes' },
+        { value: false, label: 'No' },
+    ];
+    readonly campusProfileEmergentBilingualOptions = [
+        { value: 'First Year of Monitoring', label: 'First Year of Monitoring' },
+        { value: 'Second Year of Monitoring', label: 'Second Year of Monitoring' },
+        { value: 'Currently Emergent Bilingual', label: 'Currently Emergent Bilingual' },
+        {
+            value: 'Other Non-Emergent Bilingual Student',
+            label: 'Other Non-Emergent Bilingual Student',
+        },
+    ];
+    readonly campusProfileEthnicityOptions = [
+        { value: 'Asian', label: 'Asian' },
+        { value: 'American Indian/Alaskan Native', label: 'American Indian/Alaskan Native' },
+        { value: 'Hispanic', label: 'Hispanic' },
+        { value: 'Two or More Races', label: 'Two or More Races' },
+        { value: 'Black/African American', label: 'Black/African American' },
+        { value: 'Native Hawaiian/Pacific Islander', label: 'Native Hawaiian/Pacific Islander' },
+        { value: 'White', label: 'White' },
+    ];
+    readonly campusProfileTestLanguageOptions = [
+        { value: 'ENGLISH', label: 'English' },
+        { value: 'SPANISH', label: 'Spanish' },
+    ];
 
     private static readonly CAMPUS_PROFILE_VIEWS_KEY = 'simplify_campus_profile_views';
     private static readonly CAMPUS_PROFILE_READ_KEY = 'simplify_campus_profile_read_alerts';
@@ -1044,6 +1116,341 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     // by this component. Nothing is sampled or typed in.
     // ==================================================================
 
+    /**
+     * Grade/subject options are built from this campus's own student-level records and
+     * teacher roster — never from a fixed list or the whole district.
+     */
+    private campusProfileOptionsCacheKey(): string {
+        const campus = this.campusProfileCampus;
+        return [
+            campus?.campusCode || '',
+            this.districtContext.selection.districtId,
+            this.districtContext.selection.academicYearId,
+            this.districtContext.selection.quarterCode,
+        ].join('|');
+    }
+
+    /**
+     * Distinct grade/subject codes from the real student-level records of this campus,
+     * academic year and window — the same rows the rest of the page is filtered against.
+     */
+    private loadCampusProfileOptionCodes(): void {
+        const campus = this.campusProfileCampus;
+        const base = this.districtContext.baseGrowthPayload();
+        if (!campus?.campusCode || !base) {
+            return;
+        }
+        this.campusProfileOptionCodesSub?.unsubscribe();
+        const key = this.campusProfileOptionsCacheKey();
+        this.campusProfileOptionCodesSub = this.studentGrowthRecords
+            .listRecords({
+                districtId: base.districtId,
+                academicYearId: base.academicYearId,
+                quarterCode: base.quarterCode,
+                campusCode: campus.campusCode,
+                offset: 0,
+                limit: 5000,
+            })
+            .pipe(
+                takeUntil(this.destroy$),
+                catchError(() => of(null)),
+            )
+            .subscribe((page) => {
+                if (!page || this.campusProfileOptionsCacheKey() !== key) {
+                    return;
+                }
+                const gradeCodes = new Set<string>();
+                const subjectCodes = new Set<string>();
+                for (const record of page.records ?? []) {
+                    if (record.gradeCode?.trim()) gradeCodes.add(record.gradeCode.trim());
+                    if (record.subjectCode?.trim()) subjectCodes.add(record.subjectCode.trim());
+                }
+                this.campusProfileGradeCodes = [...gradeCodes];
+                this.campusProfileSubjectCodes = [...subjectCodes];
+                this.campusProfileRecordOptionsLoaded = true;
+                this.campusProfileOptionsKey = [
+                    key,
+                    this.campusProfileStudents.length,
+                    this.campusLevelTeacherRefs.length,
+                    this.lastCampusTeacherMetrics.length,
+                ].join('|');
+                this.cdr.markForCheck();
+            });
+    }
+
+    private refreshCampusProfileOptions(): void {
+        const campus = this.campusProfileCampus;
+        const baseKey = this.campusProfileOptionsCacheKey();
+        if (
+            this.campusProfileRecordOptionsLoaded &&
+            this.campusProfileOptionsKey.startsWith(`${baseKey}|`)
+        ) {
+            return;
+        }
+        const key = [
+            baseKey,
+            this.campusProfileStudents.length,
+            this.campusLevelTeacherRefs.length,
+            this.lastCampusTeacherMetrics.length,
+        ].join('|');
+        if (key === this.campusProfileOptionsKey) {
+            return;
+        }
+        this.campusProfileRecordOptionsLoaded = false;
+        this.campusProfileOptionsKey = key;
+        const grades = new Set<string>();
+        const subjects = new Set<string>();
+        for (const student of this.campusProfileStudents) {
+            if (student.grade && student.grade !== '—') grades.add(student.grade);
+            if (student.subject && student.subject !== '—') subjects.add(student.subject);
+        }
+        for (const teacher of this.campusLevelTeacherRefs) {
+            if (campus?.campusId != null && Number(teacher.campusId) !== Number(campus.campusId)) {
+                continue;
+            }
+            if (teacher.grade?.trim()) grades.add(teacher.grade.trim());
+            if (teacher.subject?.trim()) subjects.add(teacher.subject.trim());
+        }
+        for (const row of this.lastCampusTeacherMetrics) {
+            if (row.grade?.trim()) grades.add(row.grade.trim());
+            const subject = this.campusProfileSubjectFor(row.teacherIdExternal);
+            if (subject !== '—') subjects.add(subject);
+        }
+        this.campusProfileGradeCodes = [...grades];
+        this.campusProfileSubjectCodes = [...subjects];
+    }
+
+    get campusProfileGradeOptions(): Array<{ value: string | null; label: string }> {
+        this.refreshCampusProfileOptions();
+        return [
+            { value: null, label: 'All' },
+            ...this.districtContext.grades
+                .filter(
+                    (g) =>
+                        this.campusProfileGradeCodes.includes(g.gradeCode) ||
+                        this.campusProfileGradeCodes.includes((g.gradeName || '').trim()),
+                )
+                .map((g) => ({ value: g.gradeCode as string | null, label: g.gradeName || g.gradeCode })),
+        ];
+    }
+
+    get campusProfileSubjectOptions(): Array<{ value: string | null; label: string }> {
+        this.refreshCampusProfileOptions();
+        return [
+            { value: null, label: 'All' },
+            ...this.districtContext.subjects
+                .filter(
+                    (s) =>
+                        this.campusProfileSubjectCodes.includes(s.subjectCode) ||
+                        this.campusProfileSubjectCodes.includes((s.subjectName || '').trim()),
+                )
+                .map((s) => ({ value: s.subjectCode as string | null, label: s.subjectName || s.subjectCode })),
+        ];
+    }
+
+    /** Super Admin / District Admin may compare two campuses; scoped roles cannot. */
+    get campusProfileCanCompare(): boolean {
+        return this.auth.isFullDistrictRole();
+    }
+
+    /** A teacher's grade and subject come from their roster row, never from a stored filter. */
+    get campusProfileTeacherFixed(): boolean {
+        return this.auth.isTeacherRole();
+    }
+
+    private get campusProfileTeacherRef(): CampusLevelTeacherRef | null {
+        const teacherId =
+            this.auth.getActiveRoleScope()?.teacherId ?? this.districtContext.selection.teacherId;
+        if (teacherId == null) {
+            return null;
+        }
+        return (
+            this.campusLevelTeacherRefs.find((t) => Number(t.teacherId) === Number(teacherId)) ?? null
+        );
+    }
+
+    get campusProfileTeacherGradeLabel(): string {
+        return this.campusProfileTeacherRef?.grade?.trim() || '—';
+    }
+
+    get campusProfileTeacherSubjectLabel(): string {
+        return this.campusProfileTeacherRef?.subject?.trim() || '—';
+    }
+
+    /** How many of the seven inline filter fields currently constrain the page. */
+    get campusProfileActiveFilterCount(): number {
+        const f = this.districtContext.growthFilters;
+        let count = 0;
+        if (f.grades.length) count++;
+        if (f.subjects.length) count++;
+        if (f.specialEducation != null) count++;
+        if (f.economicDisadvantage != null) count++;
+        if (f.emergentBilingual != null) count++;
+        if (f.ethnicity != null) count++;
+        if (f.testLanguage != null) count++;
+        if (this.campusProfileTeacherFixed) {
+            if (this.campusProfileTeacherGradeLabel !== '—') count++;
+            if (this.campusProfileTeacherSubjectLabel !== '—') count++;
+        }
+        return Math.min(count, 7);
+    }
+
+    /** Campus chips are owned by the route, so the inline panel only lists the seven filters. */
+    get campusProfileActiveChips(): Array<{ id: string; label: string }> {
+        return this.districtContext.growthFilterChips().filter((chip) => chip.id !== 'campus');
+    }
+
+    /** VIEWING bar pill toggles the inline panel; the reference lists load on first open. */
+    toggleCampusProfileFilters(): void {
+        this.campusProfileFiltersOpen = !this.campusProfileFiltersOpen;
+        if (!this.campusProfileFiltersOpen) {
+            return;
+        }
+        forkJoin([
+            this.districtContext.ensureGrades(),
+            this.districtContext.ensureDistrictFilterData(),
+        ])
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => {
+                this.refreshCampusProfileOptions();
+                this.cdr.markForCheck();
+            });
+        this.syncCampusProfileFilterDraft();
+        this.refreshCampusProfileOptions();
+        this.loadCampusProfileOptionCodes();
+        if (this.campusProfileTeacherFixed) {
+            this.campusProfileFilterDraft.grades = [];
+            this.campusProfileFilterDraft.subjects = [];
+        }
+        this.applyCampusProfileFilters();
+    }
+
+    /**
+     * Copy the applied shared filters into the panel's editable draft *in place*.
+     * Replacing the draft object (or its arrays) while an ng-select option is being
+     * clicked detaches the option before the mouse commit fires, so the click only
+     * moves the highlight. Enter happened to commit earlier, which is why it worked.
+     */
+    private syncCampusProfileFilterDraft(): void {
+        const f = this.districtContext.growthFilters;
+        const draft = this.campusProfileFilterDraft;
+        draft.campusId = null;
+        draft.specialEducation = f.specialEducation;
+        draft.economicDisadvantage = f.economicDisadvantage;
+        draft.emergentBilingual = f.emergentBilingual;
+        draft.ethnicity = f.ethnicity;
+        draft.testLanguage = f.testLanguage;
+        if (!sameCodes(draft.grades, f.grades)) {
+            draft.grades.splice(0, draft.grades.length, ...f.grades);
+        }
+        if (!sameCodes(draft.subjects, f.subjects)) {
+            draft.subjects.splice(0, draft.subjects.length, ...f.subjects);
+        }
+    }
+
+    /** Choose a filter → update the draft and push it straight into the shared filter state. */
+    setCampusProfileFilter(
+        key: keyof GrowthFilters,
+        value: GrowthFilters[keyof GrowthFilters],
+    ): void {
+        const draft = this.campusProfileFilterDraft as unknown as Record<string, unknown>;
+        let next: unknown = value;
+        if (key === 'grades' || key === 'subjects') {
+            const codes = (Array.isArray(value) ? value : []) as Array<string | null>;
+            // "All" is an explicit option and always clears that filter.
+            next = codes.some((code) => code == null) ? [] : codes.filter((c): c is string => c != null);
+        }
+        draft[key] = next;
+        /**
+         * Let ng-select finish its mouse commit (mousedown → mouseup → click) before
+         * emitting into the page. Applying synchronously re-rendered the open overlay
+         * mid-click, so the option detached and only the highlight moved.
+         */
+        queueMicrotask(() => this.applyCampusProfileFilters());
+    }
+
+    /**
+     * Same write path as the old popup's Search action: role-scoped grade/subject,
+     * no campus override on a campus route, and an immediate service emission so
+     * every section of the page re-fetches with the new filters.
+     */
+    private applyCampusProfileFilters(): void {
+        const draft = this.campusProfileFilterDraft;
+        const teacherScope = this.campusProfileTeacherFixed;
+        this.districtContext.setGrowthFilters({
+            ...draft,
+            campusId: null,
+            grades: teacherScope ? [] : [...draft.grades],
+            subjects: teacherScope ? [] : [...draft.subjects],
+        });
+        this.cdr.markForCheck();
+    }
+
+    /** Mouse-friendly combobox for Grade/Subject: every option commits on click. */
+    get campusProfileGradeSelectionLabel(): string {
+        const labels = this.campusProfileGradeOptions
+            .filter((o) => o.value != null && this.campusProfileFilterDraft.grades.includes(o.value))
+            .map((o) => o.label);
+        return labels.length ? labels.join(', ') : 'All';
+    }
+
+    get campusProfileSubjectSelectionLabel(): string {
+        const labels = this.campusProfileSubjectOptions
+            .filter(
+                (o) => o.value != null && this.campusProfileFilterDraft.subjects.includes(o.value),
+            )
+            .map((o) => o.label);
+        return labels.length ? labels.join(', ') : 'All';
+    }
+
+    toggleCampusProfileGradeMenu(): void {
+        this.campusProfileGradeMenuOpen = !this.campusProfileGradeMenuOpen;
+        this.campusProfileSubjectMenuOpen = false;
+    }
+
+    toggleCampusProfileSubjectMenu(): void {
+        this.campusProfileSubjectMenuOpen = !this.campusProfileSubjectMenuOpen;
+        this.campusProfileGradeMenuOpen = false;
+    }
+
+    campusProfileGradeSelected(code: string | null): boolean {
+        return code == null
+            ? this.campusProfileFilterDraft.grades.length === 0
+            : this.campusProfileFilterDraft.grades.includes(code);
+    }
+
+    campusProfileSubjectSelected(code: string | null): boolean {
+        return code == null
+            ? this.campusProfileFilterDraft.subjects.length === 0
+            : this.campusProfileFilterDraft.subjects.includes(code);
+    }
+
+    chooseCampusProfileGrade(code: string | null): void {
+        const grades = this.campusProfileFilterDraft.grades;
+        if (code == null) {
+            grades.splice(0, grades.length);
+        } else {
+            const index = grades.indexOf(code);
+            if (index >= 0) grades.splice(index, 1);
+            else grades.push(code);
+        }
+        this.campusProfileGradeMenuOpen = false;
+        this.applyCampusProfileFilters();
+    }
+
+    chooseCampusProfileSubject(code: string | null): void {
+        const subjects = this.campusProfileFilterDraft.subjects;
+        if (code == null) {
+            subjects.splice(0, subjects.length);
+        } else {
+            const index = subjects.indexOf(code);
+            if (index >= 0) subjects.splice(index, 1);
+            else subjects.push(code);
+        }
+        this.campusProfileSubjectMenuOpen = false;
+        this.applyCampusProfileFilters();
+    }
+
     private campusProfilePct(value: unknown): number | null {
         if (value == null || value === '') {
             return null;
@@ -1298,6 +1705,9 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
             const name = [r.firstName, r.lastName].filter(Boolean).join(' ').trim() || '—';
             const staar = this.campusProfilePct(r.componentScore);
             const growth = this.campusProfilePct(r.growth);
+            const approaches = this.campusProfilePct(r.app);
+            const meets = this.campusProfilePct(r.meet);
+            const masters = this.campusProfilePct(r.master);
             return {
                 teacherId: r.teacherId ?? null,
                 name,
@@ -1312,8 +1722,40 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
                 growthColor: this.campusProfileHeatColor(growth),
                 staarDeep: (staar ?? 0) >= 55,
                 growthDeep: (growth ?? 0) >= 55,
+                approaches,
+                meets,
+                masters,
+                approachesText: this.campusProfileText(approaches),
+                meetsText: this.campusProfileText(meets),
+                mastersText: this.campusProfileText(masters),
+                approachesColor: this.campusProfileHeatColor(approaches),
+                meetsColor: this.campusProfileHeatColor(meets),
+                mastersColor: this.campusProfileHeatColor(masters),
+                approachesDeep: (approaches ?? 0) >= 55,
+                meetsDeep: (meets ?? 0) >= 55,
+                mastersDeep: (masters ?? 0) >= 55,
             };
         });
+    }
+
+    /**
+     * True only when the portal actually holds student-level performance bands for this
+     * campus/window. When false the heat map stays STAAR + Growth only.
+     */
+    get campusProfileHasPerformanceLevels(): boolean {
+        /**
+         * Show the three columns whenever the portal holds student-level band data for
+         * this campus/window, even if a particular classroom's values are not
+         * attributable to that classroom (those cells render as "—").
+         */
+        const campusBandsAvailable =
+            this.mockApp !== '—' || this.mockMeet !== '—' || this.mockMaster !== '—';
+        return (
+            campusBandsAvailable ||
+            (this.lastCampusTeacherMetrics ?? []).some(
+                (r) => r.app != null || r.meet != null || r.master != null,
+            )
+        );
     }
 
     /** Rule-derived insight cards for the campus profile. */
@@ -1524,14 +1966,6 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         this.campusProfileAlertsOpen = false;
         this.campusProfileSavedOpen = false;
         this.campusProfileYearMenuOpen = false;
-    }
-
-    openCampusProfileHelp(): void {
-        window.dispatchEvent(
-            new CustomEvent('simplify-ai-prompt', {
-                detail: { prompt: `Help me understand the ${this.campusName} profile` },
-            }),
-        );
     }
 
     /** Existing Standards & CCMR route (the portal's grade/subject breakdown view). */
@@ -2821,6 +3255,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
                             campusCode,
                             campus: campusByCode.get(campusCode) || campusCode || '—',
                             grade: record.gradeCode || '—',
+                            subject: record.subjectCode || '—',
                             classroom: record.teacherName || '—',
                         });
                     }
@@ -4402,6 +4837,16 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
     }
 
     ngOnInit() {
+        /** Keep the inline panel's editable copy aligned with filters changed elsewhere. */
+        this.districtContext.growthFilters$
+            .pipe(takeUntil(this.destroy$))
+            .subscribe(() => {
+                if (this.campusProfileFiltersOpen) {
+                    this.syncCampusProfileFilterDraft();
+                    this.cdr.markForCheck();
+                }
+            });
+
         this.route.paramMap.pipe(takeUntil(this.destroy$)).subscribe((params) => {
             this.campusId = params.get('id');
             const teacherStr = params.get('teacherId');
@@ -4841,6 +5286,7 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
         this.campusStudentLeaderboardSub?.unsubscribe();
         this.districtLeaderboardSub?.unsubscribe();
         this.campusClassroomsSub?.unsubscribe();
+        this.campusProfileOptionCodesSub?.unsubscribe();
         this.destroy$.next();
         this.destroy$.complete();
     }
@@ -5017,7 +5463,17 @@ export class GrowthOverviewPageComponent implements OnInit, AfterViewInit, OnDes
             this.campusProfileStudents = [];
             const base = this.districtContext.baseGrowthPayload();
             if (base) {
-                const districtBody = { ...base, ...filters } as GrowthOverallMetricsRequest;
+                /**
+                 * Level and district ticks must describe every campus in that scope, never
+                 * this campus. Strip the role/route campus scope before asking for them.
+                 */
+                const {
+                    campusCode: _campusCode,
+                    campusCategoryId: _campusCategoryId,
+                    teacherId: _teacherId,
+                    ...districtBase
+                } = base;
+                const districtBody = { ...districtBase, ...filters } as GrowthOverallMetricsRequest;
                 this.growthAnalytics
                     .getOverallGrowthMetrics(districtBody)
                     .pipe(

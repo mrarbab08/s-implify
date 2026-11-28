@@ -229,6 +229,10 @@ export class GrowthAnalyticsService {
             const n = typeof v === 'number' ? v : Number(String(v).trim());
             return Number.isFinite(n) ? n : NaN;
         };
+        const numOrNull = (v: unknown): number | null => {
+            const x = num(v);
+            return Number.isFinite(x) ? x : null;
+        };
         return raw.map((r: any) => ({
             teacherId: Number(r?.teacherId ?? r?.TeacherId ?? r?.teacher_id ?? 0),
             teacherIdExternal: r?.teacherIdExternal ?? r?.teacher_id_external,
@@ -256,6 +260,9 @@ export class GrowthAnalyticsService {
                 const x = num(r?.growth ?? r?.growth_pct ?? r?.Growth);
                 return Number.isFinite(x) ? x : 0;
             })(),
+            app: numOrNull(r?.app ?? r?.approaches ?? r?.Approaches),
+            meet: numOrNull(r?.meet ?? r?.meets ?? r?.Meets),
+            master: numOrNull(r?.master ?? r?.masters ?? r?.Masters),
         }));
     }
 

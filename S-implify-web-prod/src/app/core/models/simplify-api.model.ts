@@ -429,6 +429,12 @@ export interface TeacherGrowthMetricsResponse {
     grade?: string | null;
     componentScore: number;
     growth: number;
+    /** Mean of this classroom's student-level STAAR Approaches share (0–100); null when not derivable. */
+    app?: number | null;
+    /** Mean of this classroom's student-level STAAR Meets share (0–100); null when not derivable. */
+    meet?: number | null;
+    /** Mean of this classroom's student-level STAAR Masters share (0–100); null when not derivable. */
+    master?: number | null;
 }
 
 /** POST /api/growth/campus-teacher-student-metrics (Swagger: CampusTeacherStudentGrowthMetricsRequest). */

@@ -23,8 +23,8 @@
       <img class="h-10 w-auto rounded md:h-11" src="/assets/images/logo.jpeg" alt="S-Implify" />
     </a>
 
-    <!-- Scope breadcrumb (drill-down routes only) -->
-    @if (scopeBackLabel || scopeCrumb) {
+    <!-- Scope breadcrumb (drill-down routes only; the campus profile already shows it in-page) -->
+    @if (!isCampusProfilePage && (scopeBackLabel || scopeCrumb)) {
       <div class="hidden min-w-0 items-center gap-2 pl-2 lg:flex">
         @if (scopeBackLabel) {
           <button

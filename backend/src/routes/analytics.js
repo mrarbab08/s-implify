@@ -6,7 +6,7 @@
  */
 const express = require('express');
 const { getOne, getAll, insert, run, nowIso } = require('../db');
-const { round, pad2, upperOrNull, gradeLetter, asBoolOrNull, asNumberOrNull, contains, MONTHS } = require('../util');
+const { round, pad2, upperOrNull, gradeLetter, asBoolOrNull, asNumberOrNull, MONTHS } = require('../util');
 
 const router = express.Router();
 
@@ -188,12 +188,25 @@ router.post('/growth/campus-teacher-metrics', (req, res) => {
     byTeacher.get(r.teacherIdExternal).push(r);
   }
   const data = [];
+  const sharedLevels = new Map();
   for (const t of teachers) {
     const key = t.teacherIdExternal;
     const sub = byTeacher.get(key) || teacherKeyFromName(rows, `${t.lastName}, ${t.firstName}`);
     if (!sub || !sub.length) continue;
     const a = agg(sub);
     const gradeRow = getOne('SELECT gradeCode FROM grades WHERE gradeId = ?', [t.gradeId]);
+    /**
+     * The portal's app/meets/masters columns are carried on student-level rows. When
+     * the same students (and therefore the same band values) feed more than one
+     * classroom, those figures describe the students/grade, not an individual
+     * classroom. Mark them as not derivable rather than copying them into each row.
+     */
+    const studentKey = sub
+      .map((r) => `${r.localId ?? ''}:${r.studentName ?? ''}`)
+      .sort()
+      .join('|');
+    const levelKey = `${a.app}|${a.meet}|${a.master}::${studentKey}`;
+    sharedLevels.set(levelKey, (sharedLevels.get(levelKey) || 0) + 1);
     data.push({
       teacherId: t.teacherId,
       teacherIdExternal: t.teacherIdExternal,
@@ -202,13 +215,32 @@ router.post('/growth/campus-teacher-metrics', (req, res) => {
       grade: gradeRow ? gradeRow.gradeCode : null,
       componentScore: a.cs ?? 0,
       growth: a.growth ?? 0,
+      app: a.app,
+      meet: a.meet,
+      master: a.master,
+      levelKey,
     });
   }
   function teacherKeyFromName(list, name) {
-    const filtered = list.filter((r) => contains(name)(r.teacherName) !== undefined && r.teacherName === name);
+    const filtered = list.filter((r) => String(r.teacherName || '').trim() === String(name).trim());
     return filtered.length ? filtered : null;
   }
-  return envelope(res, 'Success', data.map((d) => ({ ...d, campusName: campusName ? campusName.campusName : null, teacherName: d.teacherIdExternal })));
+  return envelope(
+    res,
+    'Success',
+    data.map((d) => {
+      const notClassroomSpecific = (sharedLevels.get(d.levelKey) || 0) > 1;
+      const { levelKey, ...row } = d;
+      return {
+        ...row,
+        app: notClassroomSpecific ? null : row.app,
+        meet: notClassroomSpecific ? null : row.meet,
+        master: notClassroomSpecific ? null : row.master,
+        campusName: campusName ? campusName.campusName : null,
+        teacherName: d.teacherIdExternal,
+      };
+    }),
+  );
 });
 
 router.post('/growth/top-classrooms', (req, res) => {

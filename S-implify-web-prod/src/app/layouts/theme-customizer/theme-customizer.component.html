@@ -1,6 +1,7 @@
 @if (showFilterGear) {
 <div>
-    <!-- Floating gear FAB (Search Filters launcher) -->
+    <!-- Floating gear FAB — hidden on the campus profile, which has the inline panel -->
+    @if (showFilterFab) {
     <button
         type="button"
         class="btn btn-primary fixed bottom-6 z-50 h-11 w-11 rounded-full p-0 shadow-lg ltr:right-6 rtl:left-6"
@@ -9,6 +10,7 @@
     >
         <icon-settings class="h-5 w-5" />
     </button>
+    }
 
     <!-- Search Filters popup (wide rectangle, 2-column field grid) -->
     <ngx-custom-modal #filtersModal customClass="modal-top filters-modal" class="no-footer" (closed)="onFiltersModalClosed()">

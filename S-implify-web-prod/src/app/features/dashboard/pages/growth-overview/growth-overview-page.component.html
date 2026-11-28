@@ -1262,17 +1262,6 @@
                             (click)="openCampusStandards()"
                             title="Open the Standards & CCMR view"
                         >Standards</button>
-                        <button
-                            type="button"
-                            class="aurora-slice-btn"
-                            (click)="sliceCampus()"
-                            title="Break this campus down by grade and subject"
-                        >
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M7 12h10M10 18h4" />
-                            </svg>
-                            Slice this campus
-                        </button>
                     </div>
 
                     <div class="aurora-header-tools">
@@ -1366,18 +1355,6 @@
                             </div>
                             }
                         </div>
-
-                        <button
-                            type="button"
-                            class="aurora-icon-btn"
-                            (click)="openCampusProfileHelp()"
-                            title="Help with this page"
-                            aria-label="Help with this page"
-                        >
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 5.25h.008v.008H12v-.008Z" />
-                            </svg>
-                        </button>
                     </div>
                 </div>
 
@@ -1419,54 +1396,164 @@
                     <button
                         type="button"
                         class="aurora-add-filter"
-                        (click)="districtContext.requestFilterPanel()"
+                        (click)="toggleCampusProfileFilters()"
+                        [attr.aria-expanded]="campusProfileFiltersOpen"
                         title="Open the page's filter options"
                     >+ Add filter</button>
-                    <div class="aurora-save-wrap">
+                </div>
+
+                @if (campusProfileFiltersOpen) {
+                <div class="aurora-inline-filters" aria-label="Filters">
+                    <div class="aurora-inline-filters-head">
+                        <span class="aurora-inline-filters-icon" aria-hidden="true">
+                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h18l-7 8v6l-4 2v-8L3 5Z" />
+                            </svg>
+                        </span>
+                        <span class="aurora-inline-filters-title">Filters</span>
+                        <span class="aurora-inline-filters-count">({{ campusProfileActiveFilterCount }} of 7 active)</span>
+                        @if (campusProfileCanCompare) {
                         <button
                             type="button"
-                            class="aurora-save-btn"
-                            [class.is-saved]="campusProfileSavedFlash"
-                            (click)="saveCampusProfileView()"
-                            [attr.aria-expanded]="campusProfileSavedOpen"
-                            title="Save the current year, window, campus and filters"
-                        >
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M17.593 3.322c1.1.128 1.907 1.077 1.907 2.185V21L12 17.25 4.5 21V5.507c0-1.108.806-2.057 1.907-2.185a48.507 48.507 0 0 1 11.186 0Z" />
-                            </svg>
-                            {{ campusProfileSavedFlash ? 'Saved' : 'Save this view' }}
-                        </button>
-                        @if (campusProfileSavedOpen) {
-                        <div class="aurora-pop">
-                            <div class="aurora-pop-head">
-                                <span class="aurora-pop-title">Saved views</span>
-                                <span class="aurora-pop-sub">{{ savedCampusProfileViews.length }} saved</span>
-                            </div>
-                            <div class="aurora-pop-body">
-                                @if (savedCampusProfileViews.length) {
-                                @for (view of savedCampusProfileViews; track view.id) {
-                                <div class="aurora-saved-row">
-                                    <button type="button" class="aurora-saved-open" (click)="applyCampusProfileSavedView(view)" title="Reopen this saved view">
-                                        <span class="aurora-saved-label">{{ campusProfileSavedViewLabel(view) }}</span>
-                                        <span class="aurora-saved-meta">
-                                            @if (campusProfileSavedViewFilterCount(view)) {
-                                            {{ campusProfileSavedViewFilterCount(view) }} filter{{ campusProfileSavedViewFilterCount(view) === 1 ? '' : 's' }}
-                                            } @else { No extra filters }
-                                        </span>
-                                    </button>
-                                    <button type="button" class="aurora-saved-delete" (click)="deleteCampusProfileSavedView($event, view)" aria-label="Delete saved view" title="Delete this saved view">
-                                        ×
-                                    </button>
-                                </div>
-                                }
-                                } @else {
-                                <p class="aurora-pop-empty">No saved views for this campus yet. Use “Save this view”.</p>
-                                }
-                            </div>
-                        </div>
+                            class="aurora-inline-filters-compare"
+                            (click)="districtContext.requestComparisonPanel()"
+                            title="Select two campuses to compare on the dashboard"
+                        >Campus Comparison</button>
                         }
                     </div>
+
+                    <div class="aurora-inline-filters-grid">
+                        <label class="aurora-filter-field">
+                            <span>Grade</span>
+                            @if (campusProfileTeacherFixed) {
+                            <span class="aurora-filter-fixed"> {{ campusProfileTeacherGradeLabel }} <em>Fixed</em> </span>
+                            } @else {
+                            <div class="aurora-filter-combo">
+                                <button
+                                    type="button"
+                                    class="aurora-filter-control aurora-filter-toggle"
+                                    (click)="toggleCampusProfileGradeMenu()"
+                                    [attr.aria-expanded]="campusProfileGradeMenuOpen"
+                                >
+                                    <span>{{ campusProfileGradeSelectionLabel }}</span>
+                                    <i aria-hidden="true">⌄</i>
+                                </button>
+                                @if (campusProfileGradeMenuOpen) {
+                                <div class="aurora-filter-menu" role="listbox" aria-label="Grade">
+                                    @for (opt of campusProfileGradeOptions; track opt.label) {
+                                    <button
+                                        type="button"
+                                        class="aurora-filter-option"
+                                        [class.is-selected]="campusProfileGradeSelected(opt.value)"
+                                        (click)="chooseCampusProfileGrade(opt.value)"
+                                    >{{ opt.label }}</button>
+                                    }
+                                </div>
+                                }
+                            </div>
+                            }
+                        </label>
+
+                        <label class="aurora-filter-field">
+                            <span>Subject</span>
+                            @if (campusProfileTeacherFixed) {
+                            <span class="aurora-filter-fixed"> {{ campusProfileTeacherSubjectLabel }} <em>Fixed</em> </span>
+                            } @else {
+                            <div class="aurora-filter-combo">
+                                <button
+                                    type="button"
+                                    class="aurora-filter-control aurora-filter-toggle"
+                                    (click)="toggleCampusProfileSubjectMenu()"
+                                    [attr.aria-expanded]="campusProfileSubjectMenuOpen"
+                                >
+                                    <span>{{ campusProfileSubjectSelectionLabel }}</span>
+                                    <i aria-hidden="true">⌄</i>
+                                </button>
+                                @if (campusProfileSubjectMenuOpen) {
+                                <div class="aurora-filter-menu" role="listbox" aria-label="Subject">
+                                    @for (opt of campusProfileSubjectOptions; track opt.label) {
+                                    <button
+                                        type="button"
+                                        class="aurora-filter-option"
+                                        [class.is-selected]="campusProfileSubjectSelected(opt.value)"
+                                        (click)="chooseCampusProfileSubject(opt.value)"
+                                    >{{ opt.label }}</button>
+                                    }
+                                </div>
+                                }
+                            </div>
+                            }
+                        </label>
+
+                        <label class="aurora-filter-field">
+                            <span>Special education</span>
+                            <select class="aurora-filter-control" [ngModel]="campusProfileFilterDraft.specialEducation" (ngModelChange)="setCampusProfileFilter('specialEducation', $event)">
+                                <option [ngValue]="null">All</option>
+                                @for (opt of campusProfileBoolOptions; track opt.label) {
+                                <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label class="aurora-filter-field">
+                            <span>Econ. disadvantaged</span>
+                            <select class="aurora-filter-control" [ngModel]="campusProfileFilterDraft.economicDisadvantage" (ngModelChange)="setCampusProfileFilter('economicDisadvantage', $event)">
+                                <option [ngValue]="null">All</option>
+                                @for (opt of campusProfileBoolOptions; track opt.label) {
+                                <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label class="aurora-filter-field">
+                            <span>Emergent bilingual</span>
+                            <select class="aurora-filter-control" [ngModel]="campusProfileFilterDraft.emergentBilingual" (ngModelChange)="setCampusProfileFilter('emergentBilingual', $event)">
+                                <option [ngValue]="null">All</option>
+                                @for (opt of campusProfileEmergentBilingualOptions; track opt.value) {
+                                <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label class="aurora-filter-field">
+                            <span>Ethnicity</span>
+                            <select class="aurora-filter-control" [ngModel]="campusProfileFilterDraft.ethnicity" (ngModelChange)="setCampusProfileFilter('ethnicity', $event)">
+                                <option [ngValue]="null">All</option>
+                                @for (opt of campusProfileEthnicityOptions; track opt.value) {
+                                <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </label>
+
+                        <label class="aurora-filter-field">
+                            <span>Test language</span>
+                            <select class="aurora-filter-control" [ngModel]="campusProfileFilterDraft.testLanguage" (ngModelChange)="setCampusProfileFilter('testLanguage', $event)">
+                                <option [ngValue]="null">All</option>
+                                @for (opt of campusProfileTestLanguageOptions; track opt.value) {
+                                <option [ngValue]="opt.value">{{ opt.label }}</option>
+                                }
+                            </select>
+                        </label>
+                    </div>
+
+                    @if (campusProfileActiveChips.length) {
+                    <div class="aurora-inline-filters-active">
+                        <span class="aurora-inline-filters-active-label">Active:</span>
+                        @for (chip of campusProfileActiveChips; track chip.id) {
+                        <button
+                            type="button"
+                            class="aurora-chip aurora-chip-filter"
+                            (click)="districtContext.clearGrowthFilterChip(chip.id)"
+                            [attr.aria-label]="'Remove filter: ' + chip.label"
+                        >
+                            <span>{{ chip.label }}</span>
+                            <span class="aurora-chip-x" aria-hidden="true">×</span>
+                        </button>
+                        }
+                    </div>
+                    }
                 </div>
+                }
             </section>
 
             <section class="aurora-profile-sections" aria-label="Campus profile analytics">
@@ -1587,11 +1674,16 @@
                     @if (campusChartLoading) {
                     <p class="aurora-loading">Loading classroom scores…</p>
                     } @else if (campusProfileClassrooms.length) {
-                    <div class="aurora-heat-table">
+                    <div class="aurora-heat-table" [class.has-levels]="campusProfileHasPerformanceLevels">
                         <div class="aurora-heat-head">
                             <span>Teacher · subject</span>
                             <span>STAAR</span>
                             <span>Growth</span>
+                            @if (campusProfileHasPerformanceLevels) {
+                            <span>Approaches</span>
+                            <span>Meets</span>
+                            <span>Masters</span>
+                            }
                         </div>
                         @for (room of campusProfileClassrooms; track $index) {
                         <button
@@ -1610,6 +1702,11 @@
                             </span>
                             <span class="aurora-heat-cell" [class.is-deep]="room.staarDeep" [style.background]="room.staarColor">{{ room.staarText }}</span>
                             <span class="aurora-heat-cell" [class.is-deep]="room.growthDeep" [style.background]="room.growthColor">{{ room.growthText }}</span>
+                            @if (campusProfileHasPerformanceLevels) {
+                            <span class="aurora-heat-cell" [class.is-deep]="room.approachesDeep" [style.background]="room.approachesColor">{{ room.approachesText }}</span>
+                            <span class="aurora-heat-cell" [class.is-deep]="room.meetsDeep" [style.background]="room.meetsColor">{{ room.meetsText }}</span>
+                            <span class="aurora-heat-cell" [class.is-deep]="room.mastersDeep" [style.background]="room.mastersColor">{{ room.mastersText }}</span>
+                            }
                         </button>
                         }
                     </div>

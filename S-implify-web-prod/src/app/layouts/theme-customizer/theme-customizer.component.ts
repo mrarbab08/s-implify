@@ -146,6 +146,7 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
     private contextSub?: Subscription;
     private routerSub?: Subscription;
     private panelRequestSub?: Subscription;
+    private comparisonRequestSub?: Subscription;
 
     /** Routes where growth search filters apply (district overview + campus drill-down). */
     private readonly filterGearRoutePatterns = [/^\/dashboard(\/|$)/];
@@ -177,6 +178,7 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
 
         this.watchBootstrapReady();
         this.watchFilterPanelRequests();
+        this.watchComparisonPanelRequests();
 
         /** Keep the local draft in sync if filters are changed elsewhere (e.g. Reset, restore). */
         this.contextSub = this.districtContext.growthFilters$.subscribe((f) => {
@@ -295,10 +297,20 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
         this.contextSub?.unsubscribe();
         this.routerSub?.unsubscribe();
         this.panelRequestSub?.unsubscribe();
+        this.comparisonRequestSub?.unsubscribe();
+    }
+
+    /** Campus profile uses the inline Filters panel, so its floating gear is hidden there. */
+    get showFilterFab(): boolean {
+        const path = this.router.url.split('?')[0].split('#')[0];
+        return !/^\/dashboard\/campus\/[^/]+\/?$/.test(path);
     }
 
     private updateFilterGearVisibility(url: string): void {
         const path = url.split('?')[0].split('#')[0];
+        if (/^\/dashboard\/campus\/[^/]+\/?$/.test(path)) {
+            this.closeFiltersModal();
+        }
         const visible = this.filterGearRoutePatterns.some((pattern) => pattern.test(path));
         if (this.showFilterGear === visible) {
             if (visible) {
@@ -376,6 +388,13 @@ export class ThemeCustomizerComponent implements OnInit, OnDestroy {
             if (!this.showCustomizerOpen) {
                 this.toggleCustomizer();
             }
+        });
+    }
+
+    /** Campus profile's inline panel delegates Campus Comparison to this existing modal. */
+    private watchComparisonPanelRequests(): void {
+        this.comparisonRequestSub = this.districtContext.comparisonPanelRequest$.subscribe(() => {
+            this.openCampusComparison();
         });
     }
 

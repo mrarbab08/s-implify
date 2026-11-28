@@ -367,6 +367,14 @@ export class DistrictContextService {
         this.filterPanelRequestSubject.next();
     }
 
+    /** Opens the same panel directly in Campus Comparison mode (full-district roles only). */
+    private readonly comparisonPanelRequestSubject = new RxSubject<void>();
+    readonly comparisonPanelRequest$ = this.comparisonPanelRequestSubject.asObservable();
+
+    requestComparisonPanel(): void {
+        this.comparisonPanelRequestSubject.next();
+    }
+
     /** Clears one applied search filter and re-fetches dashboard data. */
     clearGrowthFilterChip(id: GrowthFilterChipId): void {
         this.setGrowthFilters(removeGrowthFilterChip(this.growthFilters, id));
